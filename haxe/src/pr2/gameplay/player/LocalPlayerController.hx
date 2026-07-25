@@ -265,6 +265,13 @@ class LocalPlayerController implements ItemRuntimeOwner {
 
 	public function step(input:LocalPlayerInput):Void {
 		setPlayerPos(Math.round(x), Math.round(y));
+		// Flash owns the rotate tween in Course, independently of whichever
+		// LocalCharacter physics mode is active. Its ENTER_FRAME listener runs
+		// before the character listener, so an existing tween advances before
+		// physics while a newly-triggered rotation waits until the next frame.
+		if (rotateFramesRemaining > 0) {
+			updateRotation();
+		}
 		traceCharacterFrame("before");
 		hurtFramesRemaining--;
 		touchedBlock = null;
@@ -293,7 +300,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 			waterTicks = 2;
 		}
 		if (mode == MODE_PHYSICS_PAUSE || mode == MODE_JUMP) {
-			updateRotation();
+			// These modes intentionally skip character physics.
 		} else if (mode == MODE_FROZEN_SOLID) {
 			frozenSolidStep(input);
 		} else if (mode == MODE_HURT) {
@@ -556,12 +563,11 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		vy = clamp(vy, -MAX_SPEED, MAX_SPEED);
 		movePlayerBy(vx, vy);
 		processBlocks(input);
-		// A block interaction can replace water mode (notably a rotate-block bump
-		// across a one-tile air gap). Do not let the remainder of this stale water
-		// frame count down and overwrite the newly-entered mode with land.
-		if (mode != MODE_WATER) {
-			return;
-		}
+		// Deliberately preserve Flash's stale-handler bug: if processBlocks changes
+		// the mode (notably to the rotate-block "freeze" pause), waterGo still
+		// finishes this already-dispatched frame. When the linger expires here it
+		// replaces freeze with land, so normal physics continues during Course's
+		// independently-running rotation tween.
 		waterTicks--;
 		// Flash keeps Cowboy Hat flight in water mode for as long as the
 		// character is airborne. Without this refresh, every second frame exits
@@ -1255,9 +1261,9 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		if (rotateFramesRemaining > 0 || isBlockFrozen(block)) {
 			return;
 		}
-		// Flash pauses character physics in `freezeGo` while Course owns the
-		// rotation tween. This also prevents adjacent water from replacing the
-		// rotate mode in the bump frame (level 6507177 relies on that layout).
+		// Flash normally pauses character physics in `freezeGo` while Course owns
+		// the rotation tween. A stale waterGo frame can immediately replace this
+		// mode again; waterStep intentionally preserves that runtime bug.
 		setMode(MODE_PHYSICS_PAUSE);
 		vx = 0;
 		vy = 0;

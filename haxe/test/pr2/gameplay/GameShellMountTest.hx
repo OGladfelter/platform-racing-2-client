@@ -549,7 +549,7 @@ class GameShellMountTest {
 		assertEquals(openfl.display.StageQuality.HIGH, course.debugStageQualityForTests(), "completed rotate restores high stage quality");
 		var settledFeet = localCharacterFeetOnStage(course);
 		assertClose(275, settledFeet.x, "camera snaps local x after rotation");
-		assertClose(245, settledFeet.y, "camera snaps local y after rotation");
+		assertClose(244.7, settledFeet.y, "camera includes the Flash completion frame's resumed physics");
 		course.remove();
 	}
 

@@ -120,7 +120,7 @@ class LocalPlayerControllerTest {
 		testTimedMoveBlockWaitsWhenDestinationOccupied();
 		testBumpingRotateBlockPutsPlayerInFreezeState();
 		testWaterTouchDoesNotCancelRotation();
-		testWaterBelowGapDoesNotStrandRotation();
+		testExpiringWaterLingerRunsLandPhysicsDuringRotation();
 		testRotateRightCompletesCourseRotation();
 		testRotateLeftCompletesCourseRotation();
 		testRotationTweenMatchesCourseFrames();
@@ -2197,36 +2197,51 @@ class LocalPlayerControllerTest {
 			player.step(new LocalPlayerInput());
 		}
 		assertEquals(-90, player.stateSnapshot().courseRotation, "water-backed rotate block completes its rotation");
-		assertEquals("land", player.stateSnapshot().mode, "completed water-backed rotation resumes land physics");
+		assertEquals("water", player.stateSnapshot().mode, "completion resumes physics soon enough to detect water at the rotated position");
 	}
 
-	private static function testWaterBelowGapDoesNotStrandRotation():Void {
-		var level = rotateBlockLevel(BlockType.RotateRight);
+	private static function testExpiringWaterLingerRunsLandPhysicsDuringRotation():Void {
+		var level = rotateBlockLevel(BlockType.RotateLeft);
 		// Rotate block at y=1, empty y=2, water at y=3: the player swims upward
-		// through the gap and reaches the rotate block as the water linger expires.
+		// through the gap and reaches the rotate block as waterTicks reaches zero.
+		// Flash's already-dispatched waterGo then replaces the new freeze mode with
+		// land while Course continues its independent rotation tween.
 		level.blocks.splice(1, 1); // remove the helper fixture's solid below the water
-		level.blocks.push(new LevelBlock(2, 3, BlockType.Water));
+		level.blocks.push(new LevelBlock(1, 3, BlockType.Water));
 		var player = new LocalCharacter(level);
-		var bumped = false;
-		for (_ in 0...60) {
-			player.step(new LocalPlayerInput(false, false, true));
-			if (player.stateSnapshot().mode == "freeze") {
-				bumped = true;
-				break;
-			}
-		}
-		assertEquals(true, bumped, "water-gap setup reaches the rotate block");
-		assertEquals("freeze", player.stateSnapshot().mode, "expiring water linger cannot cancel the rotate pause");
-		assertEquals("swim", player.stateSnapshot().animation, "water-gap rotate pause does not borrow the freeze-ray animation");
+		player.setControllerPosition(45, 115);
+		@:privateAccess player.controller.setMode(LocalPlayerController.MODE_WATER);
+		@:privateAccess player.controller.waterTicks = 1;
+		@:privateAccess player.controller.vx = 20;
+		@:privateAccess player.controller.vy = -14;
 
-		for (_ in 0...30) player.step(new LocalPlayerInput());
-		assertEquals(90, player.stateSnapshot().courseRotation, "water-gap rotation completes instead of leaving a stale rotation lock");
+		player.step(new LocalPlayerInput());
+		var collision = player.stateSnapshot();
+		@:privateAccess assertEquals(30, player.controller.rotateFramesRemaining, "water-gap setup starts the rotate tween");
+		assertEquals("land", collision.mode, "stale water frame cancels the rotate pause like Flash");
+		assertEquals("swim", collision.animation, "collision frame retains the swimming animation");
+		assertClose(0, collision.vx, "rotate block still clears horizontal velocity before the stale mode change");
+		assertClose(0, collision.vy, "rotate block still clears vertical velocity before the stale mode change");
+
+		player.step(new LocalPlayerInput());
+		var firstTweenFrame = player.stateSnapshot();
+		assertEquals("land", firstTweenFrame.mode, "land physics remains active during the rotate tween");
+		assertClose(0.7, firstTweenFrame.vy, "first tween frame applies normal land gravity");
+		assertAbove(firstTweenFrame.y, collision.y, "player moves while the course is rotating");
+		assertEquals(-3, player.courseTweenRotation, "course tween advances independently of player mode");
+
+		for (_ in 0...29) player.step(new LocalPlayerInput());
+		var completed = player.stateSnapshot();
+		assertEquals(-90, completed.courseRotation, "water-gap rotation still completes");
+		assertAbove(completed.x, collision.y + 100, "falling during the left rotation becomes displacement on the new x axis");
 		@:privateAccess assertEquals(0, player.controller.rotateFramesRemaining, "completed water-gap rotation allows later rotate blocks");
 	}
 
 	private static function testRotateRightCompletesCourseRotation():Void {
-		var player = bumpRotateBlock(BlockType.RotateRight);
+		var level = rotateBlockLevel(BlockType.RotateRight);
+		var player = bumpRotateBlockInLevel(level);
 		var frozen = player.stateSnapshot();
+		level.blocks.splice(1, 1); // isolate the coordinate transform from fixture collisions
 
 		for (_ in 0...29) {
 			player.step(new LocalPlayerInput());
@@ -2238,12 +2253,14 @@ class LocalPlayerControllerTest {
 		assertEquals("land", state.mode, "right rotation returns player to land mode");
 		assertEquals(90, state.courseRotation, "right rotation advances course rotation");
 		assertClose(-frozen.y, state.x, "right rotation maps x from frozen y");
-		assertClose(frozen.x, state.y, "right rotation maps y from frozen x");
+		assertClose(frozen.x + 0.7, state.y, "right rotation resumes gravity on its completion frame");
 	}
 
 	private static function testRotateLeftCompletesCourseRotation():Void {
-		var player = bumpRotateBlock(BlockType.RotateLeft);
+		var level = rotateBlockLevel(BlockType.RotateLeft);
+		var player = bumpRotateBlockInLevel(level);
 		var frozen = player.stateSnapshot();
+		level.blocks.splice(1, 1); // isolate the coordinate transform from fixture collisions
 
 		for (_ in 0...30) {
 			player.step(new LocalPlayerInput());
@@ -2253,7 +2270,7 @@ class LocalPlayerControllerTest {
 		assertEquals("land", state.mode, "left rotation returns player to land mode");
 		assertEquals(-90, state.courseRotation, "left rotation decreases course rotation");
 		assertClose(frozen.y, state.x, "left rotation maps x from frozen y");
-		assertClose(-frozen.x, state.y, "left rotation maps y from frozen x");
+		assertClose(-frozen.x + 0.7, state.y, "left rotation resumes gravity on its completion frame");
 	}
 
 	private static function testRotationTweenMatchesCourseFrames():Void {
@@ -2461,7 +2478,11 @@ class LocalPlayerControllerTest {
 	}
 
 	private static function bumpRotateBlock(type:BlockType):LocalCharacter {
-		var player = new LocalCharacter(rotateBlockLevel(type));
+		return bumpRotateBlockInLevel(rotateBlockLevel(type));
+	}
+
+	private static function bumpRotateBlockInLevel(level:Level):LocalCharacter {
+		var player = new LocalCharacter(level);
 		for (_ in 0...40) {
 			player.step(new LocalPlayerInput(false, false, true));
 			if (player.stateSnapshot().mode == "freeze") {
