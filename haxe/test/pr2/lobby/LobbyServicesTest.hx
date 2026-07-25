@@ -1777,6 +1777,7 @@ class LobbyServicesTest {
 		assertEquals(2, testCourse.course.levelRenderer.teleportPopCountForTests(), "test course click adds source and destination teleport pops");
 
 		var firstCourse = testCourse.course;
+		var firstMusicSelection = firstCourse.musicSelection;
 		var firstStatsSelect = testCourse.statsSelect;
 		var firstHatPicker = testCourse.hatPicker;
 		var authoredBrick = Lambda.find(LevelDecoder.decode(Std.string(sourceData)).blocks,
@@ -1817,6 +1818,9 @@ class LobbyServicesTest {
 		}
 		DisplayUtil.findByName(testCourse.art, "restart_bt").dispatchEvent(new MouseEvent(MouseEvent.CLICK));
 		assertEquals(false, firstCourse == testCourse.course, "restart rebuilds Course from the editor's serialized level");
+		assertEquals(firstMusicSelection, testCourse.course.musicSelection,
+			"restart preserves Flash's existing music player instead of opening a second song stream");
+		assertEquals(false, firstMusicSelection.isRemoved(), "restart keeps the transferred music player active");
 		assertEquals(false, firstStatsSelect == testCourse.statsSelect, "restart rebuilds StatsSelect for the new character");
 		assertEquals(false, firstHatPicker == testCourse.hatPicker, "restart rebuilds HatPicker for the new character");
 		assertEquals(null, firstStatsSelect.parent, "restart removes the old StatsSelect control");
@@ -1842,6 +1846,7 @@ class LobbyServicesTest {
 		}
 
 		DisplayUtil.findByName(testCourse.art, "back_bt").dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+		assertEquals(true, firstMusicSelection.isRemoved(), "leaving the test course tears down the preserved music player");
 		var returnedEditor = Std.downcast(holder.getCurrentPage(), LevelEditor);
 		assertNotNull(returnedEditor, "back button returns to the level editor");
 		assertEquals(true, returnedEditor.isMod, "returned editor preserves mod flag");

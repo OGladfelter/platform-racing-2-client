@@ -5,6 +5,7 @@ import openfl.events.MouseEvent;
 import pr2.app.AppStage;
 import pr2.gameplay.Course;
 import pr2.gameplay.LevelConfig;
+import pr2.gameplay.MusicSelection;
 import pr2.level.LevelDecoder;
 import pr2.lobby.account.Settings;
 import pr2.lobby.account.StatsSelect;
@@ -83,11 +84,11 @@ class TestCoursePage extends Page {
 		super.remove();
 	}
 
-	private function mountCourse():Void {
+	private function mountCourse(?existingMusicSelection:MusicSelection):Void {
 		var data = new ServerLevelData(variables, true);
 		var level = LevelDecoder.decode(data.data);
 		var config = LevelConfig.fromServerData(data);
-		course = new Course(level, data, config);
+		course = new Course(level, data, config, null, null, null, existingMusicSelection);
 		course.removeRaceChat();
 		course.offlineMode = true;
 		course.localCharacter.testMode = true;
@@ -212,9 +213,10 @@ class TestCoursePage extends Page {
 		if (course.levelRenderer != null) {
 			course.levelRenderer.removeEventListener(MouseEvent.CLICK, teleportToClickPos);
 		}
+		var existingMusicSelection = course.releaseMusicSelection();
 		course.remove();
 		course = null;
-		mountCourse();
+		mountCourse(existingMusicSelection);
 		stackOverlayControls();
 	}
 

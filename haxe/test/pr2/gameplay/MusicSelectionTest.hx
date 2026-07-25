@@ -1,6 +1,11 @@
 package pr2.gameplay;
 
 import openfl.events.Event;
+import openfl.media.Sound;
+import openfl.media.SoundChannel;
+import openfl.media.SoundLoaderContext;
+import openfl.media.SoundTransform;
+import openfl.net.URLRequest;
 import pr2.audio.GameMusic;
 import pr2.audio.MusicCatalog.MusicTrack;
 import pr2.lobby.account.Settings;
@@ -15,6 +20,7 @@ class MusicSelectionTest {
 		if (pr2.DeterministicTestMode.finishSmokeSuite("MusicSelectionTest")) return;
 		testUserSongSwitching();
 		testStreamingEndpoint();
+		testPendingStreamCannotOutlivePlayer();
 		testArtifactSong();
 		trace('MusicSelectionTest passed $assertions assertions');
 	}
@@ -70,6 +76,25 @@ class MusicSelectionTest {
 		selection.remove();
 	}
 
+	private static function testPendingStreamCannotOutlivePlayer():Void {
+		var pending = new RecordingSound();
+		var music = new GameMusic(function():Sound return pending);
+		var track:MusicTrack = {id: "3", label: "Paradise on E - API", file: "03_paradise-on-e_ng32772.mp3"};
+		music.setSong(track);
+		assertEquals(1, pending.loads, "music starts loading the selected stream");
+		assertEquals(0, pending.plays, "music waits for the stream before creating a channel");
+		music.remove();
+		pending.dispatchEvent(new Event(Event.COMPLETE));
+		assertEquals(0, pending.plays, "a removed music player cannot start after its pending load finishes");
+
+		var ready = new RecordingSound();
+		music = new GameMusic(function():Sound return ready);
+		music.setSong(track);
+		ready.dispatchEvent(new Event(Event.COMPLETE));
+		assertEquals(1, ready.plays, "the current music player starts exactly once when its stream is ready");
+		music.remove();
+	}
+
 	private static function assertEquals(expected:Dynamic, actual:Dynamic, message:String):Void {
 		assertions++;
 		if (expected != actual) throw '$message: expected $expected, got $actual';
@@ -79,6 +104,26 @@ class MusicSelectionTest {
 		assertions++;
 		if (Math.abs(expected - actual) > tolerance) throw '$message: expected $expected +/- $tolerance, got $actual';
 	}
+}
+
+private class RecordingSound extends Sound {
+	public var loads(default, null):Int = 0;
+	public var plays(default, null):Int = 0;
+
+	public function new() {
+		super();
+	}
+
+	override public function load(stream:URLRequest, context:SoundLoaderContext = null):Void {
+		loads++;
+	}
+
+	override public function play(startTime:Float = 0, loops:Int = 0, soundTransform:SoundTransform = null):SoundChannel {
+		plays++;
+		return null;
+	}
+
+	override public function close():Void {}
 }
 
 private class RecordingGameMusic extends GameMusic {

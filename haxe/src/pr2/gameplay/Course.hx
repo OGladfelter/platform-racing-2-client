@@ -85,6 +85,7 @@ class Course extends Sprite {
 	private final onChatLine:Null<String->Bool>;
 	private final onFrame:Null<LocalPlayerState->Void>;
 	private final commandHandler:CommandHandler;
+	private var suppliedMusicSelection:Null<MusicSelection>;
 
 	private final input:LocalPlayerInput = new LocalPlayerInput();
 
@@ -177,7 +178,7 @@ class Course extends Sprite {
 	private final blockVisuals:CourseBlockVisualController;
 
 	public function new(level:Level, data:ServerLevelData, config:LevelConfig, ?onChatLine:String->Bool, ?onFrame:LocalPlayerState->Void,
-			?commandHandler:CommandHandler) {
+			?commandHandler:CommandHandler, ?musicSelection:MusicSelection) {
 		super();
 		this.level = level;
 		this.data = data;
@@ -185,6 +186,7 @@ class Course extends Sprite {
 		this.onChatLine = onChatLine;
 		this.onFrame = onFrame;
 		this.commandHandler = commandHandler != null ? commandHandler : CommandHandler.commandHandler;
+		suppliedMusicSelection = musicSelection;
 		roster = new CourseRosterController(this);
 		blockVisuals = new CourseBlockVisualController(this);
 		particleEffects = new CourseParticleEffects(function() {
@@ -363,11 +365,33 @@ class Course extends Sprite {
 	}
 
 	private function buildMusicSelection():Void {
-		musicSelection = new MusicSelection();
+		var shouldSetSong = suppliedMusicSelection == null;
+		if (suppliedMusicSelection != null) {
+			musicSelection = suppliedMusicSelection;
+			suppliedMusicSelection = null;
+		} else {
+			musicSelection = new MusicSelection();
+		}
 		musicSelection.x = MUSIC_X;
 		musicSelection.y = MUSIC_Y;
 		addChild(musicSelection);
-		musicSelection.setSong(data.song);
+		if (shouldSetSong) {
+			musicSelection.setSong(data.song);
+		}
+	}
+
+	/**
+		Transfers the level music UI/player to a replacement test-course shell.
+		Flash's TestCourse.restart() keeps its Course and GameSound instances, so
+		the song continues instead of opening another stream.
+	**/
+	public function releaseMusicSelection():Null<MusicSelection> {
+		var released = musicSelection;
+		musicSelection = null;
+		if (released != null && released.parent != null) {
+			released.parent.removeChild(released);
+		}
+		return released;
 	}
 
 	private function buildRaceChat():Void {
