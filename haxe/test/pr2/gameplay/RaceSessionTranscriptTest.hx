@@ -74,6 +74,10 @@ class RaceSessionTranscriptTest {
 		assertEquals(true, game.course == null, "course not built until the payload arrives");
 		assertTrue(game.pendingLocalInit != null, "local character frame buffered while loading");
 		assertEquals(true, game.pendingBeginRace, "begin-race frame buffered while loading");
+		handler.dispatch("cowboyMode", []);
+		assertEquals(1, game.cowboyModes.length, "cowboy announcement renders while the level payload is loading");
+		assertEquals(true, handler.dispatch("setHats7", ["5", "16777215", "-1"]),
+			"cowboy hat update is buffered for the queued local character");
 
 		// The payload arrives: the course mounts and the buffered frames apply.
 		game.onLevelData(levelData());
@@ -82,6 +86,8 @@ class RaceSessionTranscriptTest {
 		assertTrue(isReady(game.entry.state), "entry is ready once the payload validates");
 		assertTrue(course.localCharacter != null, "buffered local character applied on mount");
 		assertEquals(7, course.localCharacter.tempID, "buffered local character keeps its temp id");
+		assertEquals(5, course.localCharacter.hat1, "buffered cowboy hat update replays after mount");
+		assertTrue(course.localCharacter.stateSnapshot().speedStat >= 100, "replayed cowboy hat activates its stat boost");
 		assertEquals(false, course.raceStarted, "race waits for the countdown");
 		assertTrue(course.countdown != null, "begin-race mounts the countdown");
 		var startPos = course.localCharacter.getPos();

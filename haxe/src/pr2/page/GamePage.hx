@@ -26,6 +26,7 @@ import pr2.gameplay.QuitButton;
 import pr2.gameplay.SpecialEvent;
 import pr2.gameplay.player.LocalPlayerState;
 import pr2.lobby.LobbySession;
+import pr2.net.CommandHandler;
 import pr2.net.LobbySocket;
 import pr2.net.LevelDataClient;
 import pr2.net.ServerLevelData;
@@ -53,6 +54,8 @@ class GamePage extends Page implements GameCommandDelegate {
 	private var playerDone:Bool = false;
 	private var pendingLocalInit:Null<LocalCharacterInit>;
 	private var pendingRemoteInits:Array<RemoteCharacterInit> = [];
+	private var pendingHatUpdates:Map<Int, Array<String>> = [];
+	private var pendingHatCommandIds:Map<Int, Bool> = [];
 	private var pendingBeginRace:Bool = false;
 	private var pendingEggSeed:Null<Int>;
 	private var pendingEggAdds:Array<Int> = [];
@@ -118,11 +121,14 @@ class GamePage extends Page implements GameCommandDelegate {
 			course.onFinish = onLocalFinish;
 			course.onOutOfTime = onCourseOutOfTime;
 			if (pendingLocalInit != null) {
-				course.createLocalCharacter(pendingLocalInit);
+				var localInit = pendingLocalInit;
+				course.createLocalCharacter(localInit);
 				pendingLocalInit = null;
+				replayPendingHatUpdate(localInit.tempId);
 			}
 			for (init in pendingRemoteInits) {
 				course.createRemoteCharacter(init);
+				replayPendingHatUpdate(init.tempId);
 			}
 			pendingRemoteInits.resize(0);
 			if (pendingBeginRace) {
@@ -165,6 +171,7 @@ class GamePage extends Page implements GameCommandDelegate {
 			commandShell.remove();
 			commandShell = null;
 		}
+		clearPendingHatCommands();
 		removeEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
 		removeEventListener(Event.REMOVED_FROM_STAGE, onRemovedFromStage);
 		detachSpecialEventListeners();
@@ -251,6 +258,7 @@ class GamePage extends Page implements GameCommandDelegate {
 
 	public function createRemoteCharacter(init:RemoteCharacterInit):Void {
 		if (course == null) {
+			bufferHatCommand(init.tempId);
 			pendingRemoteInits.push(init);
 			return;
 		}
@@ -259,10 +267,48 @@ class GamePage extends Page implements GameCommandDelegate {
 
 	public function createLocalCharacter(init:LocalCharacterInit):Void {
 		if (course == null) {
+			if (pendingLocalInit != null && pendingLocalInit.tempId != init.tempId) {
+				discardPendingHatCommand(pendingLocalInit.tempId);
+			}
+			bufferHatCommand(init.tempId);
 			pendingLocalInit = init;
 			return;
 		}
 		course.createLocalCharacter(init);
+	}
+
+	private function bufferHatCommand(tempId:Int):Void {
+		if (pendingHatCommandIds.exists(tempId)) {
+			return;
+		}
+		pendingHatCommandIds.set(tempId, true);
+		CommandHandler.commandHandler.defineCommand("setHats" + tempId, function(args:Array<String>):Void {
+			pendingHatUpdates.set(tempId, args.copy());
+		});
+	}
+
+	private function replayPendingHatUpdate(tempId:Int):Void {
+		pendingHatCommandIds.remove(tempId);
+		var args = pendingHatUpdates.get(tempId);
+		pendingHatUpdates.remove(tempId);
+		if (args != null) {
+			CommandHandler.commandHandler.dispatch("setHats" + tempId, args);
+		}
+	}
+
+	private function discardPendingHatCommand(tempId:Int):Void {
+		if (pendingHatCommandIds.remove(tempId)) {
+			CommandHandler.commandHandler.defineCommand("setHats" + tempId, null);
+		}
+		pendingHatUpdates.remove(tempId);
+	}
+
+	private function clearPendingHatCommands():Void {
+		for (tempId in pendingHatCommandIds.keys()) {
+			CommandHandler.commandHandler.defineCommand("setHats" + tempId, null);
+		}
+		pendingHatCommandIds = [];
+		pendingHatUpdates = [];
 	}
 
 	public function beginRace():Void {

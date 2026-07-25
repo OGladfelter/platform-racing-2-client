@@ -1,9 +1,12 @@
 package pr2.gameplay;
 
+import openfl.display.DisplayObject;
+import openfl.display.DisplayObjectContainer;
 import openfl.display.InteractiveObject;
 import openfl.events.KeyboardEvent;
 import openfl.events.MouseEvent;
 import openfl.geom.Point;
+import openfl.text.TextField;
 import openfl.ui.Keyboard;
 import pr2.lobby.LobbyArt;
 import pr2.lobby.dialogs.ConfirmPopup;
@@ -280,6 +283,9 @@ class QuitButtonTest {
 		assertEquals(200.0, mode.y, "cowboyMode centers its authored origin vertically");
 		@:privateAccess assertEquals("assets/effects/cowboy.lottie.json", mode.art.timeline.sourcePath, "cowboyMode uses semantic Lottie data");
 		@:privateAccess assertEquals(1, mode.art.currentFrame, "cowboyMode starts on authored frame one");
+		@:privateAccess var announcement = findVisibleText(mode.art.timeline);
+		assertEquals(true, announcement != null, "cowboyMode renders its authored announcement text");
+		assertEquals("Super Flying Cowboy Mode: Activate!!!!!", announcement.text, "cowboyMode preserves the complete Flash announcement");
 
 		for (_ in 0...120) {
 			mode.advance();
@@ -322,6 +328,21 @@ class QuitButtonTest {
 
 	private static function button(owner:openfl.display.DisplayObjectContainer):InteractiveObject {
 		return Std.downcast(DisplayUtil.findByName(owner, "quit_bt"), InteractiveObject);
+	}
+
+	private static function findVisibleText(root:DisplayObjectContainer):Null<TextField> {
+		for (index in 0...root.numChildren) {
+			var child:DisplayObject = root.getChildAt(index);
+			if (!child.visible) continue;
+			var text = Std.downcast(child, TextField);
+			if (text != null && text.text != "") return text;
+			var container = Std.downcast(child, DisplayObjectContainer);
+			if (container != null) {
+				var nested = findVisibleText(container);
+				if (nested != null) return nested;
+			}
+		}
+		return null;
 	}
 
 	private static function closeAll():Void {
