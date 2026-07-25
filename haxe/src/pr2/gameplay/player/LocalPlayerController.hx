@@ -963,7 +963,9 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		vy *= -0.25;
 		jumpVelBoost = 0;
 		if (bumpPlaysThump(block)) {
-			blockVisualEvents.push(new BlockVisualEvent(BlockVisualEventKind.BlockBumpSound, block.x, block.y));
+			var visualImpulse = RotationMath.rotatePoint(0, -15, courseRotation);
+			blockVisualEvents.push(new BlockVisualEvent(BlockVisualEventKind.BlockBumpSound, block.x, block.y, 1, null, null, visualImpulse.x,
+				visualImpulse.y));
 			blockController.startBlockBounce(block, 0, -15);
 		}
 		applyBumpEffect(block, input, bumpForce, preBumpY);

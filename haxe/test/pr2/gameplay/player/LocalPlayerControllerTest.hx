@@ -127,6 +127,7 @@ class LocalPlayerControllerTest {
 		testRotationMapsSafePosition();
 		testRotatedSafeSpotUsesDisplayedBlockPosition();
 		testRotatedSafetyAndMapReturnsUseRotatedSafeSpot();
+		testRotatedBlockBumpUsesCounterRotatedVisualImpulse();
 		testCollisionSnapsAgainstRotatedCeiling();
 		testCollisionStopsLeftMovementAfterRotation();
 		testArrowPushUsesRotatedCourseDirection();
@@ -2315,6 +2316,27 @@ class LocalPlayerControllerTest {
 		state = player.stateSnapshot();
 		assertClose(-135, state.x, "rotated map return restores displayed checkpoint x");
 		assertClose(60, state.y, "rotated map return restores displayed checkpoint y");
+	}
+
+	private static function testRotatedBlockBumpUsesCounterRotatedVisualImpulse():Void {
+		var expected = [
+			{rotation: 0, x: 0, y: -15},
+			{rotation: 90, x: -15, y: 0},
+			{rotation: -90, x: 15, y: 0},
+			{rotation: 180, x: 0, y: 15}
+		];
+		for (sample in expected) {
+			var level = singleBlockLevel(BlockType.Solid);
+			var controller = new LocalPlayerController(level);
+			controller.consumeBlockVisualEvents();
+			@:privateAccess controller.courseRotation = sample.rotation;
+			@:privateAccess controller.onBump(level.blockAt(2, 3), new LocalPlayerInput(), "rotatedVisualTest");
+
+			var events = controller.consumeBlockVisualEvents();
+			assertEquals(1, events.length, 'rotation ${sample.rotation} emits one block bump');
+			assertClose(sample.x, events[0].hitX, 'rotation ${sample.rotation} counter-rotates bump x');
+			assertClose(sample.y, events[0].hitY, 'rotation ${sample.rotation} counter-rotates bump y');
+		}
 	}
 
 	private static function testCollisionSnapsAgainstRotatedCeiling():Void {
