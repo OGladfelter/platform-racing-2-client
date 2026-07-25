@@ -942,6 +942,10 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		touch(block);
 		var standForce = Math.round(vy * 2);
 		maybeFreezeSantaBlock(block);
+		if (!block.type.isSolid() && !isBlockFrozen(block)) {
+			endBlockTrace(trace);
+			return;
+		}
 		setPlayerY(rotatedBlockPos(block).y);
 		vy = 0;
 		grounded = true;
@@ -1822,12 +1826,10 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	}
 
 	private function maybeFreezeSantaBlock(block:LevelBlock):Void {
-		if (!santaHatActive || !canSantaFreeze(block) || isBlockFrozen(block)) {
+		if (!santaHatActive || !canSantaFreeze(block) || isBlockFrozen(block) || !blockController.canSantaFreeze(block)) {
 			return;
 		}
-		var state = blockState(blockKey(block.x, block.y));
-		state.frozenIceAlpha = BlockController.SANTA_ICE_OVERLAY_START_ALPHA;
-		state.frozenIceFadeRate = BlockController.SANTA_ICE_OVERLAY_FADE_RATE;
+		blockController.freezeBlock(block.x, block.y);
 	}
 
 	private function canSantaFreeze(block:LevelBlock):Bool {

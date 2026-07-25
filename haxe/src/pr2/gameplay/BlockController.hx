@@ -21,6 +21,7 @@ class BlockController {
 	public static inline var VANISH_REAPPEAR_FRAMES:Int = 54;
 	public static inline var SANTA_ICE_OVERLAY_START_ALPHA:Float = 1;
 	public static inline var SANTA_ICE_OVERLAY_FADE_RATE:Float = 0.025;
+	public static inline var SANTA_REFREEZE_COOLDOWN_MS:Int = 4000;
 	public static inline var ICE_OVERLAY_REMOVE_ALPHA:Float = 0.05;
 	public static inline var TELEPORT_RESET_FRAMES:Int = Constants.FRAME_RATE * 3;
 	public static inline var MOVE_PREVIEW_MS:Int = 1000;
@@ -42,7 +43,12 @@ class BlockController {
 
 	public function new(level:Level, ?clock:Void->Float) {
 		this.level = level;
-		this.clock = clock == null ? function():Float return haxe.Timer.stamp() * 1000 : clock;
+		if (clock == null) {
+			var controllerStartedAtMs = haxe.Timer.stamp() * 1000;
+			this.clock = function():Float return haxe.Timer.stamp() * 1000 - controllerStartedAtMs;
+		} else {
+			this.clock = clock;
+		}
 	}
 
 	public function bindPlayer(owner:LocalPlayerController, startImmediately:Bool):Void {
@@ -378,12 +384,22 @@ class BlockController {
 		return state != null && state.frozenIceAlpha != null;
 	}
 
+	public function canSantaFreeze(block:LevelBlock):Bool {
+		var state = stateAt(owner.blockKey(block.x, block.y));
+		return state == null
+			|| state.lastFrozenAtMs == null
+			|| clock() - state.lastFrozenAtMs > SANTA_REFREEZE_COOLDOWN_MS;
+	}
+
 	public function freezeBlock(tileX:Int, tileY:Int, fadeRate:Float = SANTA_ICE_OVERLAY_FADE_RATE):Void {
 		var block = level.blockAt(tileX, tileY);
 		if (block == null) {
 			return;
 		}
 		var state = stateFor(block);
+		if (state.frozenIceAlpha == null) {
+			state.lastFrozenAtMs = clock();
+		}
 		state.frozenIceAlpha = SANTA_ICE_OVERLAY_START_ALPHA;
 		state.frozenIceFadeRate = fadeRate;
 	}

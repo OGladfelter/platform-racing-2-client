@@ -1,7 +1,6 @@
 package pr2.gameplay.player;
 
 import pr2.gameplay.Items;
-import pr2.gameplay.BlockController;
 import pr2.gameplay.RotationMath;
 import pr2.gameplay.player.BlockVisualEvent.BlockVisualEventKind;
 import pr2.gameplay.player.LocalPlayerControllerTypes.PendingMinePlacement;
@@ -319,9 +318,7 @@ class ItemController {
 			var block = owner.getBlockAtPixel(shotX, shotY);
 			if (block != null) {
 				if (block.type != BlockType.Ice) {
-					var state = owner.blockState(owner.blockKey(block.x, block.y));
-					state.frozenIceAlpha = BlockController.SANTA_ICE_OVERLAY_START_ALPHA;
-					state.frozenIceFadeRate = BlockController.SANTA_ICE_OVERLAY_FADE_RATE;
+					owner.blockController.freezeBlock(block.x, block.y);
 				}
 				return;
 			}

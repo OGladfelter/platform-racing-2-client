@@ -1,6 +1,7 @@
 package pr2.character;
 
 import openfl.events.Event;
+import pr2.gameplay.BlockController;
 import pr2.gameplay.player.LocalPlayerController;
 import pr2.gameplay.player.LocalPlayerInput;
 import pr2.level.BlockType;
@@ -22,6 +23,7 @@ class LocalCharacterTest {
 		testCowboyHatFlightDoesNotRepeatWaterExitBoost();
 		testMoonHatReducesGravityUntilRemoved();
 		testSantaHatStandsOnWaterAndSafetyAndRaisesSpeedCapUntilRemoved();
+		testSantaHatFreezeCooldownLetsPlayerEnterWater();
 		testPartyHatIgnoresStingAndZapHurtReactions();
 		testTopHatPassesThroughVanishBlocks();
 		testCrownHatIgnoresMineHitsExceptDeathmatch();
@@ -172,6 +174,41 @@ class LocalCharacterTest {
 			removed.step(new LocalPlayerInput(false, true));
 		}
 		assertClose(normal.stateSnapshot().vx, removed.stateSnapshot().vx, "santa hat removal restores max horizontal velocity");
+	}
+
+	private static function testSantaHatFreezeCooldownLetsPlayerEnterWater():Void {
+		var nowMs:Float = 100000;
+		var waterLevel = nonSolidFloorLevel(BlockType.Water);
+		var waterBlocks = new BlockController(waterLevel, function():Float return nowMs);
+		var swimmer = new LocalCharacter(waterLevel, 1, 1, 1, 1, waterBlocks);
+		swimmer.setHats([7, 0xFFFFFF, -1]);
+
+		swimmer.step(new LocalPlayerInput());
+		assertClose(0.975, swimmer.blockIceOverlayAlphaAt(2, 3), "santa initially freezes water");
+		for (_ in 0...60) {
+			swimmer.step(new LocalPlayerInput());
+		}
+		assertEquals(0.0, swimmer.blockIceOverlayAlphaAt(2, 3), "water stays thawed during the santa cooldown");
+		assertEquals(false, swimmer.stateSnapshot().grounded, "santa falls through thawed water");
+		assertEquals("water", swimmer.stateSnapshot().mode, "santa can swim after the frozen water thaws");
+
+		var floorLevel = nonSolidFloorLevel(BlockType.Basic);
+		var floorBlocks = new BlockController(floorLevel, function():Float return nowMs);
+		var santa = new LocalCharacter(floorLevel, 1, 1, 1, 1, floorBlocks);
+		santa.setHats([7, 0xFFFFFF, -1]);
+		santa.step(new LocalPlayerInput());
+		for (_ in 0...45) {
+			santa.step(new LocalPlayerInput());
+		}
+		assertEquals(0.0, santa.blockIceOverlayAlphaAt(2, 3), "santa does not immediately refreeze a thawed block");
+
+		nowMs = 104000;
+		santa.step(new LocalPlayerInput());
+		assertEquals(0.0, santa.blockIceOverlayAlphaAt(2, 3), "exactly four elapsed seconds remain on cooldown");
+
+		nowMs = 104001;
+		santa.step(new LocalPlayerInput());
+		assertClose(0.975, santa.blockIceOverlayAlphaAt(2, 3), "santa can refreeze after more than four elapsed seconds");
 	}
 
 	private static function testPartyHatIgnoresStingAndZapHurtReactions():Void {
