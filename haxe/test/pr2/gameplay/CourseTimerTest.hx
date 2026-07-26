@@ -1,6 +1,9 @@
 package pr2.gameplay;
 
 import openfl.events.Event;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateDiagnostics;
+import pr2.runtime.FrameRateSettings;
 
 class CourseTimerTest {
 	private static var assertions:Int = 0;
@@ -11,7 +14,53 @@ class CourseTimerTest {
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CourseTimerTest")) return;
 		testRacingModeCountsUpAndAddTimeMovesStartTime();
 		testUrgencyPauseAndTimeoutBehavior();
+		testTimeoutAndUrgencyPulseMatchAtBothPresentationRates();
 		trace('CourseTimerTest passed $assertions assertions');
+	}
+
+	private static function testTimeoutAndUrgencyPulseMatchAtBothPresentationRates():Void {
+		var baseline = runTimeoutCadence(false);
+		var smooth = runTimeoutCadence(true);
+		assertEquals(1, baseline.calls, "30 FPS timeout fires once");
+		assertEquals(1, smooth.calls, "60 FPS timeout fires once");
+		assertEquals(15, baseline.simulationFrames, "30 FPS timeout boundary observes fifteen authoritative pulse frames");
+		assertEquals(15, smooth.simulationFrames, "60 FPS timeout boundary observes the same authoritative pulse frames");
+		assertEquals(15, baseline.stageFrames, "30 FPS timeout boundary is reached after fifteen display frames");
+		assertEquals(30, smooth.stageFrames, "60 FPS timeout follows wall time across thirty display frames");
+		assertFloatEquals(baseline.scale, smooth.scale, 0.001,
+			"urgency pulse advances only on authoritative frames at either presentation rate");
+	}
+
+	private static function runTimeoutCadence(smooth:Bool):{
+		calls:Int,
+		stageFrames:Int,
+		simulationFrames:Int,
+		scale:Float
+	} {
+		nowMs = 0;
+		var calls = 0;
+		var timer = new CourseTimer({now: now, onOutOfTime: function():Void calls++});
+		timer.setTime(1);
+		timer.init();
+		var clock = new FrameClock(FrameRateSettings.fromQuery(smooth ? "?smooth60=1" : null, true),
+			new FrameRateDiagnostics(function():Float return 0));
+		@:privateAccess FrameClock.setCurrentForTests(clock);
+		var millisecondsPerFrame = 1000 / (smooth ? 60 : 30);
+		while (calls == 0) {
+			clock.advanceFrame();
+			nowMs = clock.stageFrameNumber * millisecondsPerFrame;
+			timer.dispatchEvent(new Event(Event.ENTER_FRAME));
+			timer.tickForTests();
+		}
+		var result = {
+			calls: calls,
+			stageFrames: clock.stageFrameNumber,
+			simulationFrames: clock.simulationFrameNumber,
+			scale: timer.debugHolderScale()
+		};
+		timer.remove();
+		@:privateAccess FrameClock.setCurrentForTests(null);
+		return result;
 	}
 
 	private static function testCountdownModeUsesServerClockAndAddTime():Void {

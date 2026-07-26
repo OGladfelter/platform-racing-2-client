@@ -10,6 +10,8 @@ import openfl.text.TextField;
 import openfl.text.TextFieldAutoSize;
 import openfl.text.TextFormat;
 import pr2.Constants;
+import pr2.character.PhysicsParticle;
+import pr2.character.RemoteCharacter;
 import pr2.runtime.FontResolver;
 import pr2.gameplay.player.LocalPlayerState;
 import pr2.gameplay.Course;
@@ -22,6 +24,8 @@ import pr2.net.LevelDataClient;
 import pr2.net.ServerConfig;
 import pr2.net.ServerLevelData;
 import pr2.level.Level;
+import pr2.level.Level.LevelArtLayer;
+import pr2.level.Level.LevelDrawAction;
 import pr2.level.Level.LevelBlock;
 import pr2.level.LevelDecoder;
 import pr2.level.ObjectCodes;
@@ -138,12 +142,40 @@ class CampaignTestScreen extends Sprite {
 	private function buildLocalLevel():Void {
 		var name = localLevel == null ? "rotate" : localLevel.toLowerCase();
 		var blocks:Array<LevelBlock> = [];
+		var artLayers:Array<LevelArtLayer> = [];
 		function add(code:Int, col:Int, row:Int):Void {
 			blocks.push(LevelBlock.fromWorldPixels(code, col * 30, row * 30));
 		}
 
 		var title;
 		switch (name) {
+			case "large":
+				title = "Local Large Benchmark";
+				for (col in 0...220) {
+					add(ObjectCodes.BLOCK_BRICK, col, 20);
+					if (col % 3 == 0) add(ObjectCodes.BLOCK_BASIC1, col, 15);
+					if (col % 5 == 0) add(ObjectCodes.BLOCK_BASIC2, col, 10);
+					if (col % 7 == 0) add(ObjectCodes.BLOCK_CRUMBLE, col, 5);
+				}
+				add(ObjectCodes.BLOCK_START1, 20, 19);
+
+			case "art-heavy":
+				title = "Local Art Heavy Benchmark";
+				for (col in 6...34) {
+					add(ObjectCodes.BLOCK_BRICK, col, 20);
+				}
+				add(ObjectCodes.BLOCK_START1, 20, 19);
+				var actions:Array<LevelDrawAction> = [
+					new LevelDrawAction("c", [0xFFFFFF]),
+					new LevelDrawAction("t", [2])
+				];
+				for (index in 0...480) {
+					var x = 180 + index % 28 * 30;
+					var y = 180 + Std.int(index / 28) % 14 * 24;
+					actions.push(new LevelDrawAction("d", [x, y, 20, -12, 10, 20, -24, 6]));
+				}
+				artLayers.push(new LevelArtLayer(actions));
+
 			case "flat":
 				// A wide open floor with a start block: a minimal physics sandbox,
 				// matching what the old harness's flat-level fixture provided.
@@ -198,7 +230,7 @@ class CampaignTestScreen extends Sprite {
 				add(ObjectCodes.BLOCK_ROTATE_RIGHT, 20, 16);
 		}
 
-		var level = Level.fromDecoded(0x6688AA, blocks);
+		var level = Level.fromDecoded(0x6688AA, blocks, artLayers);
 		var vars = new Map<String, String>();
 		vars.set("title", title);
 		vars.set("gravity", "1");
@@ -228,6 +260,9 @@ class CampaignTestScreen extends Sprite {
 			course.remove();
 			course = null;
 		}
+		#if js
+		untyped Browser.window.__pr2RunSmooth60ReplayAction = null;
+		#end
 		if (parent != null) parent.removeChild(this);
 	}
 
@@ -285,8 +320,107 @@ class CampaignTestScreen extends Sprite {
 		}
 		var config = LevelConfig.fromServerData(data);
 		course = new Course(level, data, config, handleRaceChatLine, onCourseFrame);
+		#if js
+		untyped Browser.window.__pr2RunSmooth60ReplayAction = function(action:String):String {
+			return runSmooth60ReplayAction(action);
+		};
+		#end
 		// Keep the course above the background but below the status overlay.
 		addChildAt(course, 1);
+	}
+
+	public function runSmooth60ReplayAction(action:String):String {
+		if (course == null || course.localCharacter == null) {
+			return "course-unavailable";
+		}
+		var normalized = action == null ? "" : action.toLowerCase();
+		var state = course.localCharacter.stateSnapshot();
+		var result = switch (normalized) {
+			case "teleport":
+				course.effectBackground.addEffect(["Teleport", Std.string(Math.round(state.x)), Std.string(Math.round(state.y - 25))]);
+				course.effectBackground.addEffect(["Teleport", Std.string(Math.round(state.x + 120)), Std.string(Math.round(state.y - 25))]);
+				"teleport:2";
+			case "spectate":
+				var remote = replayRemoteCharacter();
+				course.toggleSpectatePossible(true);
+				course.changeSpectate(remote.tempID);
+				'spectate:${remote.tempID}';
+			case "correction":
+				var remote = replayRemoteCharacter();
+				remote.pos(["120", "-20"]);
+				'correction:${remote.tempID}';
+			case "particles":
+				spawnReplayParticles(72);
+				"particles:72";
+			default:
+				'unsupported:$normalized';
+		}
+		#if js
+		Browser.document.body.setAttribute("data-pr2-smooth60-replay-action", result);
+		#end
+		return result;
+	}
+
+	private function replayRemoteCharacter():RemoteCharacter {
+		var remote = course.getRemoteCharacter(60);
+		if (remote == null) {
+			remote = course.createRemoteCharacter({
+				tempId: 60,
+				userName: "Smooth Rival",
+				hatId: 6,
+				headId: 1,
+				bodyId: 1,
+				feetId: 1,
+				group: "0",
+				hatColor: 0xFFD34D,
+				hatColor2: -1,
+				headColor: 0xF2C49B,
+				headColor2: -1,
+				bodyColor: 0x4E8BE8,
+				bodyColor2: -1,
+				feetColor: 0x333333,
+				feetColor2: -1
+			});
+		}
+		var localState = course.localCharacter.stateSnapshot();
+		remote.setPos(localState.x + 100, localState.y);
+		remote.stepFrame();
+		return remote;
+	}
+
+	private function spawnReplayParticles(count:Int):Void {
+		var localState = course.localCharacter.stateSnapshot();
+		for (index in 0...count) {
+			var angle = index * Math.PI * 2 / count;
+			var speed = 1.5 + index % 5;
+			var particle = new PhysicsParticle({
+				graphic: "DjinnIceGraphic",
+				colors: [0x66CCFF, 0xFFFFFF],
+				life: 240,
+				startAlpha: 1,
+				minVelAlpha: 0,
+				maxVelAlpha: 0,
+				minVelX: Math.cos(angle) * speed,
+				maxVelX: Math.cos(angle) * speed,
+				minVelY: Math.sin(angle) * speed - 3,
+				maxVelY: Math.sin(angle) * speed - 3,
+				velScaleX: 0,
+				velScaleY: 0.08,
+				fricX: 0.99,
+				fricY: 0.99,
+				minOffsetX: 0,
+				maxOffsetX: 0,
+				minOffsetY: 0,
+				maxOffsetY: 0,
+				minScale: 0.65,
+				maxScale: 1.15,
+				minX: localState.x,
+				maxX: localState.x,
+				minY: localState.y - 35,
+				maxY: localState.y - 35
+			}, function():Float return 0.5);
+			course.effectBackground.addChild(particle);
+		}
 	}
 
 	private function onError(message:String):Void {
@@ -363,8 +497,8 @@ class CampaignTestScreen extends Sprite {
 		#end
 	}
 
-	/** Slim per-frame loop: only reports the harness debug phase; the Course owns
-		the actual gameplay/render/HUD update. */
+	/** Presentation-rate by design: this only reports harness diagnostics; the
+		Course owns the simulation-timed gameplay/render/HUD update. */
 	private function onHarnessFrame(event:Event):Void {
 		if (course == null || course.levelRenderer == null) {
 			return;

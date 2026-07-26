@@ -347,6 +347,14 @@ class CharacterLifecycleTest {
 		assertEquals(123.0, sting.x, "sting follows owner x each frame");
 		assertEquals(234.0, sting.y, "sting follows owner y each frame");
 		assertEquals(0.95, sting.alpha, "sting fades by Flash alpha delta");
+		course.localCharacter.setPresentationWorldOffset(2.5, -1.5);
+		sting.renderPresentationFrame();
+		assertEquals(125.5, sting.x, "sting presentation follows the owner's disposable horizontal pose");
+		assertEquals(232.5, sting.y, "sting presentation follows the owner's disposable vertical pose");
+		assertEquals(0.95, sting.alpha, "sting presentation does not advance its fade lifetime");
+		course.localCharacter.clearPresentationWorldOffset();
+		sting.renderPresentationFrame();
+		assertEquals(123.0, sting.x, "sting presentation snaps with its owner when the owner pose snaps");
 		for (_ in 0...19) {
 			sting.dispatchEvent(new Event(Event.ENTER_FRAME));
 		}
@@ -471,6 +479,25 @@ class CharacterLifecycleTest {
 		var cameraTargetDuringMove = course.snakeManager.localHeadWorld();
 		assertTrue(cameraTargetDuringMove.x != cameraTargetBeforeMove.x || cameraTargetDuringMove.y != cameraTargetBeforeMove.y,
 			"the empty Snake sprite moves smoothly every frame for camera follow");
+		course.onEnterFrame(new Event(Event.ENTER_FRAME));
+		var cameraTargetAfterSecondMove = course.snakeManager.localHeadWorld();
+		course.snakeManager.renderPresentationFrame();
+		var presentedHead = course.snakeManager.localPresentedHeadWorld();
+		assertEquals(
+			cameraTargetAfterSecondMove.x + (cameraTargetAfterSecondMove.x - cameraTargetDuringMove.x) * 0.5,
+			presentedHead.x,
+			"Snake presentation extrapolates its moving controller by one visual half-step"
+		);
+		assertEquals(
+			cameraTargetAfterSecondMove.y + (cameraTargetAfterSecondMove.y - cameraTargetDuringMove.y) * 0.5,
+			presentedHead.y,
+			"Snake presentation extrapolates its moving controller in either travel axis"
+		);
+		var authoritativeHeadAfterPresentation = course.snakeManager.localHeadWorld();
+		assertEquals(cameraTargetAfterSecondMove.x, authoritativeHeadAfterPresentation.x,
+			"Snake presentation does not change authoritative horizontal state");
+		assertEquals(cameraTargetAfterSecondMove.y, authoritativeHeadAfterPresentation.y,
+			"Snake presentation does not change authoritative vertical state");
 		assertEquals(1, course.snakeManager.trailCount(), "moving between tile centers does not run a block-entry check early");
 		for (_ in 0...SnakeManager.MOVE_FRAMES_PER_TILE) course.onEnterFrame(new Event(Event.ENTER_FRAME));
 		assertEquals(2, course.snakeManager.trailCount(), "entering the next tile adds a new Snake block and leaves the old block as trail");
@@ -705,6 +732,33 @@ class CharacterLifecycleTest {
 		assertEquals(-19, Std.int(physicsEgg.posY), "egg gravity advances vertical position before landing");
 		assertTrue(physicsEgg.display.alpha > 0, "egg fades in during movement step");
 
+		var presentationLevel = Level.fromDecoded(0xffffff, []);
+		var presentationRound = new EggRound(new CommandHandler(), function(_):Void {}, null, null, function(_, _):Void {});
+		presentationRound.initRound(777);
+		var presentationEggId = presentationRound.addFixedEgg(10, -100);
+		var presentationEgg = presentationRound.egg(presentationEggId);
+		presentationEgg.velX = 1;
+		presentationEgg.velY = 0;
+		presentationRound.step(presentationLevel, 0, null, null, false, false, false);
+		presentationRound.step(presentationLevel, 0, null, null, false, false, false);
+		var authoritativeEggX = presentationEgg.x;
+		presentationRound.renderPresentationFrame();
+		assertEquals(authoritativeEggX + 0.5, presentationEgg.display.x,
+			"moving egg presentation extrapolates its latest horizontal delta by a half-step");
+		assertEquals(authoritativeEggX, presentationEgg.x,
+			"moving egg presentation does not change its authoritative collision coordinate");
+
+		var projectileLayer = new Sprite();
+		var projectileRound = new EggRound(new CommandHandler(), function(_):Void {}, projectileLayer, null, function(_, _):Void {});
+		projectileRound.mountAttackVisual("Laser`100`-100`right`0`-1");
+		projectileRound.step(presentationLevel);
+		projectileRound.step(presentationLevel);
+		var projectileDisplay = projectileLayer.getChildAt(0);
+		var authoritativeProjectileX = projectileDisplay.x;
+		projectileRound.renderPresentationFrame();
+		assertEquals(authoritativeProjectileX + 14.5, projectileDisplay.x,
+			"egg attack projectile presentation extrapolates half of its 29-pixel simulation step");
+
 		physicsEgg.posX = 15;
 		physicsEgg.posY = -1;
 		physicsEgg.velY = 1;
@@ -712,6 +766,9 @@ class CharacterLifecycleTest {
 		assertEquals(0, Std.int(physicsEgg.posY), "egg lands on active block top");
 		assertEquals(0, Std.int(physicsEgg.velY), "egg landing clears falling velocity");
 		assertTrue(physicsEgg.grounded, "egg landing sets grounded state");
+		physicsRound.renderPresentationFrame();
+		assertEquals(physicsEgg.x + 0.0, physicsEgg.display.x,
+			"egg presentation snaps on landing instead of predicting through the block");
 
 		physicsEgg.posX = 29;
 		physicsEgg.posY = 0;
@@ -1198,6 +1255,19 @@ class CharacterLifecycleTest {
 		assertEquals(30, Std.int(falling.posY), "loose hat snaps to the block top");
 		assertEquals(30, Std.int(falling.display.y), "loose hat display follows physics position");
 		falling.remove();
+
+		var presented = course.addLooseHat(100, -100, 0, 5, 0xFFFFFF, -1, 5);
+		presented.velX = 2;
+		presented.velY = 0;
+		presented.step(course.level, 0, null, null, false, false, true);
+		presented.step(course.level, 0, null, null, false, false, true);
+		var authoritativeHatX = presented.posX;
+		presented.renderPresentationFrame();
+		assertEquals(authoritativeHatX + 1, presented.display.x,
+			"loose hat presentation extrapolates half of its latest horizontal simulation step");
+		assertEquals(authoritativeHatX, presented.posX,
+			"loose hat presentation does not change authoritative physics position");
+		presented.remove();
 
 		var pickup = course.addLooseHat(15, 0, 0, 6, 0x123456, -1, 2);
 		LobbySocket.resetSent();

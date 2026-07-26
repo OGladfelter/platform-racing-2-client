@@ -5,6 +5,7 @@ import openfl.display.Sprite;
 import openfl.events.Event;
 import pr2.assets.NativeAssetIds.StaticSvg;
 import pr2.assets.NativeAssets;
+import pr2.runtime.FrameClock;
 
 /**
 	Port of `effects.ArrowEffect`: the small drifting arrow particle emitted by
@@ -31,6 +32,7 @@ class ArrowEffect extends Sprite {
 	}
 
 	private function tick(_:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) return;
 		velY -= 0.1;
 		y -= velY;
 		alpha -= FADE_RATE;

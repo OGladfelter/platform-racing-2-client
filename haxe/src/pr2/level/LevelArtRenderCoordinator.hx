@@ -50,6 +50,7 @@ class LevelArtRenderCoordinator {
 	}
 
 	public function drawBatch(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		var deadline = Timer.stamp() + LevelRenderer.RENDER_FRAME_ESCAPE_SECONDS;
 		try {
 			drawNextForFrame(deadline);
@@ -134,8 +135,17 @@ class LevelArtRenderCoordinator {
 		var rasterCanvas = tiles.rasterCanvas;
 		if (rasterCanvas.parent == null) return;
 		var toLocal = rasterCanvas.transform.matrix.clone();
-		toLocal.concat(rasterCanvas.parent.transform.matrix);
-		toLocal.concat(owner.worldContainer.transform.matrix);
+		var layerIndex = owner.artLayerContainers.indexOf(Std.downcast(rasterCanvas.parent, Sprite));
+		if (layerIndex >= 0 && layerIndex < owner.level.artLayers.length) {
+			var layer = owner.level.artLayers[layerIndex];
+			toLocal.concat(owner.layerMatrix(
+				LevelRenderer.parallaxOffset(owner.rawOffsetX, layer.scale),
+				LevelRenderer.parallaxOffset(owner.rawOffsetY, layer.scale)
+			));
+		} else {
+			toLocal.concat(rasterCanvas.parent.transform.matrix);
+		}
+		toLocal.concat(owner.tweenRotationMatrix(owner.tweenRotation));
 		toLocal.invert();
 		var minX = Math.POSITIVE_INFINITY;
 		var minY = Math.POSITIVE_INFINITY;
@@ -175,6 +185,7 @@ class LevelArtRenderCoordinator {
 	}
 
 	private function onRasterAttachFrame(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		attachRasterTiles(LevelRenderer.ART_RASTER_ATTACH_TILES_PER_FRAME, Timer.stamp() + LevelRenderer.RENDER_FRAME_ESCAPE_SECONDS);
 		if (!hasQueuedTiles()) {
 			owner.artRasterAttachActive = false;

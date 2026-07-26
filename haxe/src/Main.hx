@@ -38,6 +38,11 @@ import pr2.page.MobileLobbyPage;
 import pr2.page.PageHolder;
 import pr2.page.SymbolPreview;
 import pr2.page.PopupPreview;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateDebugSignals;
+import pr2.runtime.FrameRateDiagnostics;
+import pr2.runtime.FrameRateFallbackPolicy;
+import pr2.runtime.FrameRateSettings;
 import pr2.ui.GpNotification;
 import pr2.ui.MuteButton;
 import pr2.ui.controls.NativeControl;
@@ -53,6 +58,12 @@ class Main extends Sprite {
 	private static inline var OFFLINE_LIST_DELAY_MS:Int = 20;
 
 	private var swfStats:Null<SWFStats>;
+	private final frameRateDebugSignals:FrameRateDebugSignals = new FrameRateDebugSignals();
+	private final frameRateFallbackPolicy:FrameRateFallbackPolicy = new FrameRateFallbackPolicy();
+	private var lastFallbackDiagnosticWindow:Int = 0;
+	private var fallbackPending:Bool = false;
+	public var frameRateSettings(default, null):FrameRateSettings;
+	public var frameClock(default, null):FrameClock;
 
 	public function new() {
 		super();
@@ -67,11 +78,17 @@ class Main extends Sprite {
 	private function init(?event:Event):Void {
 		removeEventListener(Event.ADDED_TO_STAGE, init);
 
-		stage.frameRate = Constants.FRAME_RATE;
+		stage.frameRate = Constants.DEFAULT_PRESENTATION_FRAME_RATE;
 		var query = currentQuery();
+		frameRateSettings = FrameRateSettings.fromQuery(query, smooth60SupportedOnCurrentTarget());
 		configureStage(query);
+		applyPresentationFrameRate();
+		frameRateDebugSignals.publish(frameRateSettings, FrameRateDiagnostics.shared);
 		pr2.app.AppStage.stage = stage;
-		swfStats = new SWFStats();
+		frameClock = new FrameClock(frameRateSettings);
+		frameClock.onFrame = publishFrameRateDiagnostics;
+		frameClock.install(stage);
+		swfStats = new SWFStats(frameRateSettings.presentationFrameRate);
 		FatalErrorReporter.installGlobalHandlers();
 		GpNotification.init(stage);
 		BrowserAudioUnlock.install();
@@ -97,6 +114,49 @@ class Main extends Sprite {
 		} catch (error:Dynamic) {
 			reportFatalError(error);
 		}
+	}
+
+	private function publishFrameRateDiagnostics(clock:FrameClock):Void {
+		var diagnostics = FrameRateDiagnostics.shared;
+		if (Constants.SMOOTH60_AUTOMATIC_FALLBACK_ENABLED
+			&& frameRateSettings.smooth60Enabled && clock.isSmoothPresentationActive
+			&& diagnostics.completedWindows > lastFallbackDiagnosticWindow) {
+			lastFallbackDiagnosticWindow = diagnostics.completedWindows;
+			fallbackPending = frameRateFallbackPolicy.observeWindow(
+				diagnostics.lastWindowPresentedFrames,
+				diagnostics.lastWindowElapsedMs
+			);
+		}
+		// Rebase only after an authoritative frame. The next 30 FPS callback is
+		// therefore the next simulation tick, with no duplicate or skipped phase.
+		if (fallbackPending && clock.isSimulationFrame) {
+			clock.use30FpsPresentation();
+			stage.frameRate = Constants.DEFAULT_PRESENTATION_FRAME_RATE;
+			if (swfStats != null) {
+				swfStats.useTargetFrameRate(Constants.DEFAULT_PRESENTATION_FRAME_RATE);
+			}
+			fallbackPending = false;
+		}
+		frameRateDebugSignals.publish(
+			frameRateSettings,
+			diagnostics,
+			clock.presentationFrameRate,
+			frameRateFallbackPolicy.unsupported
+		);
+	}
+
+	private function applyPresentationFrameRate():Void {
+		#if (js && html5)
+		stage.frameRate = frameRateSettings.presentationFrameRate;
+		#end
+	}
+
+	private static inline function smooth60SupportedOnCurrentTarget():Bool {
+		#if (js && html5)
+		return true;
+		#else
+		return false;
+		#end
 	}
 
 	private function configureStage(query:Null<String>):Void {

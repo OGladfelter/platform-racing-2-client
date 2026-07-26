@@ -3,8 +3,12 @@ package pr2;
 final class Constants {
 	public static inline var STAGE_WIDTH:Int = 550;
 	public static inline var STAGE_HEIGHT:Int = 400;
-	public static inline var FRAME_RATE:Int = 30;
-	public static inline var FIXED_TIMESTEP_SECONDS:Float = 1.0 / FRAME_RATE;
+	public static inline var SIMULATION_FRAME_RATE:Int = 30;
+	public static inline var DEFAULT_PRESENTATION_FRAME_RATE:Int = 30;
+	public static inline var SMOOTH_PRESENTATION_FRAME_RATE:Int = 60;
+	/** Disabled while `smooth60=1` is used for deterministic 60 FPS testing. */
+	public static inline var SMOOTH60_AUTOMATIC_FALLBACK_ENABLED:Bool = false;
+	public static inline var FIXED_TIMESTEP_SECONDS:Float = 1.0 / SIMULATION_FRAME_RATE;
 	public static inline var BACKGROUND_COLOR:Int = 0x242A3A;
 	public static inline var VERSION:String = "200.0.0";
 	public static inline var BUILD:String = "2026-07-13-v200.0.0";

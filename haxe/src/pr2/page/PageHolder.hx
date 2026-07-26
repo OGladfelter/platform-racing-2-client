@@ -1,6 +1,7 @@
 package pr2.page;
 
 import openfl.display.Sprite;
+import pr2.runtime.FrameClock;
 
 /**
 	Hosts the active `Page` and swaps between pages, ported from the Flash
@@ -16,10 +17,12 @@ import openfl.display.Sprite;
 class PageHolder extends Sprite {
 	private static var rootHolder:Null<PageHolder>;
 	private var currentPage:Null<Page>;
+	private final isRootHolder:Bool;
 
 	public function new(?page:Page, root:Bool = false) {
 		super();
-		if (root) {
+		isRootHolder = root;
+		if (isRootHolder) {
 			rootHolder = this;
 			pr2.lobby.level.LevelLaunch.install(this);
 		}
@@ -29,6 +32,9 @@ class PageHolder extends Sprite {
 	}
 
 	public function changePage(page:Page):Void {
+		if (isRootHolder) {
+			FrameClock.resetCurrentPresentationPhase();
+		}
 		if (currentPage != null) {
 			currentPage.remove();
 			if (currentPage.parent != null) {

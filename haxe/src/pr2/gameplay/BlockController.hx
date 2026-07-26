@@ -23,7 +23,7 @@ class BlockController {
 	public static inline var SANTA_ICE_OVERLAY_FADE_RATE:Float = 0.025;
 	public static inline var SANTA_REFREEZE_COOLDOWN_MS:Int = 4000;
 	public static inline var ICE_OVERLAY_REMOVE_ALPHA:Float = 0.05;
-	public static inline var TELEPORT_RESET_FRAMES:Int = Constants.FRAME_RATE * 3;
+	public static inline var TELEPORT_RESET_FRAMES:Int = Constants.SIMULATION_FRAME_RATE * 3;
 	public static inline var MOVE_PREVIEW_MS:Int = 1000;
 	public static inline var MOVE_INTERVAL_MS:Int = 5000;
 

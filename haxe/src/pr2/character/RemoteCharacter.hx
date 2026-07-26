@@ -3,7 +3,10 @@ package pr2.character;
 import openfl.events.Event;
 import pr2.gameplay.MiniMapDot;
 import pr2.gameplay.RotationMath;
+import pr2.gameplay.presentation.CharacterPresentationLayer;
+import pr2.gameplay.presentation.PresentationPose;
 import pr2.net.CommandHandler;
+import pr2.runtime.FrameClock;
 
 typedef RemoteCharacterPoint = {
 	var x:Float;
@@ -20,6 +23,7 @@ typedef RemoteCharacterPoint = {
 	until the live race shell owns those systems.
 **/
 class RemoteCharacter extends Character {
+	private static inline var MAX_PRESENTATION_DELTA:Float = 60;
 	public var mapDot(default, null):Null<MiniMapDot>;
 	public var mapRotation:Float = 0;
 	public var catchupRate(default, null):Float = 1;
@@ -40,6 +44,10 @@ class RemoteCharacter extends Character {
 
 	private var updateQueue:Array<Dynamic> = [];
 	private var commandHandler:Null<CommandHandler>;
+	private final presentationPose:PresentationPose = new PresentationPose();
+	private var presentationLayer:CharacterPresentationLayer = CharacterPresentationLayer.Front;
+	private var presentationDiscontinuityPending:Bool = true;
+	private var externalPresentationSnapPending:Bool = false;
 
 	public function new(tempId:Int, ?dot:MiniMapDot, userName:String = "", hatId:Int = 1, headId:Int = 1, bodyId:Int = 1, feetId:Int = 1,
 			groupStr:String = "0", ?handler:CommandHandler) {
@@ -58,7 +66,7 @@ class RemoteCharacter extends Character {
 	}
 
 	public function stepFrame():Void {
-		go(null, true);
+		stepSimulationFrame(null);
 	}
 
 	public function pos(args:Array<String>):Void {
@@ -105,6 +113,7 @@ class RemoteCharacter extends Character {
 		posX = px;
 		posY = py;
 		updateSegs(mapRotation);
+		invalidatePresentationPose();
 	}
 
 	public function setScaleX(value:Float):Void {
@@ -112,6 +121,19 @@ class RemoteCharacter extends Character {
 	}
 
 	public function setScaleY(_:Float):Void {}
+
+	public function setPresentationLayer(parentLayer:String):Void {
+		var next = parentLayer == "backBackground" ? CharacterPresentationLayer.Back : CharacterPresentationLayer.Front;
+		if (next == presentationLayer) return;
+		presentationLayer = next;
+		requestPresentationSnap();
+	}
+
+	public function requestPresentationSnap():Void {
+		externalPresentationSnapPending = true;
+		presentationPose.markDiscontinuity();
+		snapPresentationToAuthoritative();
+	}
 
 	public function heart(_:Array<String>):Void {
 		gainHeart();
@@ -131,6 +153,7 @@ class RemoteCharacter extends Character {
 		unregisterCommands();
 		commandHandler = null;
 		updateQueue = [];
+		presentationPose.clear();
 		if (mapDot != null) {
 			mapDot.remove();
 			mapDot = null;
@@ -139,7 +162,77 @@ class RemoteCharacter extends Character {
 	}
 
 	private function onEnterFrame(event:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) {
+			renderPresentationFrame();
+			return;
+		}
+		stepSimulationFrame(event);
+	}
+
+	private function stepSimulationFrame(event:Null<Event>):Void {
+		var beforeX = x;
+		var beforeY = y;
+		presentationPose.beginSimulationTick(beforeX, beforeY, rotation, scaleX < 0 ? -1 : 1, presentationLayer);
 		go(event, true);
+		var deltaX = x - beforeX;
+		var deltaY = y - beforeY;
+		presentationPose.finishSimulationTick(
+			x,
+			y,
+			rotation,
+			scaleX < 0 ? -1 : 1,
+			presentationLayer,
+			presentationDiscontinuityPending
+				|| externalPresentationSnapPending
+				|| removed
+				|| PresentationPose.movementTooLarge(deltaX, deltaY, MAX_PRESENTATION_DELTA)
+		);
+		presentationDiscontinuityPending = false;
+		snapPresentationToAuthoritative();
+	}
+
+	public function renderPresentationFrame():Void {
+		if (!presentationPose.hasSamples) return;
+		var predictedX = RemotePresentationPolicy.guardedExtrapolation(
+			presentationPose.previousX,
+			presentationPose.currentX,
+			presentationPose.discontinuity
+		);
+		var predictedY = RemotePresentationPolicy.guardedExtrapolation(
+			presentationPose.previousY,
+			presentationPose.currentY,
+			presentationPose.discontinuity
+		);
+		var predictedRotation = RemotePresentationPolicy.guardedExtrapolation(
+			presentationPose.previousRotation,
+			presentationPose.currentRotation,
+			presentationPose.discontinuity
+		);
+		var worldOffsetX = predictedX - presentationPose.currentX;
+		var worldOffsetY = predictedY - presentationPose.currentY;
+		var radians = -presentationPose.currentRotation * Math.PI / 180;
+		var cos = Math.cos(radians);
+		var sin = Math.sin(radians);
+		var localScaleX = scaleX == 0 ? 1 : scaleX;
+		display.x = (worldOffsetX * cos - worldOffsetY * sin) / localScaleX;
+		display.y = worldOffsetX * sin + worldOffsetY * cos;
+		display.rotation = predictedRotation - presentationPose.currentRotation;
+		setPresentationWorldOffset(worldOffsetX, worldOffsetY);
+		externalPresentationSnapPending = false;
+	}
+
+	private function invalidatePresentationPose():Void {
+		presentationDiscontinuityPending = true;
+		externalPresentationSnapPending = true;
+		presentationPose.clear();
+		snapPresentationToAuthoritative();
+	}
+
+	private function snapPresentationToAuthoritative():Void {
+		display.x = 0;
+		display.y = 0;
+		display.rotation = 0;
+		clearPresentationWorldOffset();
 	}
 
 	private function go(_:Event, advanceAnimation:Bool):Void {

@@ -228,6 +228,7 @@ class ItemController {
 			return;
 		}
 		owner.setPlayerX(destX);
+		owner.markMovementDiscontinuity();
 		owner.lastItemEffect = "teleport:" + Std.int(startX) + "," + Std.int(startY) + ":" + Std.int(owner.x) + "," + Std.int(owner.y - 25);
 		consumeHeldItemUse();
 	}
@@ -259,7 +260,7 @@ class ItemController {
 	}
 
 	public static function msToFrames(ms:Int):Int {
-		return Std.int(Math.round(ms * LocalPlayerController.FRAME_RATE / 1000));
+		return Std.int(Math.round(ms * LocalPlayerController.SIMULATION_FRAME_RATE / 1000));
 	}
 
 	public function useJetPack():Void {

@@ -1059,6 +1059,7 @@ class LevelEditor extends Page {
 	}
 
 	private function keyScroll(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		var hasInput = isPressed(Keyboard.DOWN) || isPressed(Keyboard.UP) || isPressed(Keyboard.LEFT) || isPressed(Keyboard.RIGHT);
 		if (!cameraStarted && !hasInput) {
 			return;

@@ -177,6 +177,7 @@ class TestCoursePage extends Page {
 	}
 
 	private function focusStageEveryFrame(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		focusStage();
 	}
 

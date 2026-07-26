@@ -86,10 +86,17 @@ class LevelRenderer extends Sprite {
 	private final level:Level;
 	private var offsetX:Float;
 	private var offsetY:Float;
+	private var presentationOffsetX:Float;
+	private var presentationOffsetY:Float;
 	// Unrounded camera offset, kept so the parallax layers can re-derive their
 	// rounded per-plane offset whenever the committed rotation changes.
 	private var rawOffsetX:Float;
 	private var rawOffsetY:Float;
+	private var presentationRawOffsetX:Float;
+	private var presentationRawOffsetY:Float;
+	private var fractionalPresentationCamera:Bool = false;
+	private var viewWindowUpdateCount:Int = 0;
+	private var artViewWindowUpdateCount:Int = 0;
 	// Holds the parallax art layers and the block layer — everything that spins
 	// when a rotate block fires. Mirrors Flash, which rotates the whole Course
 	// during the tween (worldContainer here) and bakes the committed 90-degree
@@ -102,11 +109,18 @@ class LevelRenderer extends Sprite {
 	// whole world about the screen centre while a rotate block animates.
 	private var courseRotation:Int = 0;
 	private var tweenRotation:Float = 0;
+	private var presentationTweenRotation:Float = 0;
 	private final blockLayer:Sprite = new Sprite();
 	private var backCharacterLayer:Null<Sprite>;
 	private var frontCharacterLayer:Null<Sprite>;
 	private var effectLayer:Null<Sprite>;
 	private final artLayerContainers:Array<Sprite> = [];
+	private final blockPresentationMatrix:Matrix = new Matrix();
+	private final backCharacterPresentationMatrix:Matrix = new Matrix();
+	private final frontCharacterPresentationMatrix:Matrix = new Matrix();
+	private final effectPresentationMatrix:Matrix = new Matrix();
+	private final artPresentationMatrices:Array<Matrix> = [];
+	private final tweenPresentationMatrix:Matrix = new Matrix();
 	private final artRasterTileLayers:Array<ArtRasterTiles> = [];
 	private var solidBackground:Null<Shape>;
 	private var artBackgroundContainer:Null<Sprite>;
@@ -180,6 +194,7 @@ class LevelRenderer extends Sprite {
 		artRenderer = new LevelArtRenderCoordinator(this);
 		blockCulling = new BlockDisplayCulling(this);
 		this.level = level;
+		for (_ in 0...level.artLayers.length) artPresentationMatrices.push(new Matrix());
 		blockFactory = new BlockViewFactory(this);
 		this.incrementalBlocks = incrementalBlocks;
 		this.blocksPerFrame = blocksPerFrame <= 0 ? DEFAULT_BLOCKS_PER_FRAME : blocksPerFrame;
@@ -199,6 +214,10 @@ class LevelRenderer extends Sprite {
 		}
 		rawOffsetX = offsetX;
 		rawOffsetY = offsetY;
+		presentationOffsetX = offsetX;
+		presentationOffsetY = offsetY;
+		presentationRawOffsetX = rawOffsetX;
+		presentationRawOffsetY = rawOffsetY;
 
 		drawBackground();
 		drawArtBackground();
@@ -275,7 +294,7 @@ class LevelRenderer extends Sprite {
 	// rotation is baked into the block layer, which stores its blocks in the
 	// original frame, so it must not be applied again here.
 	public function worldToScreen(x:Float, y:Float):Point {
-		var point = new Point(x + offsetX, y + offsetY);
+		var point = new Point(x + presentationOffsetX, y + presentationOffsetY);
 		return tweenRotation == 0 ? point : worldContainer.transform.matrix.transformPoint(point);
 	}
 
@@ -293,11 +312,15 @@ class LevelRenderer extends Sprite {
 			inverse.invert();
 			point = inverse.transformPoint(point);
 		}
-		return new Point(point.x - offsetX, point.y - offsetY);
+		return new Point(point.x - presentationOffsetX, point.y - presentationOffsetY);
 	}
 
 	public function cameraOffset():Point {
 		return new Point(offsetX, offsetY);
+	}
+
+	public function presentationCameraOffset():Point {
+		return new Point(presentationOffsetX, presentationOffsetY);
 	}
 
 	/** Convert an original-frame block point into the committed rotated world frame. */
@@ -321,16 +344,34 @@ class LevelRenderer extends Sprite {
 		}
 		if (this.tweenRotation != tweenRotation) {
 			this.tweenRotation = tweenRotation;
-			applyTweenRotation();
 			updateViewWindow(false);
 			updateArtViewWindows(false);
 		}
+		presentationTweenRotation = tweenRotation;
+		applyTweenRotation();
+	}
+
+	public function setPresentationCourseTweenRotation(rotation:Float):Void {
+		presentationTweenRotation = rotation;
+		applyTweenRotation();
+	}
+
+	public function courseTweenRotation():Float {
+		return tweenRotation;
+	}
+
+	public function presentationCourseTweenRotation():Float {
+		return presentationTweenRotation;
 	}
 
 	// Builds the block/art layer matrix in the same authored world frame used by
 	// gameplay. Committed course rotation turns about world (0, 0).
 	private function layerMatrix(translateX:Float, translateY:Float, includeCourseRotation:Bool = true):Matrix {
-		var matrix = new Matrix();
+		return configureLayerMatrix(new Matrix(), translateX, translateY, includeCourseRotation);
+	}
+
+	private function configureLayerMatrix(matrix:Matrix, translateX:Float, translateY:Float, includeCourseRotation:Bool = true):Matrix {
+		matrix.identity();
 		if (includeCourseRotation && courseRotation != 0) {
 			matrix.rotate(courseRotation * Math.PI / 180);
 		}
@@ -339,42 +380,72 @@ class LevelRenderer extends Sprite {
 	}
 
 	private function applyLayerTransforms():Void {
-		blockLayer.transform.matrix = layerMatrix(offsetX, offsetY);
+		blockLayer.transform.matrix = configureLayerMatrix(blockPresentationMatrix, presentationOffsetX, presentationOffsetY);
 		// Match Flash Background.setPos: characters retain map/world coordinates
 		// while their front/back parent planes carry the camera translation.
 		if (backCharacterLayer != null) {
-			backCharacterLayer.transform.matrix = layerMatrix(offsetX, offsetY, false);
+			backCharacterLayer.transform.matrix = configureLayerMatrix(
+				backCharacterPresentationMatrix,
+				presentationOffsetX,
+				presentationOffsetY,
+				false
+			);
 		}
 		if (frontCharacterLayer != null) {
-			frontCharacterLayer.transform.matrix = layerMatrix(offsetX, offsetY, false);
+			frontCharacterLayer.transform.matrix = configureLayerMatrix(
+				frontCharacterPresentationMatrix,
+				presentationOffsetX,
+				presentationOffsetY,
+				false
+			);
 		}
 		if (effectLayer != null) {
 			// Attack effects use the same already-rotated world coordinates as the
 			// character plane. They still need the camera translation, especially
 			// for editor levels whose authored coordinates are far from (0, 0).
-			effectLayer.transform.matrix = layerMatrix(offsetX, offsetY, false);
+			effectLayer.transform.matrix = configureLayerMatrix(
+				effectPresentationMatrix,
+				presentationOffsetX,
+				presentationOffsetY,
+				false
+			);
 		}
 		for (i in 0...artLayerContainers.length) {
 			if (artLayerContainers[i] == null) {
 				continue;
 			}
 			var layer = level.artLayers[i];
-			artLayerContainers[i].transform.matrix = layerMatrix(parallaxOffset(rawOffsetX, layer.scale), parallaxOffset(rawOffsetY, layer.scale));
+			var artOffsetX = fractionalPresentationCamera
+				? presentationRawOffsetX * layer.scale
+				: parallaxOffset(presentationRawOffsetX, layer.scale);
+			var artOffsetY = fractionalPresentationCamera
+				? presentationRawOffsetY * layer.scale
+				: parallaxOffset(presentationRawOffsetY, layer.scale);
+			artLayerContainers[i].transform.matrix = configureLayerMatrix(
+				artPresentationMatrices[i],
+				artOffsetX,
+				artOffsetY
+			);
 		}
 	}
 
 	private function applyTweenRotation():Void {
-		if (tweenRotation == 0) {
-			worldContainer.transform.matrix = new Matrix();
-			return;
-		}
+		worldContainer.transform.matrix = configureTweenRotationMatrix(tweenPresentationMatrix, presentationTweenRotation);
+	}
+
+	private function tweenRotationMatrix(rotation:Float):Matrix {
+		return configureTweenRotationMatrix(new Matrix(), rotation);
+	}
+
+	private function configureTweenRotationMatrix(matrix:Matrix, rotation:Float):Matrix {
+		matrix.identity();
+		if (rotation == 0) return matrix;
 		var pivotX = Constants.STAGE_WIDTH / 2;
 		var pivotY = Constants.STAGE_HEIGHT / 2;
-		var matrix = new Matrix();
 		matrix.translate(-pivotX, -pivotY);
-		matrix.rotate(tweenRotation * Math.PI / 180);
+		matrix.rotate(rotation * Math.PI / 180);
 		matrix.translate(pivotX, pivotY);
-		worldContainer.transform.matrix = matrix;
+		return matrix;
 	}
 
 	/** Applies Course.setPos camera translation to world and parallax layers. */
@@ -383,9 +454,27 @@ class LevelRenderer extends Sprite {
 		rawOffsetY = y;
 		offsetX = Math.round(x);
 		offsetY = Math.round(y);
+		presentationRawOffsetX = x;
+		presentationRawOffsetY = y;
+		presentationOffsetX = offsetX;
+		presentationOffsetY = offsetY;
+		fractionalPresentationCamera = false;
 		applyLayerTransforms();
 		updateViewWindow(false);
 		updateArtViewWindows(false);
+	}
+
+	/**
+		Applies a disposable render-only camera transform. This deliberately does
+		not change the authoritative offset or rebuild block/art view windows.
+	**/
+	public function setPresentationCameraOffset(x:Float, y:Float):Void {
+		presentationRawOffsetX = x;
+		presentationRawOffsetY = y;
+		presentationOffsetX = x;
+		presentationOffsetY = y;
+		fractionalPresentationCamera = true;
+		applyLayerTransforms();
 	}
 
 	/** Applies Flash `Course.setColor`/`Background.applyColorTransform` to rendered planes. */
@@ -504,7 +593,7 @@ class LevelRenderer extends Sprite {
 
 	public function attachEffectLayer(layer:Sprite):Void {
 		effectLayer = layer;
-		layer.transform.matrix = layerMatrix(offsetX, offsetY, false);
+		layer.transform.matrix = configureLayerMatrix(effectPresentationMatrix, presentationOffsetX, presentationOffsetY, false);
 		if (layer.parent == worldContainer) {
 			return;
 		}
@@ -836,8 +925,8 @@ class LevelRenderer extends Sprite {
 	}
 
 	private function drawBlocks():Void {
-		blockLayer.x = offsetX;
-		blockLayer.y = offsetY;
+		blockLayer.x = presentationOffsetX;
+		blockLayer.y = presentationOffsetY;
 		worldContainer.addChild(blockLayer);
 		// Establish the initial window from the start-focus offset so blocks that
 		// fall on screen are attached as they are created, and the rest stay off
@@ -851,6 +940,7 @@ class LevelRenderer extends Sprite {
 	}
 
 	private function drawBlockBatch(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		drawNextBlocks(blocksPerFrame, Timer.stamp() + RENDER_FRAME_ESCAPE_SECONDS);
 		if (isBlockDrawingComplete()) {
 			removeEventListener(Event.ENTER_FRAME, drawBlockBatch);
@@ -858,10 +948,12 @@ class LevelRenderer extends Sprite {
 	}
 
 	private function drawArtBatch(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		artRenderer.drawBatch(event);
 	}
 
 	private function onWaterRippleFrame(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		for (key in [for (k in waterRippleFrames.keys()) k]) {
 			var display = blockDisplays.get(key);
 			if (display == null) {
@@ -880,6 +972,7 @@ class LevelRenderer extends Sprite {
 	}
 
 	private function onBlockBounceFrame(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		for (key in [for (k in blockBounceVelocities.keys()) k]) {
 			var display = blockDisplays.get(key);
 			if (display == null) {
@@ -935,10 +1028,12 @@ class LevelRenderer extends Sprite {
 		walked (a few hundred segment cells), never the full block list.
 	**/
 	private function updateViewWindow(force:Bool):Void {
+		viewWindowUpdateCount++;
 		blockCulling.updateViewWindow(force);
 	}
 
 	private function updateArtViewWindows(force:Bool):Void {
+		artViewWindowUpdateCount++;
 		artRenderer.updateViewWindows(force);
 	}
 
@@ -1010,6 +1105,12 @@ class LevelRenderer extends Sprite {
 			var physicsParticle = Std.downcast(child, pr2.character.PhysicsParticle);
 			if (physicsParticle != null) {
 				physicsParticle.remove();
+				i--;
+				continue;
+			}
+			var followFadeEffect = Std.downcast(child, pr2.effects.FollowFadeEffect);
+			if (followFadeEffect != null) {
+				followFadeEffect.remove();
 				i--;
 				continue;
 			}

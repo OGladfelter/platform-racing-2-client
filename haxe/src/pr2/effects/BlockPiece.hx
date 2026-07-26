@@ -4,6 +4,9 @@ import openfl.display.DisplayObject;
 import openfl.display.Bitmap;
 import openfl.display.Sprite;
 import openfl.events.Event;
+import pr2.runtime.FrameClock;
+import pr2.gameplay.presentation.CharacterPresentationLayer;
+import pr2.gameplay.presentation.PresentationPose;
 
 /**
 	Ports `effects/BlockPiece.as`: an authored block fragment with randomized
@@ -23,6 +26,10 @@ class BlockPiece extends Sprite {
 	private final friction:Float;
 	private final fadeRate:Float;
 	private var ownsCustomVisual:Bool = false;
+	private final presentationPose:PresentationPose = new PresentationPose();
+	private var authoritativeX:Float;
+	private var authoritativeY:Float;
+	private var authoritativeRotation:Float;
 
 	public function new(linkage:Null<String>, gravity:Float = GRAVITY, friction:Float = FRICTION, fadeRate:Float = FADE_RATE, spreadX:Float = 10,
 			spreadY:Float = 10, spreadRot:Float = 10, startX:Float = 0, startY:Float = 0, ?random:Void->Float,
@@ -38,10 +45,13 @@ class BlockPiece extends Sprite {
 		addChild(visual);
 		x = startX;
 		y = startY;
+		authoritativeX = x;
+		authoritativeY = y;
 		this.gravity = gravity;
 		this.friction = friction;
 		this.fadeRate = fadeRate;
 		rotation = nextRandom() * 360;
+		authoritativeRotation = rotation;
 		velX = nextRandom() * spreadX * 2 - spreadX;
 		velY = nextRandom() * spreadY * 2 - spreadY;
 		rotVel = nextRandom() * spreadRot * 2 - spreadRot;
@@ -77,17 +87,46 @@ class BlockPiece extends Sprite {
 	}
 
 	private function tick(_:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) {
+			renderPresentationFrame();
+			return;
+		}
+		presentationPose.beginSimulationTick(
+			authoritativeX,
+			authoritativeY,
+			authoritativeRotation,
+			1,
+			CharacterPresentationLayer.Front
+		);
 		velX *= friction;
 		velY *= friction;
 		rotVel *= friction;
 		velY += gravity;
-		x += velX;
-		y += velY;
-		rotation += rotVel;
+		authoritativeX += velX;
+		authoritativeY += velY;
+		authoritativeRotation += rotVel;
+		x = authoritativeX;
+		y = authoritativeY;
+		rotation = authoritativeRotation;
+		presentationPose.finishSimulationTick(
+			authoritativeX,
+			authoritativeY,
+			authoritativeRotation,
+			1,
+			CharacterPresentationLayer.Front
+		);
 		alpha -= fadeRate;
 		if (alpha <= 0) {
 			remove();
 		}
+	}
+
+	public function renderPresentationFrame():Void {
+		if (!presentationPose.hasSamples) return;
+		var factor = presentationPose.discontinuity ? 0.0 : 0.5;
+		x = presentationPose.extrapolatedX(factor);
+		y = presentationPose.extrapolatedY(factor);
+		rotation = presentationPose.extrapolatedRotation(factor);
 	}
 
 	public function remove():Void {

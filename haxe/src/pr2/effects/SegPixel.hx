@@ -5,6 +5,7 @@ import openfl.display.BitmapData;
 import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.geom.Point;
+import pr2.runtime.FrameClock;
 
 /**
 	A single block of a `PixelEffect1` dissolve, ported from the Flash
@@ -46,6 +47,7 @@ class SegPixel extends Sprite {
 	}
 
 	private function go(e:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) return;
 		if (Math.abs(x - finalX) < 1 && Math.abs(y - finalY) < 1) {
 			settle();
 		} else {
@@ -70,6 +72,7 @@ class SegPixel extends Sprite {
 	}
 
 	private function glint(e:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) return;
 		glintCounter--;
 		if (glintCounter > 0) {
 			alpha = glintCounter / glintFrames / 2;

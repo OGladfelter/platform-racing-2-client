@@ -5,6 +5,10 @@ openfl_driver.py - drive the PR2 OpenFL HTML5 build for visual checks.
 Commands:
   shot <out.png>                serve export/html5/bin and capture a screenshot
   fps                           run the build and validate logged FPS samples
+  smooth60-flag                 validate opt-in and navigation query behavior
+  smooth60-stability            prove the opt-in survives sustained browser load
+  smooth60-replays              capture paired 30/60 gameplay replay scenes
+  smooth60-benchmark            benchmark smooth presentation scene/device matrix
   debug-state                   read and optionally validate harness debug state
   sequence <script.json>        replay timed screenshot/navigation actions
 
@@ -15,8 +19,10 @@ Shot options:
   --browser <path>              Chrome/Chromium binary path
   --base-url <url>              use an existing server (for example dev_proxy.py)
   --fps-duration <seconds>      FPS validation duration, default 30.0
-  --fps-target <fps>            FPS validation target, default 30
-  --fps-tolerance <fps>         FPS validation tolerance, default 5
+  --fps-target <fps>            presented-frame target, default 30
+  --fps-tolerance <fps>         presented-frame tolerance, default 5
+  --simulation-fps-target <fps> simulation-tick target, default 30
+  --simulation-fps-tolerance    simulation-tick tolerance, default 1
   --expect <key=value>          expected debug-state field, repeatable
   --metrics-out <path>          write JSON metrics collected by sequence metrics steps
 
@@ -34,7 +40,7 @@ Sequence script format:
   A bare list of steps is also accepted. Sequence actions: keyDown, keyUp,
   tap, hold, mouseMove, click, click-display-object, dragPath, typeText,
   rebuild-lobby, open-level-editor, level-editor-e2e, assert-level-editor-state,
-  navigate, metrics, shot, debug-state, body-attribute.
+  smooth60-replay, navigate, metrics, shot, debug-state, body-attribute.
 
   Sequences wait for the app to boot past the OpenFL preloader before the
   clock starts: step `time` offsets are measured from the moment `Main` sets
@@ -211,28 +217,561 @@ def capture_shot(out_path, root, delay, browser_path, query="", use_gpu=False):
     )
 
 
-def check_fps(root, duration, target, tolerance, browser_path, query="", use_gpu=False):
+def check_fps(
+    root,
+    duration,
+    target,
+    tolerance,
+    simulation_target,
+    simulation_tolerance,
+    browser_path,
+    query="",
+    use_gpu=False,
+):
     browser = resolve_browser(browser_path)
 
     with serve(root) as url:
         url = append_query(url, query)
-        samples = run_browser_and_read_fps(browser, url, duration, use_gpu)
+        result = run_browser_and_read_fps(browser, url, duration, use_gpu)
 
     expected_sample_count = int(duration)
-    checked_samples = samples[-expected_sample_count:]
-    if len(checked_samples) < expected_sample_count:
-        raise SystemExit(f"Only captured {len(checked_samples)} FPS samples, expected {expected_sample_count}: {samples}")
+    presentation_samples = result["presentation"][-expected_sample_count:]
+    simulation_samples = result["simulation"][-expected_sample_count:]
+    if len(presentation_samples) < expected_sample_count or len(simulation_samples) < expected_sample_count:
+        raise SystemExit(
+            "Only captured "
+            f"{len(presentation_samples)} presentation and {len(simulation_samples)} simulation samples, "
+            f"expected {expected_sample_count}: {result}"
+        )
 
     low = target - tolerance
     high = target + tolerance
-    failures = [(index + 1, sample) for index, sample in enumerate(checked_samples) if sample < low or sample > high]
-    sample_text = ",".join(str(sample) for sample in checked_samples)
-    print(f"FPS samples ({len(checked_samples)}s): {sample_text}")
-    print(f"FPS range: min={min(checked_samples)} max={max(checked_samples)} target={target} tolerance=+/-{tolerance}")
+    presentation_failures = [
+        (index + 1, sample)
+        for index, sample in enumerate(presentation_samples)
+        if sample < low or sample > high
+    ]
+    simulation_low = simulation_target - simulation_tolerance
+    simulation_high = simulation_target + simulation_tolerance
+    simulation_failures = [
+        (index + 1, sample)
+        for index, sample in enumerate(simulation_samples)
+        if sample < simulation_low or sample > simulation_high
+    ]
+    smooth60 = any(part == "smooth60=1" for part in query.lstrip("?").split("&"))
+    cadence_failures = []
+    for index, (presented, simulated) in enumerate(zip(presentation_samples, simulation_samples)):
+        cadence_matches = abs(presented - simulated * 2) <= 1 if smooth60 else presented == simulated
+        if not cadence_matches:
+            cadence_failures.append((index + 1, presented, simulated))
+
+    print(f"Presented-frame samples ({len(presentation_samples)}s): {','.join(map(str, presentation_samples))}")
+    print(f"Simulation-tick samples ({len(simulation_samples)}s): {','.join(map(str, simulation_samples))}")
+    print(
+        f"Presented range: min={min(presentation_samples)} max={max(presentation_samples)} "
+        f"target={target} tolerance=+/-{tolerance}"
+    )
+    print(
+        f"Simulation range: min={min(simulation_samples)} max={max(simulation_samples)} "
+        f"target={simulation_target} tolerance=+/-{simulation_tolerance}"
+    )
+    failures = []
+    if presentation_failures:
+        failures.append(
+            "presented " + ", ".join(f"{second}s={sample}" for second, sample in presentation_failures)
+        )
+    if simulation_failures:
+        failures.append(
+            "simulation " + ", ".join(f"{second}s={sample}" for second, sample in simulation_failures)
+        )
+    if cadence_failures:
+        failures.append(
+            "cadence "
+            + ", ".join(
+                f"{second}s={presented}/{simulated}" for second, presented, simulated in cadence_failures
+            )
+        )
     if failures:
-        failure_text = ", ".join(f"{second}s={sample}" for second, sample in failures)
-        raise SystemExit(f"FPS validation failed: {failure_text}")
-    print("FPS validation passed.")
+        raise SystemExit("Independent FPS validation failed: " + "; ".join(failures))
+    print("Independent presentation/simulation FPS validation passed.")
+
+
+def check_smooth60_flag(root, browser_path, use_gpu=False):
+    browser = resolve_browser(browser_path)
+    with serve(root) as url:
+        with browser_devtools_session(browser, url, use_gpu) as devtools:
+            cases = [
+                ("default", "", "0", "30"),
+                ("non-exact value", "smooth60=true", "0", "30"),
+                ("exact opt-in", "smooth60=1", "1", "60"),
+                ("navigation without flag", "screen=intro", "0", "30"),
+            ]
+            for label, query, expected_enabled, expected_target in cases:
+                destination = append_query(url, query)
+                devtools.request("Page.navigate", {"url": destination})
+                wait_for_app_ready(devtools)
+                actual_enabled = devtools.evaluate(
+                    'document.body.getAttribute("data-pr2-smooth60") || ""'
+                )
+                actual_target = devtools.evaluate(
+                    'document.body.getAttribute("data-pr2-presentation-fps-target") || ""'
+                )
+                actual_search = devtools.evaluate("location.search")
+                if actual_enabled != expected_enabled or actual_target != expected_target:
+                    raise SystemExit(
+                        f"Smooth60 {label} failed: enabled={actual_enabled}, target={actual_target}, "
+                        f"query={actual_search}"
+                    )
+                if label == "navigation without flag" and "smooth60" in actual_search:
+                    raise SystemExit(
+                        f"Smooth60 flag survived navigation without its parameter: {actual_search}"
+                    )
+                print(
+                    f"Smooth60 {label}: enabled={actual_enabled}, "
+                    f"presentationTarget={actual_target}, query={actual_search or '<none>'}"
+                )
+    print("Smooth60 browser flag validation passed.")
+
+
+def check_smooth60_stability(root, browser_path, use_gpu=False):
+    browser = resolve_browser(browser_path)
+    with serve(root) as url:
+        with browser_devtools_session(browser, url, use_gpu) as devtools:
+            destination = append_query(
+                url,
+                "screen=campaign&debug=1&localLevel=art-heavy&smooth60=1",
+            )
+            devtools.request("Page.navigate", {"url": destination})
+            wait_for_app_ready(devtools)
+            race_phase = wait_for_body_attribute(
+                devtools,
+                "data-pr2-race-phase",
+                "racing",
+                30.0,
+            )
+            if race_phase != "racing":
+                raise SystemExit("Smooth60 stability fixture did not reach racing phase.")
+            initial_requested = devtools.evaluate(
+                'document.body.getAttribute("data-pr2-smooth60") || ""'
+            )
+            initial_fallback = devtools.evaluate(
+                'document.body.getAttribute("data-pr2-smooth60-fallback") || ""'
+            )
+            initial_target = devtools.evaluate(
+                'document.body.getAttribute("data-pr2-presentation-fps-target") || ""'
+            )
+            if (initial_requested, initial_fallback, initial_target) != ("1", "0", "60"):
+                raise SystemExit(
+                    "Smooth60 stability fixture did not begin in requested 60 FPS mode: "
+                    f"requested={initial_requested}, fallback={initial_fallback}, "
+                    f"target={initial_target}"
+                )
+            presentation_count = len(read_all_int_attribute(
+                devtools,
+                "data-pr2-presentation-frame-samples",
+            ))
+            simulation_count = len(read_all_int_attribute(
+                devtools,
+                "data-pr2-simulation-tick-samples",
+            ))
+            try:
+                devtools.request("Emulation.setCPUThrottlingRate", {"rate": 20})
+                time.sleep(6.2)
+                loaded_presentation = read_all_int_attribute(
+                    devtools,
+                    "data-pr2-presentation-frame-samples",
+                )[presentation_count + 1:]
+                loaded_simulation = read_all_int_attribute(
+                    devtools,
+                    "data-pr2-simulation-tick-samples",
+                )[simulation_count + 1:]
+            finally:
+                devtools.request("Emulation.setCPUThrottlingRate", {"rate": 1})
+            requested = devtools.evaluate(
+                'document.body.getAttribute("data-pr2-smooth60") || ""'
+            )
+            fallback = devtools.evaluate(
+                'document.body.getAttribute("data-pr2-smooth60-fallback") || ""'
+            )
+            target = devtools.evaluate(
+                'document.body.getAttribute("data-pr2-presentation-fps-target") || ""'
+            )
+            search = devtools.evaluate("location.search")
+            if fallback != "0" or requested != "1" or target != "60":
+                raise SystemExit(
+                    "Smooth60 changed mode under sustained load: "
+                    f"requested={requested}, fallback={fallback}, target={target}, query={search}"
+                )
+            if "smooth60=1" not in search:
+                raise SystemExit(
+                    f"Smooth60 stability test lost the requested URL parameter: {search}"
+                )
+            paired_samples = list(zip(loaded_presentation, loaded_simulation))
+            if len(paired_samples) < 3 or any(
+                simulated > 35 or abs(presented - simulated * 2) > 1
+                for presented, simulated in paired_samples
+            ):
+                raise SystemExit(
+                    "Smooth60 sustained-load cadence was not presentation/simulation 2:1: "
+                    f"{paired_samples}"
+                )
+            print(
+                "Smooth60 sustained-load stability: "
+                f"requested={requested}, fallback={fallback}, "
+                f"presentationTarget={target}, samples={paired_samples}, query={search}"
+            )
+    print("Smooth60 browser stability validation passed.")
+
+
+def capture_smooth60_replays(root, browser_path, out_dir, use_gpu=False):
+    browser = resolve_browser(browser_path)
+    cases = [
+        ("running", "flat"),
+        ("jumping", "flat"),
+        ("falling", "flat"),
+        ("landing", "flat"),
+        ("wall-contact", "rotate"),
+        ("teleporting", "flat"),
+        ("rotating", "rotate"),
+        ("spectating", "flat"),
+        ("multiplayer-correction", "flat"),
+        ("particle-heavy", "flat"),
+    ]
+    os.makedirs(out_dir, exist_ok=True)
+    with serve(root) as url:
+        with browser_devtools_session(browser, url, use_gpu) as devtools:
+            for name, level in cases:
+                pair = []
+                for smooth in (False, True):
+                    rate = "60" if smooth else "30"
+                    query = f"screen=campaign&debug=1&localLevel={level}"
+                    if smooth:
+                        query += "&smooth60=1"
+                    devtools.request("Page.navigate", {"url": append_query(url, query)})
+                    wait_for_app_ready(devtools)
+                    race_phase = wait_for_body_attribute(devtools, "data-pr2-race-phase", "racing", 20.0)
+                    if race_phase != "racing":
+                        current_url = devtools.evaluate("location.href")
+                        screen_state = devtools.evaluate(
+                            'document.body.getAttribute("data-pr2-screen") || ""'
+                        )
+                        debug_state = devtools.evaluate(
+                            'document.body.getAttribute("data-pr2-debug-state") || ""'
+                        )
+                        error_state = devtools.evaluate(
+                            'document.body.getAttribute("data-pr2-error") || ""'
+                        )
+                        raise SystemExit(
+                            f"Replay {name} did not reach racing phase at {rate} FPS: "
+                            f"url={current_url!r}, screen={screen_state!r}, phase={race_phase!r}, "
+                            f"debug={debug_state!r}, error={error_state!r}"
+                        )
+                    time.sleep(0.35)
+                    perform_smooth60_replay_case(devtools, name)
+                    out_path = os.path.join(out_dir, f"{name}-{rate}.png")
+                    capture_devtools_shot(devtools, out_path)
+                    pair.append(out_path)
+                combined = os.path.join(out_dir, f"{name}-side-by-side.png")
+                combine_replay_pair(pair[0], pair[1], combined)
+    manifest = {
+        "presentationRates": [30, 60],
+        "authoritativeSimulationRate": 30,
+        "cases": [
+            {
+                "name": name,
+                "baseline": f"{name}-30.png",
+                "smooth": f"{name}-60.png",
+                "sideBySide": f"{name}-side-by-side.png",
+            }
+            for name, _ in cases
+        ],
+    }
+    manifest_path = os.path.join(out_dir, "manifest.json")
+    with open(manifest_path, "w", encoding="utf-8") as file:
+        json.dump(manifest, file, indent=2)
+        file.write("\n")
+    print(f"Smooth60 replay capture passed: {len(cases)} paired scenes, manifest={manifest_path}")
+
+
+def perform_smooth60_replay_case(devtools, name):
+    if name == "running":
+        dispatch_key(devtools, "keyDown", "right")
+        time.sleep(0.45)
+        dispatch_key(devtools, "keyUp", "right")
+    elif name == "jumping":
+        dispatch_key(devtools, "keyDown", "up")
+        time.sleep(0.20)
+        dispatch_key(devtools, "keyUp", "up")
+        time.sleep(0.08)
+    elif name == "falling":
+        dispatch_key(devtools, "keyDown", "up")
+        time.sleep(0.20)
+        dispatch_key(devtools, "keyUp", "up")
+        time.sleep(0.50)
+    elif name == "landing":
+        dispatch_key(devtools, "keyDown", "up")
+        time.sleep(0.20)
+        dispatch_key(devtools, "keyUp", "up")
+        time.sleep(1.00)
+    elif name == "wall-contact":
+        dispatch_key(devtools, "keyDown", "right")
+        time.sleep(1.25)
+        dispatch_key(devtools, "keyUp", "right")
+    elif name == "teleporting":
+        run_smooth60_replay_action(devtools, "teleport")
+        time.sleep(0.12)
+    elif name == "rotating":
+        dispatch_key(devtools, "keyDown", "up")
+        time.sleep(0.35)
+        dispatch_key(devtools, "keyUp", "up")
+        time.sleep(0.25)
+    elif name == "spectating":
+        run_smooth60_replay_action(devtools, "spectate")
+        time.sleep(0.30)
+    elif name == "multiplayer-correction":
+        run_smooth60_replay_action(devtools, "correction")
+        time.sleep(0.18)
+    elif name == "particle-heavy":
+        run_smooth60_replay_action(devtools, "particles")
+        time.sleep(0.30)
+    else:
+        raise SystemExit(f"Unsupported smooth60 replay case: {name}")
+
+
+def combine_replay_pair(baseline_path, smooth_path, out_path):
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError as error:
+        raise SystemExit(f"Pillow is required to compose smooth60 replay pairs: {error}")
+    baseline = Image.open(baseline_path).convert("RGB")
+    smooth = Image.open(smooth_path).convert("RGB")
+    width = baseline.width + smooth.width
+    height = max(baseline.height, smooth.height) + 30
+    combined = Image.new("RGB", (width, height), (20, 20, 20))
+    combined.paste(baseline, (0, 30))
+    combined.paste(smooth, (baseline.width, 30))
+    labels = ImageDraw.Draw(combined)
+    labels.text((10, 8), "30 FPS presentation / 30 Hz simulation", fill=(255, 255, 255))
+    labels.text((baseline.width + 10, 8), "60 FPS presentation / 30 Hz simulation", fill=(255, 255, 255))
+    combined.save(out_path)
+    print(f"Side-by-side replay saved: {out_path}")
+
+
+def benchmark_smooth60(root, browser_path, out_path, duration, use_gpu=False):
+    browser = resolve_browser(browser_path)
+    scenes = [
+        ("small", "flat", None),
+        ("large", "large", None),
+        ("art-heavy", "art-heavy", None),
+        ("multiplayer", "flat", "multiplayer"),
+    ]
+    devices = [
+        ("desktop", 1),
+        ("lower-powered-emulation", 4),
+    ]
+    results = []
+    with serve(root) as url:
+        with browser_devtools_session(browser, url, use_gpu) as devtools:
+            devtools.request("Performance.enable")
+            for device, cpu_rate in devices:
+                devtools.request("Emulation.setCPUThrottlingRate", {"rate": cpu_rate})
+                for scene, level, setup in scenes:
+                    query = f"screen=campaign&debug=1&localLevel={level}&smooth60=1"
+                    devtools.request("Page.navigate", {"url": append_query(url, query)})
+                    wait_for_app_ready(devtools)
+                    race_phase = wait_for_body_attribute(devtools, "data-pr2-race-phase", "racing", 30.0)
+                    if race_phase != "racing":
+                        raise SystemExit(f"Benchmark {device}/{scene} did not reach racing phase.")
+                    time.sleep(0.35)
+                    if setup == "multiplayer":
+                        run_smooth60_replay_action(devtools, "spectate")
+                        run_smooth60_replay_action(devtools, "correction")
+                    devtools.evaluate("window.gc && window.gc()")
+                    time.sleep(0.05)
+                    heap_before = read_heap_usage(devtools)
+                    metrics_before = read_performance_metrics(devtools)
+                    initial_presentation_count = len(read_all_int_attribute(
+                        devtools, "data-pr2-presentation-frame-samples"
+                    ))
+                    initial_simulation_count = len(read_all_int_attribute(
+                        devtools, "data-pr2-simulation-tick-samples"
+                    ))
+                    install_stage_interval_probe(devtools)
+                    heap_samples = [heap_before["usedSize"]]
+                    sample_count = max(1, int(duration))
+                    measured_seconds = duration + 1.2
+                    sample_seconds = measured_seconds / sample_count
+                    for _ in range(sample_count):
+                        time.sleep(sample_seconds)
+                        heap_samples.append(read_heap_usage(devtools)["usedSize"])
+                    intervals = stop_stage_interval_probe(devtools)
+                    all_presentation = read_all_int_attribute(devtools, "data-pr2-presentation-frame-samples")
+                    all_simulation = read_all_int_attribute(devtools, "data-pr2-simulation-tick-samples")
+                    presentation_samples = all_presentation[
+                        initial_presentation_count + 1:initial_presentation_count + 1 + sample_count
+                    ]
+                    simulation_samples = all_simulation[
+                        initial_simulation_count + 1:initial_simulation_count + 1 + sample_count
+                    ]
+                    if len(presentation_samples) < sample_count or len(simulation_samples) < sample_count:
+                        raise SystemExit(
+                            f"Benchmark {device}/{scene} captured incomplete FPS windows: "
+                            f"presentation={presentation_samples}, simulation={simulation_samples}"
+                        )
+                    invalid_cadence = [
+                        (presented, simulated)
+                        for presented, simulated in zip(presentation_samples, simulation_samples)
+                        if simulated > 35
+                        or abs(presented - simulated * 2) > 1
+                    ]
+                    if invalid_cadence:
+                        raise SystemExit(
+                            f"Benchmark {device}/{scene} observed unsafe presentation/simulation "
+                            f"cadence: {invalid_cadence}"
+                        )
+                    fallback_active = devtools.evaluate(
+                        'document.body.getAttribute("data-pr2-smooth60-fallback") || ""'
+                    ) == "1"
+                    effective_target = int(devtools.evaluate(
+                        'document.body.getAttribute("data-pr2-presentation-fps-target") || "0"'
+                    ))
+                    if fallback_active or effective_target != 60:
+                        raise SystemExit(
+                            f"Benchmark {device}/{scene} changed requested smooth60 mode: "
+                            f"fallback={fallback_active}, target={effective_target}"
+                        )
+                    metrics_after = read_performance_metrics(devtools)
+                    heap_peak = max(heap_samples)
+                    devtools.evaluate("window.gc && window.gc()")
+                    time.sleep(0.05)
+                    heap_after_gc = read_heap_usage(devtools)
+                    result = {
+                        "device": device,
+                        "cpuThrottleRate": cpu_rate,
+                        "scene": scene,
+                        "durationSeconds": duration,
+                        "presentationFps": average(presentation_samples),
+                        "simulationFps": average(simulation_samples),
+                        "fallbackActive": fallback_active,
+                        "effectivePresentationTargetFps": effective_target,
+                        "presentationSamples": presentation_samples,
+                        "simulationSamples": simulation_samples,
+                        "frameTimeMs": {
+                            "p50": percentile(intervals, 50),
+                            "p95": percentile(intervals, 95),
+                            "p99": percentile(intervals, 99),
+                            "max": max(intervals) if intervals else 0,
+                            "sampleCount": len(intervals),
+                        },
+                        "memory": {
+                            "heapBeforeBytes": heap_before["usedSize"],
+                            "heapPeakBytes": heap_peak,
+                            "heapAfterGcBytes": heap_after_gc["usedSize"],
+                            "gcReclaimedBytes": max(0, heap_peak - heap_after_gc["usedSize"]),
+                            "heapLimitBytes": heap_after_gc["embedderHeapUsedSize"] + heap_after_gc["backingStorageSize"]
+                                if "embedderHeapUsedSize" in heap_after_gc else heap_after_gc.get("totalSize", 0),
+                        },
+                        "performanceDelta": performance_delta(metrics_before, metrics_after),
+                    }
+                    results.append(result)
+                    print(
+                        f"Smooth60 benchmark {device}/{scene}: "
+                        f"presentation={result['presentationFps']:.1f}, simulation={result['simulationFps']:.1f}, "
+                        f"fallback={fallback_active}, target={effective_target}, "
+                        f"frame p95={result['frameTimeMs']['p95']:.2f}ms, "
+                        f"heap peak={heap_peak}"
+                    )
+            devtools.request("Emulation.setCPUThrottlingRate", {"rate": 1})
+    report = {
+        "feature": "smooth60",
+        "simulationRateHz": 30,
+        "presentationTargetFps": 60,
+        "lowerPoweredProxy": "Chrome 4x CPU throttling",
+        "results": results,
+    }
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as file:
+        json.dump(report, file, indent=2)
+        file.write("\n")
+    print(f"Smooth60 benchmark matrix passed: {len(results)} runs, report={out_path}")
+
+
+def install_stage_interval_probe(devtools):
+    installed = devtools.evaluate(
+        """
+(() => {
+  const stage = window.__pr2Stage;
+  if (!stage) return false;
+  if (window.__pr2SmoothBenchHandler) {
+    stage.removeEventListener("enterFrame", window.__pr2SmoothBenchHandler);
+  }
+  window.__pr2SmoothBenchIntervals = [];
+  window.__pr2SmoothBenchLast = performance.now();
+  window.__pr2SmoothBenchHandler = () => {
+    const now = performance.now();
+    window.__pr2SmoothBenchIntervals.push(now - window.__pr2SmoothBenchLast);
+    window.__pr2SmoothBenchLast = now;
+  };
+  stage.addEventListener("enterFrame", window.__pr2SmoothBenchHandler);
+  return true;
+})()
+"""
+    )
+    if installed is not True:
+        raise SystemExit("OpenFL stage interval probe is unavailable.")
+
+
+def stop_stage_interval_probe(devtools):
+    raw = devtools.evaluate(
+        """
+(() => {
+  const stage = window.__pr2Stage;
+  if (stage && window.__pr2SmoothBenchHandler) {
+    stage.removeEventListener("enterFrame", window.__pr2SmoothBenchHandler);
+  }
+  window.__pr2SmoothBenchHandler = null;
+  return JSON.stringify(window.__pr2SmoothBenchIntervals || []);
+})()
+"""
+    )
+    return [float(value) for value in json.loads(raw) if value >= 0]
+
+
+def read_heap_usage(devtools):
+    return devtools.request("Runtime.getHeapUsage").get("result", {})
+
+
+def read_all_int_attribute(devtools, name):
+    expression = f'document.body.getAttribute({json.dumps(name)}) || ""'
+    raw = devtools.evaluate(expression)
+    return [int(value) for value in raw.split(",") if value]
+
+
+def average(values):
+    return sum(values) / len(values) if values else 0
+
+
+def percentile(values, percentage):
+    if not values:
+        return 0
+    ordered = sorted(values)
+    index = max(0, min(len(ordered) - 1, int((percentage / 100) * len(ordered) + 0.999999) - 1))
+    return ordered[index]
+
+
+def performance_delta(before, after):
+    keys = [
+        "TaskDuration",
+        "ScriptDuration",
+        "LayoutDuration",
+        "RecalcStyleDuration",
+        "LayoutCount",
+        "RecalcStyleCount",
+    ]
+    return {
+        key: after.get(key, 0) - before.get(key, 0)
+        for key in keys
+    }
 
 
 def check_debug_state(root, delay, browser_path, query, expected, use_gpu=False):
@@ -370,9 +909,36 @@ def run_browser_and_read_fps(browser, url, duration, use_gpu=False):
     process = subprocess.Popen(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
         page_ws_url = wait_for_page_websocket(debug_port)
+        devtools = DevToolsSession(page_ws_url)
+        wait_for_app_ready(devtools)
+        initial_presentation = devtools.evaluate(
+            'document.body.getAttribute("data-pr2-presentation-frame-samples") || ""'
+        )
+        initial_simulation = devtools.evaluate(
+            'document.body.getAttribute("data-pr2-simulation-tick-samples") || ""'
+        )
+        initial_presentation_count = len([value for value in initial_presentation.split(",") if value])
+        initial_simulation_count = len([value for value in initial_simulation.split(",") if value])
         time.sleep(duration + 2.0)
-        raw_samples = cdp_evaluate(page_ws_url, 'document.body.getAttribute("data-pr2-fps-samples") || ""')
-        return [int(value) for value in raw_samples.split(",") if value]
+        raw_samples = devtools.evaluate('document.body.getAttribute("data-pr2-fps-samples") || ""')
+        raw_presentation = devtools.evaluate(
+            'document.body.getAttribute("data-pr2-presentation-frame-samples") || ""'
+        )
+        raw_simulation = devtools.evaluate(
+            'document.body.getAttribute("data-pr2-simulation-tick-samples") || ""'
+        )
+        devtools.close()
+        presentation = [int(value) for value in raw_presentation.split(",") if value]
+        simulation = [int(value) for value in raw_simulation.split(",") if value]
+        # Drop the first window that closes after readiness because it began
+        # during preload and is not a full in-app measurement second.
+        presentation_start = min(len(presentation), initial_presentation_count + 1)
+        simulation_start = min(len(simulation), initial_simulation_count + 1)
+        return {
+            "legacy": [int(value) for value in raw_samples.split(",") if value],
+            "presentation": presentation[presentation_start:],
+            "simulation": simulation[simulation_start:],
+        }
     finally:
         process.terminate()
         try:
@@ -804,6 +1370,8 @@ def run_sequence_step(devtools, step, context=None):
         run_level_editor_e2e(devtools)
     elif action == "assert-level-editor-state":
         assert_level_editor_state(devtools, step, context)
+    elif action == "smooth60-replay":
+        run_smooth60_replay_action(devtools, require_field(step, "name"))
     elif action == "navigate":
         if context is None:
             raise SystemExit("Sequence navigate step requires a sequence context.")
@@ -849,6 +1417,16 @@ def run_sequence_step(devtools, step, context=None):
         validate_sequence_body_attribute(devtools, require_field(step, "name"), require_field(step, "value"))
     else:
         raise SystemExit(f"Unsupported OpenFL sequence action: {action}")
+
+
+def run_smooth60_replay_action(devtools, name):
+    result = devtools.evaluate(
+        'typeof window.__pr2RunSmooth60ReplayAction === "function" '
+        f'? window.__pr2RunSmooth60ReplayAction({json.dumps(name)}) : "hook-unavailable"'
+    )
+    print(f"smooth60-replay: {name} -> {result}")
+    if result == "hook-unavailable" or str(result).startswith("unsupported:"):
+        raise SystemExit(f"Smooth60 replay action failed: {result}")
 
 
 def render_sequence_text(value, context=None):
@@ -1253,8 +1831,8 @@ def wait_for_sequence_debug_state(devtools):
     return ""
 
 
-def wait_for_body_attribute(devtools, name, expected_value):
-    deadline = time.monotonic() + 5.0
+def wait_for_body_attribute(devtools, name, expected_value, timeout=5.0):
+    deadline = time.monotonic() + timeout
     expression = f'document.body.getAttribute({json.dumps(name)}) || ""'
     last_value = ""
     while time.monotonic() < deadline:
@@ -1394,8 +1972,16 @@ def main():
     parser.add_argument("--fps-duration", type=float, default=30.0)
     parser.add_argument("--fps-target", type=int, default=30)
     parser.add_argument("--fps-tolerance", type=int, default=5)
+    parser.add_argument("--simulation-fps-target", type=int, default=30)
+    parser.add_argument("--simulation-fps-tolerance", type=int, default=1)
     parser.add_argument("--expect", action="append", default=[])
     parser.add_argument("--metrics-out")
+    parser.add_argument("--replay-out", default=os.path.join("test", "output", "smooth60-replays"))
+    parser.add_argument("--benchmark-duration", type=float, default=5.0)
+    parser.add_argument(
+        "--benchmark-out",
+        default=os.path.join("test", "output", "smooth60-benchmark.json"),
+    )
     parser.add_argument(
         "--gpu",
         action="store_true",
@@ -1412,6 +1998,10 @@ def main():
     sequence.add_argument("script")
 
     subparsers.add_parser("fps")
+    subparsers.add_parser("smooth60-flag")
+    subparsers.add_parser("smooth60-stability")
+    subparsers.add_parser("smooth60-replays")
+    subparsers.add_parser("smooth60-benchmark")
     subparsers.add_parser("debug-state")
 
     args = parser.parse_args()
@@ -1420,7 +2010,31 @@ def main():
     elif args.command == "sequence":
         run_sequence(args.script, args.root, args.browser, args.base_url, args.gpu, args.metrics_out)
     elif args.command == "fps":
-        check_fps(args.root, args.fps_duration, args.fps_target, args.fps_tolerance, args.browser, args.query, args.gpu)
+        check_fps(
+            args.root,
+            args.fps_duration,
+            args.fps_target,
+            args.fps_tolerance,
+            args.simulation_fps_target,
+            args.simulation_fps_tolerance,
+            args.browser,
+            args.query,
+            args.gpu,
+        )
+    elif args.command == "smooth60-flag":
+        check_smooth60_flag(args.root, args.browser, args.gpu)
+    elif args.command == "smooth60-stability":
+        check_smooth60_stability(args.root, args.browser, args.gpu)
+    elif args.command == "smooth60-replays":
+        capture_smooth60_replays(args.root, args.browser, args.replay_out, args.gpu)
+    elif args.command == "smooth60-benchmark":
+        benchmark_smooth60(
+            args.root,
+            args.browser,
+            args.benchmark_out,
+            args.benchmark_duration,
+            args.gpu,
+        )
     elif args.command == "debug-state":
         check_debug_state(args.root, args.delay, args.browser, args.query, args.expect, args.gpu)
 

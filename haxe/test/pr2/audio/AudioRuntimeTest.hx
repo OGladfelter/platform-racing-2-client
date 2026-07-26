@@ -22,6 +22,15 @@ class AudioRuntimeTest {
 		assert(pr2.effects.ZapEffect.SOUND_PATH == "assets/audio/sfx/zap.mp3", "ZapEffect uses the named exported Flash ZapSound"); assertions++;
 		assert(pr2.gameplay.RaceSounds.SQUASH_SOUND == "assets/audio/sfx/squash.mp3", "squash uses the named exported Flash SquashSound"); assertions++;
 		assert(pr2.gameplay.RaceSounds.VICTORY_SOUND == "assets/audio/sfx/victory.mp3", "finishing uses the named exported Flash VictorySound"); assertions++;
+		var logicalCameraX = 12.5;
+		var logicalCameraY = -7.25;
+		var raceSounds = new pr2.gameplay.RaceSounds(function() return {x: logicalCameraX, y: logicalCameraY});
+		var spatialCamera = @:privateAccess raceSounds.spatialCameraOffset();
+		assertNear(12.5, spatialCamera.x, "spatial audio reads the deliberate logical camera x"); assertions++;
+		assertNear(-7.25, spatialCamera.y, "spatial audio reads the deliberate logical camera y"); assertions++;
+		logicalCameraX = 18;
+		assertNear(18, (@:privateAccess raceSounds.spatialCameraOffset()).x,
+			"spatial audio samples logical camera state without owning or mutating it"); assertions++;
 
 		var songs = MusicCatalog.enabled(["2", "19"]);
 		assert(songs.length == 18, "disabled songs are omitted outside the editor"); assertions++;

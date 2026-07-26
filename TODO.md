@@ -131,164 +131,167 @@ identical with `smooth60` enabled and disabled.
 
 ##### Establish The Frame-Rate Boundary
 
-- [ ] Inventory every use of `Constants.FRAME_RATE`, `stage.frameRate`, and
+- [x] Inventory every use of `Constants.FRAME_RATE`, `stage.frameRate`, and
   `Event.ENTER_FRAME`; classify each as simulation, presentation, authored
   animation, UI timing, loading work, or diagnostics before changing timing.
-- [ ] Split the current shared frame-rate constant into explicit 30 Hz
+- [x] Split the current shared frame-rate constant into explicit 30 Hz
   simulation and configurable presentation rates without changing physics
   formulas or frame-duration constants.
-- [ ] Parse `smooth60=1` through the normal query-parameter path and expose one
+- [x] Parse `smooth60=1` through the normal query-parameter path and expose one
   immutable runtime setting; missing, empty, `0`, and invalid values must leave
   the feature disabled.
-- [ ] Keep the project/window bootstrap at 30 FPS, then request a 60 FPS stage
+- [x] Keep the project/window bootstrap at 30 FPS, then request a 60 FPS stage
   only after startup has resolved that the HTML5 experiment is enabled.
-- [ ] Make native targets ignore `smooth60` until the presentation clock and
+- [x] Make native targets ignore `smooth60` until the presentation clock and
   performance have been validated separately on those targets.
-- [ ] Update `SWFStats` so its target is the configured presentation rate and it
+- [x] Update `SWFStats` so its target is the configured presentation rate and it
   cannot force a flagged 60 FPS stage back to 30 FPS.
-- [ ] Add separate diagnostic counters for simulation ticks and presented
+- [x] Add separate diagnostic counters for simulation ticks and presented
   frames so a reported 60 FPS cannot hide doubled or slowed physics.
-- [ ] Publish the flag state and both measured rates through the existing HTML5
+- [x] Publish the flag state and both measured rates through the existing HTML5
   debug-signal mechanism for deterministic browser-driver assertions.
 
 ##### Introduce A 30 Hz Simulation Clock
 
-- [ ] Add one application-owned frame clock, installed before production
+- [x] Add one application-owned frame clock, installed before production
   screens, that identifies 30 Hz simulation ticks and intervening presentation
   frames when the stage runs at 60 FPS.
-- [ ] Make every stage frame a simulation tick when `smooth60` is disabled so
+- [x] Make every stage frame a simulation tick when `smooth60` is disabled so
   the default path retains the current event ordering and behavior.
-- [ ] Define and test the clock's initial phase so enabling the experiment does
+- [x] Define and test the clock's initial phase so enabling the experiment does
   not run, skip, or duplicate a simulation tick during startup.
-- [ ] Reset presentation phase safely across deactivate/reactivate, focus loss,
+- [x] Reset presentation phase safely across deactivate/reactivate, focus loss,
   screen replacement, and course teardown without synthesizing gameplay ticks.
-- [ ] Move `Course` physics, input copying, items, block synchronization, frame
+- [x] Move `Course` physics, input copying, items, block synchronization, frame
   counters, finish handling, and network emission onto simulation ticks only.
-- [ ] Move remote-character queue consumption and block-touch probes onto
+- [x] Move remote-character queue consumption and block-touch probes onto
   simulation ticks only; 60 FPS presentation must not consume server updates
   twice as fast.
-- [ ] Move character recovery, invincibility flashing, jet animation, and
+- [x] Move character recovery, invincibility flashing, jet animation, and
   removal/fade lifecycles onto simulation ticks only.
-- [ ] Move gameplay effects, particles, projectiles, eggs, loose hats, snakes,
+- [x] Move gameplay effects, particles, projectiles, eggs, loose hats, snakes,
   moving-block visuals, and course-rotation progression onto simulation ticks
   only.
-- [ ] Move authored timeline clips, HUD animations, UI frame counters, loading
+- [x] Move authored timeline clips, HUD animations, UI frame counters, loading
   work, lobby animation, and editor frame handlers onto simulation ticks unless
   a handler is explicitly presentation-only.
-- [ ] Add a source-level regression check or narrow allowlist so a future
+- [x] Add a source-level regression check or narrow allowlist so a future
   time-dependent `ENTER_FRAME` handler cannot silently begin running at 60 Hz.
-- [ ] Add clock tests covering long runs, phase resets, flagged/unflagged mode,
+- [x] Add clock tests covering long runs, phase resets, flagged/unflagged mode,
   and transitions back to a 30 FPS presentation rate.
 
 ##### Build The Local-Player Visual Prototype
 
-- [ ] Introduce a small presentation-pose type containing previous/current
+- [x] Introduce a small presentation-pose type containing previous/current
   position, rotation, facing, layer, and a discontinuity marker.
-- [ ] Capture the previous authoritative pose immediately before a simulation
+- [x] Capture the previous authoritative pose immediately before a simulation
   tick and the new authoritative pose immediately after it.
-- [ ] Render the normal authoritative pose on simulation frames and, on the
+- [x] Render the normal authoritative pose on simulation frames and, on the
   intervening frame, extrapolate `current + 0.5 * (current - previous)`.
-- [ ] Apply the extrapolated offset to the inner character presentation rather
+- [x] Apply the extrapolated offset to the inner character presentation rather
   than overwriting the authoritative `Character.x/y` read by gameplay systems.
-- [ ] Keep character pose/timeline advancement at 30 Hz; do not attempt optical
+- [x] Keep character pose/timeline advancement at 30 Hz; do not attempt optical
   blending or synthesized in-between body-art frames in this experiment.
-- [ ] Mark spawn, teleport, removal, finish, respawn, layer change, spectate
+- [x] Mark spawn, teleport, removal, finish, respawn, layer change, spectate
   change, committed course rotation, and unusually large movement as
   discontinuities that snap instead of extrapolating.
-- [ ] Suppress unsafe prediction when a landing, wall/ceiling collision,
+- [x] Suppress unsafe prediction when a landing, wall/ceiling collision,
   velocity reversal, or other contact makes the previous movement delta an
   invalid estimate of the next half-step.
-- [ ] Clear both pose samples whenever the course or local character is rebuilt
+- [x] Clear both pose samples whenever the course or local character is rebuilt
   so stale coordinates cannot produce a one-frame streak across the level.
-- [ ] Add focused pose tests for constant motion, fractional/negative movement,
+- [x] Add focused pose tests for constant motion, fractional/negative movement,
   stopped motion, direction reversal, and every snap condition.
 
 ##### Smooth The Camera And Course Together
 
-- [ ] Separate the authoritative 30 Hz camera state from its disposable
+- [x] Separate the authoritative 30 Hz camera state from its disposable
   presentation transform.
-- [ ] Extrapolate the camera from its last two authoritative positions on the
+- [x] Extrapolate the camera from its last two authoritative positions on the
   same phase as the local player so player and background do not judder against
   one another.
-- [ ] Split `LevelRenderer.setCameraOffset` so 60 Hz presentation updates can
+- [x] Split `LevelRenderer.setCameraOffset` so 60 Hz presentation updates can
   apply fractional transforms without rebuilding culling and art view windows.
-- [ ] Keep block/art culling, visibility decisions, and raster-cache selection
+- [x] Keep block/art culling, visibility decisions, and raster-cache selection
   on authoritative simulation ticks using conservative integer bounds.
-- [ ] Preserve fractional presentation camera coordinates instead of rounding
+- [x] Preserve fractional presentation camera coordinates instead of rounding
   away the half-frame movement.
-- [ ] Interpolate or extrapolate the in-progress course-rotation presentation
+- [x] Interpolate or extrapolate the in-progress course-rotation presentation
   angle while keeping rotation state, collision axes, and rotation completion
   on 30 Hz simulation ticks.
-- [ ] Snap camera and course presentation on teleports, spectate-target changes,
+- [x] Snap camera and course presentation on teleports, spectate-target changes,
   rotation commits, manual editor scrolling, and level-load transitions.
-- [ ] Verify spatial audio continues to use a deliberate camera coordinate and
+- [x] Verify spatial audio continues to use a deliberate camera coordinate and
   cannot affect authoritative state; choose logical or presented camera
   position consistently and cover it with a focused test.
 
 ##### Extend Presentation Coverage
 
-- [ ] Give remote characters presentation poses without changing their existing
+- [x] Give remote characters presentation poses without changing their existing
   30 Hz network catch-up algorithm or queued-update semantics.
-- [ ] Compare delayed previous/current interpolation with guarded extrapolation
+- [x] Compare delayed previous/current interpolation with guarded extrapolation
   for remote players and select the approach with the least visible correction;
   do not add latency to the local player as part of that choice.
-- [ ] Smooth the spectated character and camera as one unit, including switches
+- [x] Smooth the spectated character and camera as one unit, including switches
   between local and remote targets.
-- [ ] Inventory every moving world-space display object visible during a race
+- [x] Inventory every moving world-space display object visible during a race
   and record whether it should extrapolate, interpolate, or intentionally snap.
-- [ ] Add presentation poses for snake segments, egg projectiles, loose hats,
+- [x] Add presentation poses for snake segments, egg projectiles, loose hats,
   physics particles, block pieces, shots, and follow/fade effects one subsystem
   at a time.
-- [ ] Keep instantaneous block changes, pickups, state transitions, and
+- [x] Keep instantaneous block changes, pickups, state transitions, and
   visibility changes discrete unless the Flash behavior already contains a
   continuous visual tween.
-- [ ] Decide whether minimap dots should remain authoritative at 30 Hz or use
+- [x] Decide whether minimap dots should remain authoritative at 30 Hz or use
   the same presentation pose as their characters, then test rotation and
   spectating in the chosen mode.
-- [ ] Verify water/front/back character-layer changes cannot leave a smoothed
+- [x] Verify water/front/back character-layer changes cannot leave a smoothed
   character duplicated, missing, or on the wrong side of level art.
-- [ ] Ensure removal and teardown unregister both simulation and presentation
+- [x] Ensure removal and teardown unregister both simulation and presentation
   callbacks so changing screens does not retain pose objects or frame listeners.
 
 ##### Performance, Fallback, And Acceptance
 
-- [ ] Make presentation-frame code allocation-free in steady state; reuse pose
+- [x] Make presentation-frame code allocation-free in steady state; reuse pose
   storage and avoid rebuilding matrices, maps, points, or child lists solely to
   draw an in-between frame.
-- [ ] Confirm the extra frames do not invalidate static level-art, character,
+- [x] Confirm the extra frames do not invalidate static level-art, character,
   or flattened display-tree caches.
-- [ ] Extend the FPS harness to assert approximately 60 presented frames and
+- [x] Extend the FPS harness to assert approximately 60 presented frames and
   exactly 30 simulation ticks per second independently.
-- [ ] Add a deterministic twin replay that runs identical inputs with
+- [x] Add a deterministic twin replay that runs identical inputs with
   `smooth60` off and on and compares every 30 Hz `LocalPlayerState`.
-- [ ] Compare the complete emitted multiplayer command stream in that twin
+- [x] Compare the complete emitted multiplayer command stream in that twin
   replay, including update cadence and payload values.
-- [ ] Test frame-counted lifecycles at both presentation rates, including
+- [x] Test frame-counted lifecycles at both presentation rates, including
   countdown, recovery, invincibility, fades, rotation, items, effects, finish,
   and out-of-time behavior.
-- [ ] Add browser coverage proving the query flag is default-off, enables only
+- [x] Add browser coverage proving the query flag is default-off, enables only
   for `smooth60=1`, requests the intended stage rate, and does not survive a
   navigation without the parameter.
-- [ ] Capture side-by-side 30/60 replays for running, jumping, falling, landing,
+- [x] Capture side-by-side 30/60 replays for running, jumping, falling, landing,
   wall contact, teleporting, rotating, spectating, multiplayer correction, and
   a particle-heavy scene.
-- [ ] Benchmark representative small, large, art-heavy, and multiplayer levels
+- [x] Benchmark representative small, large, art-heavy, and multiplayer levels
   on desktop and a lower-powered browser device; record simulation rate,
   presentation rate, frame-time percentiles, and memory/GC behavior.
-- [ ] Define a sustained-frame-time threshold for declaring 60 FPS presentation
+- [x] Define a sustained-frame-time threshold for declaring 60 FPS presentation
   unsupported on the current device.
-- [ ] Add a safe session-only fallback to 30 FPS presentation when that threshold
+- [x] Add a safe session-only fallback to 30 FPS presentation when that threshold
   is exceeded; rebasing the presentation clock must not skip or duplicate a
   simulation tick.
-- [ ] Show the fallback state in diagnostics and keep `smooth60=1` in the URL so
+- [x] Show the fallback state in diagnostics and keep `smooth60=1` in the URL so
   performance failures are distinguishable from an unrequested experiment.
-- [ ] Run the focused runtime, gameplay, character, effects, network,
+  Automatic fallback is currently compile-time disabled so `smooth60=1`
+  remains a definitive 60 FPS test control; the policy and diagnostics remain
+  available for a later re-enable.
+- [x] Run the focused runtime, gameplay, character, effects, network,
   level-rendering, and UI deterministic domains plus the HTML5 replay/performance
   cases; do not substitute a full-suite pass for targeted evidence.
-- [ ] Document `?smooth60=1`, its experimental/default-off status, fallback
+- [x] Document `?smooth60=1`, its experimental/default-off status, fallback
   behavior, known visual snap cases, and the guarantee that authoritative
   gameplay remains 30 Hz.
-- [ ] Keep the experiment opt-in until the state/packet equivalence checks,
+- [x] Keep the experiment opt-in until the state/packet equivalence checks,
   visual replay set, and performance thresholds pass; make any later proposal
   to enable it by default a separate parity and product decision.
 

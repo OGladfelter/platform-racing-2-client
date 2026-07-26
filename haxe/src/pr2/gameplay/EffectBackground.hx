@@ -7,6 +7,7 @@ import pr2.display.Removable;
 import pr2.audio.SoundEffects;
 import pr2.level.LevelRenderer;
 import pr2.net.CommandHandler;
+import pr2.character.PhysicsParticle;
 
 /**
 	Server-pushed race effects from `background.EffectBackground`.
@@ -89,6 +90,11 @@ class EffectBackground extends Sprite {
 	public function clear():Void {
 		while (numChildren > 0) {
 			var child:DisplayObject = getChildAt(numChildren - 1);
+			var physicsParticle = Std.downcast(child, PhysicsParticle);
+			if (physicsParticle != null) {
+				physicsParticle.remove();
+				continue;
+			}
 			var removable = Std.downcast(child, Removable);
 			if (removable != null) {
 				removable.remove();

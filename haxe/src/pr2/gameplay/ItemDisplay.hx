@@ -46,6 +46,7 @@ class ItemDisplay extends Removable {
 	}
 
 	private function advanceItemArt(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		if (art != null) art.advanceFrame();
 	}
 

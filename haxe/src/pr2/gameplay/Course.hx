@@ -24,6 +24,7 @@ import pr2.effects.ZapEffect;
 import pr2.effects.Slash;
 import pr2.effects.StingEffect;
 import pr2.effects.BlockPiece;
+import pr2.effects.FollowFadeEffect;
 import pr2.gameplay.GameCommandShell.LocalCharacterInit;
 import pr2.gameplay.GameCommandShell.RemoteCharacterInit;
 import pr2.gameplay.SpecialEvent.PlaceArtifactRequest;
@@ -32,6 +33,9 @@ import pr2.gameplay.player.BlockVisualEvent.BlockVisualEventKind;
 import pr2.gameplay.player.LocalPlayerState;
 import pr2.gameplay.player.LocalPlayerInput;
 import pr2.gameplay.player.PlayerDisplayPlacement;
+import pr2.gameplay.presentation.CharacterPresentationLayer;
+import pr2.gameplay.presentation.CameraPresentationPose;
+import pr2.gameplay.presentation.PresentationPose;
 import pr2.lobby.account.AlternateControls;
 import pr2.lobby.chat.ChatText;
 import pr2.lobby.LobbySession;
@@ -44,6 +48,7 @@ import pr2.net.CommandHandler;
 import pr2.net.LobbySocket;
 import pr2.net.ServerLevelData;
 import pr2.runtime.FontResolver;
+import pr2.runtime.FrameClock;
 
 /**
 	The in-game race shell: a decoded `Level` rendered with the authored HUD
@@ -59,6 +64,7 @@ import pr2.runtime.FontResolver;
 	roster controller owns their command registration and lifecycle.
 **/
 class Course extends Sprite {
+	private static inline var MAX_LOCAL_PRESENTATION_DELTA:Float = 60;
 	// Verified Course holder->stage offsets (holder is centred at +275,+200).
 	public static inline var ITEM_X:Float = 2;
 	public static inline var ITEM_Y:Float = 2;
@@ -102,6 +108,15 @@ class Course extends Sprite {
 	private var camera:CameraFollow;
 	private var snakeManager:SnakeManager;
 	private var remoteBlockActivation:RemoteBlockActivation;
+	private final localPresentationPose:PresentationPose = new PresentationPose();
+	private final cameraPresentationPose:CameraPresentationPose = new CameraPresentationPose();
+	private var localPresentationBeforeCourseRotation:Int = 0;
+	private var localPresentationBeforeDiscontinuityVersion:Int = 0;
+	private var localPresentationBeforeCollisionVersion:Int = 0;
+	private var localPresentationBeforeVx:Float = 0;
+	private var localPresentationBeforeVy:Float = 0;
+	private var localPresentationBeforeGrounded:Bool = false;
+	private var localPresentationDiscontinuityPending:Bool = true;
 
 	public var miniMap(default, null):MiniMap;
 	public var spectatePicker(default, null):SpectatePicker;
@@ -117,6 +132,7 @@ class Course extends Sprite {
 	public var eggRound(default, null):EggRound;
 	public var effectBackground(default, null):EffectBackground;
 	public var looseHats(default, null):Map<Int, HatEffect> = new Map();
+	private final looseHatPresentationOwners:Array<HatEffect> = [];
 	public var raceStarted(default, null):Bool = false;
 	public var framesPlaying(default, null):Int = 0;
 	/** Suppresses live-server finish submission for local/editor-hosted courses. */
@@ -216,6 +232,8 @@ class Course extends Sprite {
 		var focus = startBlocks.length == 0 ? null : startBlocks[0];
 		levelRenderer = new LevelRenderer(level, focus, LevelRenderer.DEFAULT_FOCUS_X, LevelRenderer.DEFAULT_FOCUS_Y, true);
 		addChild(levelRenderer);
+		// Spatial audio uses the authoritative 30 Hz offset. Presentation-only
+		// camera extrapolation remains visual and cannot feed back into sound.
 		raceSounds = new RaceSounds(levelRenderer.cameraOffset);
 
 		blockController = new BlockController(level);
@@ -477,6 +495,12 @@ class Course extends Sprite {
 		}
 	}
 
+	private function renderLooseHatPresentationFrame():Void {
+		for (index in 0...looseHatPresentationOwners.length) {
+			looseHatPresentationOwners[index].renderPresentationFrame();
+		}
+	}
+
 	public function isDonePlaying():Bool {
 		return localFinishHandled || raceEnded;
 	}
@@ -498,7 +522,11 @@ class Course extends Sprite {
 		return onChatLine != null && onChatLine(message);
 	}
 
-	public function createLocalCharacter(init:LocalCharacterInit):LocalCharacter return roster.createLocalCharacter(init);
+	public function createLocalCharacter(init:LocalCharacterInit):LocalCharacter {
+		var character = roster.createLocalCharacter(init);
+		invalidateLocalPresentationPose();
+		return character;
+	}
 	public function createRemoteCharacter(init:RemoteCharacterInit):RemoteCharacter return roster.createRemoteCharacter(init);
 	public function getRemoteCharacter(tempId:Int):Null<RemoteCharacter> return roster.getRemoteCharacter(tempId);
 	public function remoteCharacterCount():Int return roster.remoteCharacterCount();
@@ -555,6 +583,7 @@ class Course extends Sprite {
 		var world = levelRenderer.screenToWorld(local.x, local.y);
 		var state = localCharacter.stateSnapshot();
 		levelRenderer.showTeleportPop(state.x, state.y);
+		invalidateLocalPresentationPose();
 		localCharacter.setControllerPosition(world.x, world.y);
 		levelRenderer.showTeleportPop(world.x, world.y);
 		updatePlayerDisplay();
@@ -607,7 +636,14 @@ class Course extends Sprite {
 
 	public function addLooseHat(x:Int, y:Int, rot:Int, num:Int, color:Int, color2:Int, id:Int):HatEffect {
 		removeLooseHat(id);
-		return new HatEffect(this, x, y, rot, num, color, color2, id, effectBackground, commandHandler);
+		var hat = new HatEffect(this, x, y, rot, num, color, color2, id, effectBackground, commandHandler);
+		looseHatPresentationOwners.push(hat);
+		return hat;
+	}
+
+	public function unregisterLooseHatPresentationOwner(hat:HatEffect):Void {
+		var index = looseHatPresentationOwners.indexOf(hat);
+		if (index >= 0) looseHatPresentationOwners.splice(index, 1);
 	}
 
 	public function removeLooseHat(id:Int):Bool {
@@ -748,8 +784,11 @@ class Course extends Sprite {
 		if (canSpectate == value) {
 			return;
 		}
+		var previousRemote = Std.downcast(playerSpectating, RemoteCharacter);
+		if (previousRemote != null) previousRemote.requestPresentationSnap();
 		canSpectate = value;
 		playerSpectating = null;
+		markLocalPresentationDiscontinuity();
 		toggleKeyScroll(value);
 	}
 
@@ -757,7 +796,10 @@ class Course extends Sprite {
 		if (playerSpectating != null && tempId == playerSpectating.tempID) {
 			return;
 		}
+		var previousRemote = Std.downcast(playerSpectating, RemoteCharacter);
+		if (previousRemote != null) previousRemote.requestPresentationSnap();
 		playerSpectating = tempId >= 0 && playerArray != null && tempId < playerArray.length ? playerArray[tempId] : null;
+		markLocalPresentationDiscontinuity();
 		toggleKeyScroll(canSpectate && playerSpectating == null);
 	}
 
@@ -816,14 +858,27 @@ class Course extends Sprite {
 	}
 
 	private function onEnterFrame(event:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) {
+			renderLocalPresentationFrame();
+			renderRemotePresentationFrames();
+			renderFollowFadePresentationFrames();
+			if (snakeManager != null) snakeManager.renderPresentationFrame();
+			if (eggRound != null) eggRound.renderPresentationFrame();
+			renderLooseHatPresentationFrame();
+			renderCameraPresentationFrame();
+			renderCourseRotationPresentationFrame();
+			return;
+		}
 		if (frameCounterActive) {
 			framesPlaying++;
 		}
 		if (player == null) {
 			return;
 		}
+		beginLocalPresentationPoseCapture(player.stateSnapshot());
 		if (levelRenderer != null && !levelRenderer.isDrawingComplete()) {
 			toggleKeyScroll(true);
+			finishLocalPresentationPoseCapture(player.stateSnapshot());
 			updatePlayerDisplay();
 			pr2.app.DebugSignal.set("race-phase", "loading");
 			return;
@@ -882,6 +937,7 @@ class Course extends Sprite {
 			player.y = state.y;
 			localCharacter.emitNetworkUpdate(state.touchedBlockType == "water" ? "backBackground" : "frontBackground");
 		}
+		finishLocalPresentationPoseCapture(state);
 		updatePlayerDisplay();
 		emitLocalItemEffect(state);
 		maybeHandleLocalFinish(state);
@@ -894,6 +950,168 @@ class Course extends Sprite {
 		if (onFrame != null) {
 			onFrame(state);
 		}
+	}
+
+	private function beginLocalPresentationPoseCapture(state:LocalPlayerState):Void {
+		localCharacter.clearPresentationWorldOffset();
+		localPresentationBeforeCourseRotation = state.courseRotation;
+		localPresentationBeforeDiscontinuityVersion = localCharacter.controller.movementDiscontinuityVersion;
+		localPresentationBeforeCollisionVersion = localCharacter.controller.collisionVersion;
+		localPresentationBeforeVx = state.vx;
+		localPresentationBeforeVy = state.vy;
+		localPresentationBeforeGrounded = state.grounded;
+		localPresentationPose.beginSimulationTick(
+			state.x,
+			state.y,
+			localCharacter.characterRotation,
+			localCharacter.facingScaleX,
+			presentationLayerFor(state)
+		);
+	}
+
+	private function finishLocalPresentationPoseCapture(state:LocalPlayerState):Void {
+		var deltaX = state.x - localPresentationPose.previousX;
+		var deltaY = state.y - localPresentationPose.previousY;
+		var layer = presentationLayerFor(state);
+		var discontinuous = PresentationPose.shouldSnap(
+			localPresentationDiscontinuityPending,
+			localCharacter.controller.movementDiscontinuityVersion != localPresentationBeforeDiscontinuityVersion,
+			localCharacter.controller.collisionVersion != localPresentationBeforeCollisionVersion,
+			state.courseRotation != localPresentationBeforeCourseRotation,
+			layer != localPresentationPose.previousLayer,
+			!localPresentationBeforeGrounded && state.grounded,
+			PresentationPose.velocityReversed(localPresentationBeforeVx, state.vx),
+			PresentationPose.velocityReversed(localPresentationBeforeVy, state.vy),
+			PresentationPose.movementTooLarge(deltaX, deltaY, MAX_LOCAL_PRESENTATION_DELTA)
+		);
+		localPresentationPose.finishSimulationTick(
+			state.x,
+			state.y,
+			localCharacter.characterRotation,
+			localCharacter.facingScaleX,
+			layer,
+			discontinuous
+		);
+		localPresentationDiscontinuityPending = false;
+	}
+
+	private static inline function presentationLayerFor(state:LocalPlayerState):CharacterPresentationLayer {
+		return state.touchedBlockType == "water" ? CharacterPresentationLayer.Back : CharacterPresentationLayer.Front;
+	}
+
+	private function renderLocalPresentationFrame():Void {
+		if (player == null || !localPresentationPose.hasSamples) {
+			return;
+		}
+		// Reuse the exact CharacterView pose selected on the last simulation tick.
+		// Presentation frames transform that bitmap/vector tree only: they never
+		// select a clip, advance its timeline, or synthesize body-art frames.
+		var factor = localPresentationPose.discontinuity ? 0.0 : 0.5;
+		applyLocalPresentationPose(
+			localPresentationPose.extrapolatedX(factor),
+			localPresentationPose.extrapolatedY(factor),
+			localPresentationPose.extrapolatedRotation(factor),
+			localPresentationPose.currentFacing
+		);
+	}
+
+	private function markLocalPresentationDiscontinuity():Void {
+		localPresentationDiscontinuityPending = true;
+		localPresentationPose.markDiscontinuity();
+		var spectatedRemote = Std.downcast(playerSpectating, RemoteCharacter);
+		if (spectatedRemote != null) spectatedRemote.requestPresentationSnap();
+		snapPresentationTransformsToAuthoritative();
+	}
+
+	private function invalidateLocalPresentationPose():Void {
+		localPresentationDiscontinuityPending = true;
+		localPresentationPose.clear();
+		snapPresentationTransformsToAuthoritative();
+	}
+
+	private function snapPresentationTransformsToAuthoritative():Void {
+		if (player != null) {
+			if (localPresentationPose.hasSamples) {
+				applyLocalPresentationPose(
+					localPresentationPose.currentX,
+					localPresentationPose.currentY,
+					localPresentationPose.currentRotation,
+					localPresentationPose.currentFacing
+				);
+			} else {
+				player.display.x = 0;
+				player.display.y = 0;
+				player.display.rotation = 0;
+				player.display.scaleX = PlayerDisplayPlacement.CHARACTER_SCALE * player.facingScaleX;
+				player.display.scaleY = PlayerDisplayPlacement.CHARACTER_SCALE;
+				player.clearPresentationWorldOffset();
+			}
+		}
+		if (levelRenderer != null) {
+			if (cameraPresentationPose.hasSamples) {
+				cameraPresentationPose.present(cameraPresentationPose.currentX, cameraPresentationPose.currentY);
+				levelRenderer.setPresentationCameraOffset(
+					Constants.STAGE_WIDTH / 2 + cameraPresentationPose.currentX,
+					Constants.STAGE_HEIGHT / 2 + cameraPresentationPose.currentY
+				);
+			}
+			levelRenderer.setPresentationCourseTweenRotation(levelRenderer.courseTweenRotation());
+		}
+	}
+
+	private function applyLocalPresentationPose(x:Float, y:Float, rotation:Float, facing:Int):Void {
+		var worldOffsetX = x - localPresentationPose.currentX;
+		var worldOffsetY = y - localPresentationPose.currentY;
+		var radians = -localPresentationPose.currentRotation * Math.PI / 180;
+		var cos = Math.cos(radians);
+		var sin = Math.sin(radians);
+		player.display.x = worldOffsetX * cos - worldOffsetY * sin;
+		player.display.y = worldOffsetX * sin + worldOffsetY * cos;
+		player.display.rotation = rotation - localPresentationPose.currentRotation;
+		player.display.scaleX = PlayerDisplayPlacement.CHARACTER_SCALE * facing;
+		player.display.scaleY = PlayerDisplayPlacement.CHARACTER_SCALE;
+		player.setPresentationWorldOffset(worldOffsetX, worldOffsetY);
+	}
+
+	private function renderRemotePresentationFrames():Void {
+		if (playerArray == null) return;
+		for (index in 0...playerArray.length) {
+			var character = Std.downcast(playerArray[index], RemoteCharacter);
+			if (character != null) character.renderPresentationFrame();
+		}
+	}
+
+	private function renderFollowFadePresentationFrames():Void {
+		if (characterLayer == null) return;
+		for (index in 0...characterLayer.numChildren) {
+			var effect = Std.downcast(characterLayer.getChildAt(index), FollowFadeEffect);
+			if (effect != null) effect.renderPresentationFrame();
+		}
+	}
+
+	private function renderCameraPresentationFrame():Void {
+		if (levelRenderer == null || !cameraPresentationPose.hasSamples) {
+			return;
+		}
+		var factor = localPresentationPose.hasSamples && !localPresentationPose.discontinuity ? 0.5 : 0.0;
+		cameraPresentationPose.present(
+			cameraPresentationPose.extrapolatedX(factor),
+			cameraPresentationPose.extrapolatedY(factor)
+		);
+		levelRenderer.setPresentationCameraOffset(
+			Constants.STAGE_WIDTH / 2 + cameraPresentationPose.presentedX,
+			Constants.STAGE_HEIGHT / 2 + cameraPresentationPose.presentedY
+		);
+	}
+
+	private function renderCourseRotationPresentationFrame():Void {
+		if (levelRenderer == null || !localPresentationPose.hasSamples) {
+			return;
+		}
+		var factor = localPresentationPose.discontinuity ? 0.0 : 0.5;
+		levelRenderer.setPresentationCourseTweenRotation(
+			-localPresentationPose.extrapolatedRotation(factor)
+		);
 	}
 
 	// Publishes the race lifecycle phase and the live remote-player count to the
@@ -1012,6 +1230,7 @@ class Course extends Sprite {
 		if (!state.finished) {
 			return;
 		}
+		markLocalPresentationDiscontinuity();
 		var finishId = state.finishBlockId == null ? -1 : state.finishBlockId;
 		// Preserve the -1/0/0 sentinel for finishes without a block
 		// (deathmatch/time-out).
@@ -1302,6 +1521,7 @@ class Course extends Sprite {
 		var worldX = state.x;
 		var worldY = state.y;
 		var cameraTarget = cameraTargetWorld(worldX, worldY);
+		cameraPresentationPose.beginAuthoritativeUpdate(camera.posX, camera.posY);
 		if (keyScrollActive) {
 			applyKeyScroll();
 		} else {
@@ -1312,7 +1532,11 @@ class Course extends Sprite {
 				camera.follow(cameraTarget.x, cameraTarget.y);
 			}
 		}
-		levelRenderer.setCameraOffset(Constants.STAGE_WIDTH / 2 + camera.posX, Constants.STAGE_HEIGHT / 2 + camera.posY);
+		cameraPresentationPose.finishAuthoritativeUpdate(camera.posX, camera.posY);
+		levelRenderer.setCameraOffset(
+			Constants.STAGE_WIDTH / 2 + cameraPresentationPose.presentedX,
+			Constants.STAGE_HEIGHT / 2 + cameraPresentationPose.presentedY
+		);
 		if (playerDot != null) {
 			playerDot.x = worldX;
 			playerDot.y = worldY;
@@ -1370,6 +1594,7 @@ class Course extends Sprite {
 		if (keyScrollActive == active) {
 			return;
 		}
+		markLocalPresentationDiscontinuity();
 		keyScrollActive = active;
 		if (!active) {
 			scrollVelX = 0;
@@ -1454,6 +1679,9 @@ class Course extends Sprite {
 	}
 
 	public function remove():Void {
+		FrameClock.resetCurrentPresentationPhase();
+		invalidateLocalPresentationPose();
+		cameraPresentationPose.clear();
 		removeEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
 		removeEventListener(Event.REMOVED_FROM_STAGE, onRemovedFromStage);
 		removeEventListener(Event.ENTER_FRAME, onEnterFrame);
@@ -1521,6 +1749,7 @@ class Course extends Sprite {
 			}
 			looseHats = null;
 		}
+		looseHatPresentationOwners.resize(0);
 		stopAllJetSounds();
 		particleEffects.clearAll();
 		removeAllRemoteCharacters();

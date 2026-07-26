@@ -3,8 +3,12 @@ package pr2.gameplay;
 import openfl.display.Sprite;
 import openfl.display.DisplayObject;
 import openfl.display.DisplayObjectContainer;
+import openfl.events.Event;
 import openfl.text.TextField;
 import pr2.lobby.account.Settings;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateDiagnostics;
+import pr2.runtime.FrameRateSettings;
 
 class CountdownTest {
 	private static var assertions:Int = 0;
@@ -13,7 +17,43 @@ class CountdownTest {
 		testCountdownSequence();
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CountdownTest")) return;
 		testCountdownSounds();
+		testCountdownUsesSimulationCadenceAtBothPresentationRates();
 		trace('CountdownTest passed $assertions assertions');
+	}
+
+	private static function testCountdownUsesSimulationCadenceAtBothPresentationRates():Void {
+		var baseline = runCountdownCadence(false);
+		var smooth = runCountdownCadence(true);
+		assertEquals(61, baseline.simulationFrames, "30 FPS countdown completes after 61 authoritative advances");
+		assertEquals(61, baseline.stageFrames, "30 FPS countdown uses one display frame per authoritative advance");
+		assertEquals(61, smooth.simulationFrames, "60 FPS countdown keeps the same authoritative duration");
+		assertEquals(121, smooth.stageFrames, "60 FPS countdown inserts presentation-only frames between authoritative advances");
+		assertEquals(baseline.result, smooth.result, "countdown counts, finish callback, and teardown match at both rates");
+	}
+
+	private static function runCountdownCadence(smooth:Bool):{
+		stageFrames:Int,
+		simulationFrames:Int,
+		result:String
+	} {
+		var clock = new FrameClock(FrameRateSettings.fromQuery(smooth ? "?smooth60=1" : null, true),
+			new FrameRateDiagnostics(function():Float return 0));
+		@:privateAccess FrameClock.setCurrentForTests(clock);
+		var finishCalls = 0;
+		var parent = new Sprite();
+		var countdown = new Countdown(function():Void finishCalls++);
+		parent.addChild(countdown);
+		while (countdown.parent != null) {
+			clock.advanceFrame();
+			@:privateAccess countdown.art.dispatchEvent(new Event(Event.ENTER_FRAME));
+		}
+		var result = '${countdown.counts}:${countdown.finished}:$finishCalls:${countdown.parent == null}';
+		@:privateAccess FrameClock.setCurrentForTests(null);
+		return {
+			stageFrames: clock.stageFrameNumber,
+			simulationFrames: clock.simulationFrameNumber,
+			result: result
+		};
 	}
 
 	private static function testCountdownSequence():Void {

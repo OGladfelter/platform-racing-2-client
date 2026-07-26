@@ -92,6 +92,7 @@ class EggView extends Sprite {
 	}
 
 	private function advance(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		if (!playing) return;
 		currentFrame++;
 		if (currentFrame == 25) currentFrame = 1;

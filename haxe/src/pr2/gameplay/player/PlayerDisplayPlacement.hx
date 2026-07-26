@@ -23,6 +23,7 @@ class PlayerDisplayPlacement {
 		playerDisplay.scaleY = 1;
 		characterDisplay.x = 0;
 		characterDisplay.y = 0;
+		characterDisplay.rotation = 0;
 		characterDisplay.scaleX = CHARACTER_SCALE * facingScaleX;
 		characterDisplay.scaleY = CHARACTER_SCALE;
 	}

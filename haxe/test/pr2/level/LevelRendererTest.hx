@@ -15,6 +15,9 @@ import pr2.level.Level.LevelDrawAction;
 import pr2.level.Level.LevelTextObject;
 import pr2.level.Level.LevelBlock;
 import pr2.runtime.FontResolver;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateDiagnostics;
+import pr2.runtime.FrameRateSettings;
 
 class LevelRendererTest {
 	private static var assertions:Int = 0;
@@ -27,6 +30,8 @@ class LevelRendererTest {
 		testDefaultArtStrokeThickness();
 		testArtEraseStrokeClearsRasterTiles();
 		testWorldToScreenFocus();
+		testPresentationCameraOffsetDoesNotRebuild();
+		testPresentationCourseRotationDoesNotAdvanceAuthority();
 		testBackgroundColorTransforms();
 		testArtObjectAndTextLayerScale();
 		testBlockAlphaUpdate();
@@ -54,6 +59,74 @@ class LevelRendererTest {
 		testArtLayerDepthAndParallax();
 		testRemoveDisposesAnimatedChildren();
 		trace('LevelRendererTest passed $assertions assertions');
+	}
+
+	private static function testPresentationCourseRotationDoesNotAdvanceAuthority():Void {
+		var block = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 0, 0);
+		var renderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block);
+		renderer.setCourseRotation(0, 3);
+		var blockWindowUpdates = @:privateAccess renderer.viewWindowUpdateCount;
+		var artWindowUpdates = @:privateAccess renderer.artViewWindowUpdateCount;
+
+		renderer.setPresentationCourseTweenRotation(4.5);
+
+		assertClose(3, renderer.courseTweenRotation(), "presentation spin leaves authoritative tween angle");
+		assertClose(4.5, renderer.presentationCourseTweenRotation(), "presentation spin accepts half-step angle");
+		assertEquals(blockWindowUpdates, @:privateAccess renderer.viewWindowUpdateCount,
+			"presentation spin does not advance block culling");
+		assertEquals(artWindowUpdates, @:privateAccess renderer.artViewWindowUpdateCount,
+			"presentation spin does not advance art culling");
+
+		renderer.setCourseRotation(0, 6);
+		assertClose(6, renderer.courseTweenRotation(), "next simulation advances authoritative tween");
+		assertClose(6, renderer.presentationCourseTweenRotation(), "simulation restores authoritative presented tween");
+		renderer.setCourseRotation(90, 0);
+		assertClose(0, renderer.courseTweenRotation(), "rotation commit clears authoritative tween");
+		assertClose(0, renderer.presentationCourseTweenRotation(), "rotation commit snaps presented tween");
+		renderer.remove();
+	}
+
+	private static function testPresentationCameraOffsetDoesNotRebuild():Void {
+		var block = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 0, 0);
+		var renderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block);
+		renderer.setCameraOffset(10.4, 20.6);
+		var blockWindowUpdates = @:privateAccess renderer.viewWindowUpdateCount;
+		var artWindowUpdates = @:privateAccess renderer.artViewWindowUpdateCount;
+
+		renderer.setPresentationCameraOffset(10.75, 20.25);
+
+		var authoritative = renderer.cameraOffset();
+		var presented = renderer.presentationCameraOffset();
+		assertClose(10, authoritative.x, "presentation update leaves authoritative camera x");
+		assertClose(21, authoritative.y, "presentation update leaves authoritative camera y");
+		assertClose(10.75, presented.x, "presentation camera preserves fractional x");
+		assertClose(20.25, presented.y, "presentation camera preserves fractional y");
+		assertEquals(blockWindowUpdates, @:privateAccess renderer.viewWindowUpdateCount,
+			"presentation camera does not update block culling window");
+		assertEquals(artWindowUpdates, @:privateAccess renderer.artViewWindowUpdateCount,
+			"presentation camera does not update art culling windows");
+		var screen = renderer.worldToScreen(5, 7);
+		assertClose(15.75, screen.x, "world-to-screen uses disposable presentation x");
+		assertClose(27.25, screen.y, "world-to-screen uses disposable presentation y");
+		var world = renderer.screenToWorld(screen.x, screen.y);
+		assertClose(5, world.x, "screen-to-world inverts disposable presentation x");
+		assertClose(7, world.y, "screen-to-world inverts disposable presentation y");
+
+		var authoritativeColMin = @:privateAccess renderer.viewColMin;
+		var authoritativeColMax = @:privateAccess renderer.viewColMax;
+		var authoritativeRowMin = @:privateAccess renderer.viewRowMin;
+		var authoritativeRowMax = @:privateAccess renderer.viewRowMax;
+		renderer.setPresentationCameraOffset(-5000.5, 4000.25);
+		@:privateAccess renderer.updateViewWindow(true);
+		assertEquals(authoritativeColMin, @:privateAccess renderer.viewColMin,
+			"forced block culling ignores disposable presentation x");
+		assertEquals(authoritativeColMax, @:privateAccess renderer.viewColMax,
+			"conservative block culling max remains authoritative");
+		assertEquals(authoritativeRowMin, @:privateAccess renderer.viewRowMin,
+			"forced block culling ignores disposable presentation y");
+		assertEquals(authoritativeRowMax, @:privateAccess renderer.viewRowMax,
+			"conservative block culling row max remains authoritative");
+		renderer.remove();
 	}
 
 	private static function testMineExplosion():Void {
@@ -96,6 +169,14 @@ class LevelRendererTest {
 		assertEquals(block.worldY + 15.75, piece.y, "piece applies friction then gravity");
 		assertEquals(3, piece.selectedFrame, "brick fragment frame does not auto-play after construction");
 		assertClose(0.95, piece.alpha, "piece fades by Flash rate");
+		piece.dispatchEvent(new openfl.events.Event(openfl.events.Event.ENTER_FRAME));
+		piece.renderPresentationFrame();
+		assertClose(block.worldY + 17.94375, piece.y,
+			"block-piece presentation extrapolates half of its latest gravity-driven step");
+		assertClose(0.9, piece.alpha, "block-piece presentation does not advance authoritative fading");
+		piece.dispatchEvent(new openfl.events.Event(openfl.events.Event.ENTER_FRAME));
+		assertClose(block.worldY + 19.351875, piece.y,
+			"the next block-piece simulation tick resumes from authoritative rather than presented position");
 		var minePieces = renderer.showBlockPieces("MinePieceGraphic", block.worldX, block.worldY, 1, 10, 10, 25, 0.75, 0.95, 0.05,
 			function() return 0.5);
 		var minePiece = minePieces[0];
@@ -580,8 +661,17 @@ class LevelRendererTest {
 
 		renderer.triggerWaterRipple(water.worldX, water.worldY);
 		assertClose(0.9, renderer.blockAlphaAt(water.worldX, water.worldY), "remote water ripple dims block");
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true), new FrameRateDiagnostics(function():Float return 0));
+		@:privateAccess FrameClock.setCurrentForTests(clock);
+		clock.advanceFrame();
+		clock.advanceFrame();
+		renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertClose(0.9, renderer.blockAlphaAt(water.worldX, water.worldY),
+			"presentation frame holds the latest discrete block visibility/alpha state");
+		clock.advanceFrame();
 		renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
 		assertClose(0.93, renderer.blockAlphaAt(water.worldX, water.worldY), "remote water ripple recovers each frame");
+		@:privateAccess FrameClock.setCurrentForTests(null);
 		for (_ in 0...3) {
 			renderer.triggerWaterRipple(water.worldX, water.worldY);
 		}
@@ -714,6 +804,16 @@ class LevelRendererTest {
 		assertEquals(false, text.wordWrap, "placed text preserves no-wrap behavior");
 		assertEquals(true, text.multiline, "placed text preserves multiline behavior");
 		assertEquals(true, text.cacheAsBitmap, "placed text preserves Flash bitmap caching");
+		assertEquals(true, object.cacheAsBitmap, "static placed artwork starts with renderer caching enabled");
+		var objectParent = object.parent;
+		var textParent = text.parent;
+		renderer.setPresentationCameraOffset(180.5, 279.5);
+		renderer.setPresentationCourseTweenRotation(1.5);
+		assertEquals(true, object.cacheAsBitmap, "presentation camera/course transforms preserve static art caching");
+		assertEquals(true, text.cacheAsBitmap, "presentation camera/course transforms preserve text bitmap caching");
+		assertEquals(objectParent, object.parent, "presentation transforms do not rebuild or reparent static artwork");
+		assertEquals(textParent, text.parent, "presentation transforms do not rebuild or reparent cached text");
+		assertEquals(true, renderer.debugArtCachingEnabled(), "presentation transforms leave the renderer cache policy enabled");
 
 		var escapedContainer = new Sprite();
 		LevelRenderer.addLayerText(escapedContainer,
@@ -751,6 +851,19 @@ class LevelRendererTest {
 		var foreground = worldLayer(renderer, 6);
 		assertEquals(Math.round(315.4 * 2), foreground.x, "foreground layer x follows camera at double speed");
 		assertEquals(Math.round(172.6 * 2), foreground.y, "foreground layer y follows camera at double speed");
+
+		renderer.setPresentationCameraOffset(315.75, 172.25);
+		assertClose(315.75 * 0.25, rear.x, "presentation rear parallax preserves fractional x");
+		assertClose(172.25 * 0.25, rear.y, "presentation rear parallax preserves fractional y");
+		assertClose(315.75 * 2, foreground.x, "presentation foreground parallax preserves fractional x");
+		assertClose(172.25 * 2, foreground.y, "presentation foreground parallax preserves fractional y");
+		var blockLayer = worldLayer(renderer, 4);
+		assertClose(315.75, blockLayer.transform.matrix.tx, "presentation block plane preserves fractional x");
+		assertClose(172.25, blockLayer.transform.matrix.ty, "presentation block plane preserves fractional y");
+
+		renderer.setCameraOffset(315.4, 172.6);
+		assertEquals(Math.round(315.4 * 0.25), rear.x, "next simulation restores rounded rear parallax x");
+		assertEquals(Math.round(172.6 * 0.25), rear.y, "next simulation restores rounded rear parallax y");
 	}
 
 	private static function testRemoveDisposesAnimatedChildren():Void {

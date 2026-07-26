@@ -37,6 +37,7 @@ class MineAppear extends Sprite {
 	}
 
 	private function tick(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		clock.advance();
 	}
 

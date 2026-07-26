@@ -29,6 +29,7 @@ class TeleportPop extends Sprite {
 	}
 
 	private function tick(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		framesRemaining--;
 		if (framesRemaining <= 0) {
 			remove();

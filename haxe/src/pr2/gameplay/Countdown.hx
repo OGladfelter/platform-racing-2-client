@@ -55,7 +55,10 @@ class Countdown extends Sprite {
 		processCurrentFrame();
 	}
 
-	private function onEnterFrame(_:Event):Void processCurrentFrame();
+	private function onEnterFrame(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
+		processCurrentFrame();
+	}
 
 	private function processCurrentFrame():Void {
 		if (art == null) return;

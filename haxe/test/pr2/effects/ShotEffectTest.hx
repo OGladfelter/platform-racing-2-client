@@ -6,6 +6,9 @@ import pr2.effects.ShotEffect.ShotEffectPlayer;
 import pr2.level.ObjectCodes;
 import pr2.level.Level;
 import pr2.level.Level.LevelBlock;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateDiagnostics;
+import pr2.runtime.FrameRateSettings;
 
 class ShotEffectTest {
 	private static var assertions:Int = 0;
@@ -36,6 +39,26 @@ class ShotEffectTest {
 		assertEquals(1, shot.hitAnythingCount, "block hit invokes shared hit hook");
 		assertEquals(null, shot.parent, "life expiry removes the shot after collision checks");
 		assertEquals(false, shot.hasEventListener(Event.ENTER_FRAME), "life expiry clears frame listener");
+
+		var smooth = new TestShotEffect(0, -100, 0, 0, 7, "laser");
+		var emptyLevel = Level.fromDecoded(0xffffff, []);
+		smooth.step(emptyLevel, 0);
+		smooth.step(emptyLevel, 0);
+		var lifeBeforePresentation = smooth.life;
+		smooth.renderPresentationFrame();
+		assertEquals(12.5, smooth.x, "shot presentation extrapolates half of its latest five-pixel simulation step");
+		assertEquals(lifeBeforePresentation, smooth.life, "shot presentation does not advance projectile lifetime");
+		smooth.step(emptyLevel, 0);
+		assertEquals(15, Std.int(smooth.x), "the next shot simulation tick resumes from authoritative rather than presented position");
+		smooth.remove();
+
+		var collisionSnap = new TestShotEffect(0, 15, 0, 0, 7, "laser");
+		collisionSnap.setSpeed(35);
+		collisionSnap.step(level, 0);
+		var collisionX = collisionSnap.x;
+		collisionSnap.renderPresentationFrame();
+		assertEquals(collisionX, collisionSnap.x, "shot presentation snaps on a block hit instead of predicting through it");
+		collisionSnap.remove();
 	}
 
 	private static function testPlayerHitFilteringAndRecoil():Void {
@@ -78,9 +101,19 @@ class ShotEffectTest {
 		});
 		assertEquals(true, driven.hasEventListener(Event.ENTER_FRAME), "shot activates enter-frame listener");
 		assertEquals(1, calls, "constructor uses the provided context for Flash's immediate collision check");
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true), new FrameRateDiagnostics(function():Float return 0));
+		@:privateAccess FrameClock.setCurrentForTests(clock);
+		clock.advanceFrame();
 		driven.dispatchEvent(new Event(Event.ENTER_FRAME));
 		assertEquals(2, calls, "enter-frame uses the provided context");
+		clock.advanceFrame();
+		driven.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(2, calls, "presentation-only frame preserves shot context cadence");
+		clock.advanceFrame();
+		driven.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(3, calls, "next simulation frame advances shot once");
 		driven.remove();
+		@:privateAccess FrameClock.setCurrentForTests(null);
 		assertEquals(false, driven.hasEventListener(Event.ENTER_FRAME), "remove clears shot enter-frame listener");
 	}
 

@@ -79,6 +79,7 @@ class QuitButton extends openfl.display.Sprite {
 	}
 
 	private function animateGlow(_:Null<Event>):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		glowFrame++;
 		var data = glowData();
 		if (glowFrame >= data.endFrameScript.frame) glowFrame = Reflect.field(data.labels, data.endFrameScript.target);

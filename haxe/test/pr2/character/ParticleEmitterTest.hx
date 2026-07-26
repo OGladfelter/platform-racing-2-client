@@ -5,6 +5,9 @@ import openfl.events.Event;
 import pr2.character.PhysicsParticle.PhysicsParticleParams;
 import pr2.effects.ArrowEffect;
 import pr2.effects.StarEffect;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateDiagnostics;
+import pr2.runtime.FrameRateSettings;
 
 class ParticleEmitterTest {
 	private static var assertions:Int = 0;
@@ -17,7 +20,35 @@ class ParticleEmitterTest {
 		testRainbowStarEmitterCreatesColoredRotatedStarEffect();
 		testPhysicsParticleAppliesRandomizedMotionAndLifetime();
 		testPositionedParticleEmitterCreatesPhysicsParticleAtTargetPoint();
+		testDynamicParticlesRunOnlyOnSimulationFrames();
 		trace('ParticleEmitterTest passed $assertions assertions');
+	}
+
+	private static function testDynamicParticlesRunOnlyOnSimulationFrames():Void {
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true), new FrameRateDiagnostics(function():Float return 0));
+		@:privateAccess FrameClock.setCurrentForTests(clock);
+		var arrow = new ArrowEffect(10, 20);
+
+		clock.advanceFrame();
+		arrow.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertClose(20.1, arrow.y, "simulation phase advances arrow particle");
+		var arrowAlpha = arrow.alpha;
+		clock.advanceFrame();
+		arrow.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertClose(20.1, arrow.y, "presentation-only phase preserves arrow position");
+		assertClose(arrowAlpha, arrow.alpha, "presentation-only phase preserves arrow lifetime");
+
+		var particle = new PhysicsParticle(basePhysicsParams(), sequence([0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]));
+		var particleX = particle.x;
+		particle.tick(new Event(Event.ENTER_FRAME));
+		assertClose(particleX, particle.x, "presentation-only phase preserves physics particle");
+		clock.advanceFrame();
+		particle.tick(new Event(Event.ENTER_FRAME));
+		assertClose(particleX + 3, particle.x, "simulation phase advances physics particle");
+
+		arrow.remove();
+		particle.remove();
+		@:privateAccess FrameClock.setCurrentForTests(null);
 	}
 
 	private static function testArrowEffectDriftsFadesAndRemoves():Void {
@@ -123,9 +154,14 @@ class ParticleEmitterTest {
 		assertClose(17, particle.y, "physics particle applies velocity y");
 		assertClose(1.6, particle.scaleX, "physics particle applies scale velocity");
 		assertClose(0.4, particle.alpha, "physics particle applies alpha velocity and life fade");
-		for (_ in 0...3) {
-			particle.tick(new Event(Event.ENTER_FRAME));
-		}
+		particle.tick(new Event(Event.ENTER_FRAME));
+		particle.renderPresentationFrame();
+		assertClose(22.5, particle.x, "physics particle presentation extrapolates half of its latest horizontal step");
+		assertClose(20, particle.y, "physics particle presentation extrapolates half of its latest vertical step");
+		assertClose(1.75, particle.scaleX, "physics particle presentation extrapolates scale without advancing lifetime");
+		particle.tick(new Event(Event.ENTER_FRAME));
+		assertClose(24, particle.x, "the next physics tick resumes from authoritative rather than presented position");
+		particle.tick(new Event(Event.ENTER_FRAME));
 		assertEquals(0, parent.numChildren, "physics particle removes after configured life");
 	}
 

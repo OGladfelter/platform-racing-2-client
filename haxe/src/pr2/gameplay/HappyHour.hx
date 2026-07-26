@@ -29,7 +29,10 @@ class HappyHour extends Sprite {
 		processCurrentFrame();
 	}
 
-	private function onFrame(_:Event):Void processCurrentFrame();
+	private function onFrame(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
+		processCurrentFrame();
+	}
 	private function processCurrentFrame():Void {
 		if (art == null || removed) return;
 		frame = art.currentFrame;

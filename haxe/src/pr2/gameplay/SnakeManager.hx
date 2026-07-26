@@ -7,6 +7,8 @@ import openfl.geom.Point;
 import openfl.utils.AssetType;
 import openfl.utils.Assets;
 import pr2.gameplay.player.LocalPlayerController;
+import pr2.gameplay.presentation.CharacterPresentationLayer;
+import pr2.gameplay.presentation.PresentationPose;
 import pr2.level.LevelRenderer;
 import pr2.level.ObjectCodes;
 import pr2.level.Level;
@@ -24,6 +26,10 @@ private class SnakeState {
 	public var remainingFrames:Int = SnakeManager.USE_FRAMES;
 	public var sequence:Int = 0;
 	public final sprite:Sprite;
+	public var authoritativeX:Float = 0;
+	public var authoritativeY:Float = 0;
+	public final presentationPose:PresentationPose = new PresentationPose();
+	public var presentationDiscontinuityPending:Bool = true;
 
 	public function new(ownerId:Int, tileX:Int, tileY:Int, dx:Int, dy:Int, sprite:Sprite) {
 		this.ownerId = ownerId;
@@ -63,6 +69,7 @@ class SnakeManager {
 	private final renderer:LevelRenderer;
 	private final controller:LocalPlayerController;
 	private final snakes:Map<Int, SnakeState> = new Map();
+	private final presentationSnakes:Array<SnakeState> = [];
 	private final trails:Map<String, SnakeTrailSegment> = new Map();
 	private final lastSequences:Map<Int, Int> = new Map();
 	private var frame:Int = 0;
@@ -113,6 +120,12 @@ class SnakeManager {
 	public function localHeadWorld():Null<Point> {
 		if (!localActive()) return null;
 		var snake = snakes.get(localOwnerId);
+		return renderer.blockWorldToRotatedWorld(snake.authoritativeX, snake.authoritativeY);
+	}
+
+	public function localPresentedHeadWorld():Null<Point> {
+		if (!localActive()) return null;
+		var snake = snakes.get(localOwnerId);
 		return renderer.blockWorldToRotatedWorld(snake.sprite.x, snake.sprite.y);
 	}
 
@@ -147,24 +160,41 @@ class SnakeManager {
 		updateTrails();
 		if (localActive()) {
 			var snake = snakes.get(localOwnerId);
+			beginPresentationCapture(snake);
 			snake.remainingFrames--;
 			if (snake.remainingFrames <= 0) {
 				stopSnake(snake, true);
 			} else {
 				stepLocalSnake(snake);
+				finishPresentationCapture(snake);
 			}
+		}
+	}
+
+	public function renderPresentationFrame():Void {
+		for (index in 0...presentationSnakes.length) {
+			var snake = presentationSnakes[index];
+			if (!snake.presentationPose.hasSamples) continue;
+			var factor = snake.presentationPose.discontinuity ? 0.0 : 0.5;
+			snake.sprite.x = snake.presentationPose.extrapolatedX(factor);
+			snake.sprite.y = snake.presentationPose.extrapolatedY(factor);
 		}
 	}
 
 	private function stepLocalSnake(snake:SnakeState):Void {
 		if (snake.moveFrames == MOVE_FRAMES_PER_TILE) {
+			if (snake.dx != snake.pendingDx || snake.dy != snake.pendingDy) {
+				snake.presentationDiscontinuityPending = true;
+			}
 			snake.dx = snake.pendingDx;
 			snake.dy = snake.pendingDy;
 			setHead(snake.tileX, snake.tileY, true, snake.dx, snake.dy);
 		}
 		var pixelsPerFrame = LevelRenderer.TILE_SIZE / MOVE_FRAMES_PER_TILE;
-		snake.sprite.x += snake.dx * pixelsPerFrame;
-		snake.sprite.y += snake.dy * pixelsPerFrame;
+		snake.authoritativeX += snake.dx * pixelsPerFrame;
+		snake.authoritativeY += snake.dy * pixelsPerFrame;
+		snake.sprite.x = snake.authoritativeX;
+		snake.sprite.y = snake.authoritativeY;
 		snake.moveFrames--;
 		if (snake.moveFrames > 0) return;
 		snake.moveFrames = MOVE_FRAMES_PER_TILE;
@@ -214,6 +244,7 @@ class SnakeManager {
 				snake.sequence = sequence;
 				lastSequences.set(ownerId, sequence);
 				positionSnake(snake);
+				snake.presentationDiscontinuityPending = true;
 				destroyLocalSnakeAt(snake.tileX, snake.tileY);
 				addSnakeBlock(snake.tileX, snake.tileY, true, snake.dx, snake.dy);
 			case "SnakeStop":
@@ -239,6 +270,8 @@ class SnakeManager {
 		}
 		setHead(snake.tileX, snake.tileY, false, snake.dx, snake.dy);
 		snakes.remove(snake.ownerId);
+		var presentationIndex = presentationSnakes.indexOf(snake);
+		if (presentationIndex >= 0) presentationSnakes.splice(presentationIndex, 1);
 		if (snake.sprite.parent != null) snake.sprite.parent.removeChild(snake.sprite);
 		if (localOwnerId == snake.ownerId) localOwnerId = null;
 	}
@@ -280,6 +313,7 @@ class SnakeManager {
 		for (snake in snakes) if (snake.sprite.parent != null) snake.sprite.parent.removeChild(snake.sprite);
 		for (trail in trails) if (trail.display.parent != null) trail.display.parent.removeChild(trail.display);
 		snakes.clear();
+		presentationSnakes.resize(0);
 		trails.clear();
 		lastSequences.clear();
 		controller.clearSnakeTrails();
@@ -290,13 +324,40 @@ class SnakeManager {
 		var sprite = new Sprite();
 		renderer.worldEffectLayer().addChild(sprite);
 		var snake = new SnakeState(ownerId, tileX, tileY, dx, dy, sprite);
+		presentationSnakes.push(snake);
 		positionSnake(snake);
 		return snake;
 	}
 
 	private function positionSnake(snake:SnakeState):Void {
-		snake.sprite.x = worldPixelX(snake.tileX) + LevelRenderer.TILE_SIZE / 2;
-		snake.sprite.y = worldPixelY(snake.tileY) + LevelRenderer.TILE_SIZE / 2;
+		snake.authoritativeX = worldPixelX(snake.tileX) + LevelRenderer.TILE_SIZE / 2;
+		snake.authoritativeY = worldPixelY(snake.tileY) + LevelRenderer.TILE_SIZE / 2;
+		snake.sprite.x = snake.authoritativeX;
+		snake.sprite.y = snake.authoritativeY;
+	}
+
+	private function beginPresentationCapture(snake:SnakeState):Void {
+		snake.presentationPose.beginSimulationTick(
+			snake.authoritativeX,
+			snake.authoritativeY,
+			0,
+			1,
+			CharacterPresentationLayer.Front
+		);
+	}
+
+	private function finishPresentationCapture(snake:SnakeState):Void {
+		snake.presentationPose.finishSimulationTick(
+			snake.authoritativeX,
+			snake.authoritativeY,
+			0,
+			1,
+			CharacterPresentationLayer.Front,
+			snake.presentationDiscontinuityPending
+		);
+		snake.presentationDiscontinuityPending = false;
+		snake.sprite.x = snake.authoritativeX;
+		snake.sprite.y = snake.authoritativeY;
 	}
 
 	private function createTrailSegment(tileX:Int, tileY:Int):SnakeTrailSegment {

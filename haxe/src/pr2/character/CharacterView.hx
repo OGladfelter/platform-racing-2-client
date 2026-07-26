@@ -654,7 +654,10 @@ class CharacterView extends Sprite {
 		idleTicking = false;
 		removeEventListener(Event.ENTER_FRAME, onIdleTick);
 	}
-	private function onIdleTick(_:Event):Void advanceOneFrame();
+	private function onIdleTick(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
+		advanceOneFrame();
+	}
 
 	@:allow(pr2.character.CharacterViewTest)
 	@:allow(pr2.character.CharacterBaseTest)

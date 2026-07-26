@@ -191,6 +191,7 @@ class CustomScrollBar extends Sprite {
 	}
 
 	private function scroll(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		position(pos + scrollDelta);
 	}
 

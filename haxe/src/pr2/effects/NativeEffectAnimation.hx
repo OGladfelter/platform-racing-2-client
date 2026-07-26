@@ -23,6 +23,7 @@ class NativeEffectAnimation extends Sprite {
 	}
 
 	private function advance(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		advanceOneFrame();
 	}
 

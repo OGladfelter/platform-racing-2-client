@@ -46,7 +46,7 @@ class DrawingInfo extends Removable {
 		this.gameMode = gameMode;
 		this.courseId = courseId;
 		this.framesPlaying = framesPlaying == null ? function():Int return 0 : framesPlaying;
-		this.frameRate = frameRate == null ? function():Float return Constants.FRAME_RATE : frameRate;
+		this.frameRate = frameRate == null ? function():Float return Constants.SIMULATION_FRAME_RATE : frameRate;
 		this.submitKongStat = submitKongStat;
 		art = new Sprite();
 		info2 = createInfoLayer("info2", 1, 1, 0xFFFFFF, 0.5);
@@ -103,6 +103,7 @@ class DrawingInfo extends Removable {
 	}
 
 	private function animateDrawingLabels(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		drawingFrame = (drawingFrame + 1) % 17;
 		var dots = drawingFrame < 4 ? "" : drawingFrame < 8 ? "." : drawingFrame < 12 ? ".." : "...";
 		for (layer in [info1, info2]) {

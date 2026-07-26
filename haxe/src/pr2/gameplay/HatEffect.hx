@@ -7,6 +7,8 @@ import openfl.geom.ColorTransform;
 import pr2.level.Level;
 import pr2.net.CommandHandler;
 import pr2.net.LobbySocket;
+import pr2.gameplay.presentation.CharacterPresentationLayer;
+import pr2.gameplay.presentation.PresentationPose;
 
 typedef HatEffectInfo = {
 	final x:Float;
@@ -38,6 +40,11 @@ class HatEffect {
 	public var sentReturnToStart(default, null):Bool = false;
 	private final owner:Course;
 	private final commandHandler:CommandHandler;
+	private final presentationPose:PresentationPose = new PresentationPose();
+	private var authoritativeDisplayX:Float;
+	private var authoritativeDisplayY:Float;
+	private var authoritativeDisplayRotation:Float;
+	private var presentationDiscontinuityPending:Bool = true;
 
 	public function new(owner:Course, x:Int, y:Int, rot:Int, num:Int, color:Int, color2:Int, id:Int, ?displayLayer:Sprite,
 			?commandHandler:CommandHandler) {
@@ -58,6 +65,9 @@ class HatEffect {
 		display.rotation = rot;
 		display.scaleX = 0.15;
 		display.scaleY = 0.15;
+		authoritativeDisplayX = x;
+		authoritativeDisplayY = y;
+		authoritativeDisplayRotation = rot;
 		setupColorChannel("colorMC", color, true);
 		setupColorChannel("colorMC2", num == 16 && color2 == -1 ? 0 : color2, color2 != -1 || num == 16);
 		if (displayLayer != null) {
@@ -69,6 +79,17 @@ class HatEffect {
 
 	public function step(level:Level, courseRotation:Int, ?playerX:Float, ?playerY:Float, playerCrouching:Bool = false,
 			playerRemoved:Bool = false, donePlaying:Bool = false):Void {
+		var previousVelX = velX;
+		var previousVelY = velY;
+		var previousGrounded = grounded;
+		var wallContact = false;
+		presentationPose.beginSimulationTick(
+			authoritativeDisplayX,
+			authoritativeDisplayY,
+			authoritativeDisplayRotation,
+			velX < 0 ? -1 : 1,
+			CharacterPresentationLayer.Front
+		);
 		velY += 0.2;
 		if (velY > 8) {
 			velY = 8;
@@ -81,6 +102,7 @@ class HatEffect {
 			var wallProbe = RotationMath.rotatePoint(posX + velX, posY - 10, -displayRotation);
 			var wallBlock = BlockCollision.blockFromPos(level, wallProbe.x, wallProbe.y, courseRotation);
 			if (BlockCollision.isActiveBlock(wallBlock)) {
+				wallContact = true;
 				var blockPos = BlockCollision.rotatedBlockPos(wallBlock, rot);
 				posX = velX < 0 ? blockPos.x + 31 : blockPos.x - 1;
 			}
@@ -103,6 +125,28 @@ class HatEffect {
 		display.x = rotatedPos.x;
 		display.y = rotatedPos.y;
 		display.rotation = displayRotation;
+		authoritativeDisplayX = rotatedPos.x;
+		authoritativeDisplayY = rotatedPos.y;
+		authoritativeDisplayRotation = displayRotation;
+		var presentationDiscontinuity = presentationDiscontinuityPending
+			|| wallContact
+			|| (!previousGrounded && grounded)
+			|| PresentationPose.velocityReversed(previousVelX, velX)
+			|| PresentationPose.velocityReversed(previousVelY, velY)
+			|| PresentationPose.movementTooLarge(
+				authoritativeDisplayX - presentationPose.previousX,
+				authoritativeDisplayY - presentationPose.previousY,
+				15
+			);
+		presentationPose.finishSimulationTick(
+			authoritativeDisplayX,
+			authoritativeDisplayY,
+			authoritativeDisplayRotation,
+			velX < 0 ? -1 : 1,
+			CharacterPresentationLayer.Front,
+			presentationDiscontinuity
+		);
+		presentationDiscontinuityPending = false;
 		if (!donePlaying
 			&& playerX != null
 			&& playerY != null
@@ -110,6 +154,14 @@ class HatEffect {
 			remove();
 			LobbySocket.write('get_hat`$id');
 		}
+	}
+
+	public function renderPresentationFrame():Void {
+		if (!presentationPose.hasSamples) return;
+		var factor = presentationPose.discontinuity ? 0.0 : 0.5;
+		display.x = presentationPose.extrapolatedX(factor);
+		display.y = presentationPose.extrapolatedY(factor);
+		display.rotation = presentationPose.extrapolatedRotation(factor);
 	}
 
 	public function info():HatEffectInfo {
@@ -135,6 +187,7 @@ class HatEffect {
 		if (owner.looseHats != null) {
 			owner.looseHats.remove(id);
 		}
+		owner.unregisterLooseHatPresentationOwner(this);
 		commandHandler.defineCommand('removeHat$id', null);
 	}
 

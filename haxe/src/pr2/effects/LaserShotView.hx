@@ -28,6 +28,7 @@ class LaserShotView extends Sprite {
 	}
 
 	private function advance(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		if (!playingHit || currentFrame >= 18) return;
 		currentFrame++;
 		renderFrame();

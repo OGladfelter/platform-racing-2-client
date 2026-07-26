@@ -39,12 +39,15 @@ class RaceSounds {
 	// EngineSound -> sound549, looped while Character.beginJet is active.
 	public static inline var ENGINE_SOUND:String = "assets/audio/sfx/jet_engine.wav";
 
-	private final cameraOffset:Void->RaceCameraOffset;
+	// Spatial audio deliberately follows the authoritative 30 Hz camera. The
+	// disposable presentation camera is visual-only and never feeds sound or
+	// gameplay state.
+	private final logicalCameraOffset:Void->RaceCameraOffset;
 	private var activeJetSounds:ObjectMap<Character, Bool> = new ObjectMap();
 	private var jetSoundChannels:ObjectMap<Character, SoundChannel> = new ObjectMap();
 
-	public function new(cameraOffset:Void->RaceCameraOffset) {
-		this.cameraOffset = cameraOffset;
+	public function new(logicalCameraOffset:Void->RaceCameraOffset) {
+		this.logicalCameraOffset = logicalCameraOffset;
 	}
 
 	public function playWorldJumpSound(worldX:Float, worldY:Float):Void {
@@ -69,7 +72,7 @@ class RaceSounds {
 		stopJetSound(request.target);
 		markJetSoundActive(request.target);
 		if (Assets.exists(ENGINE_SOUND)) {
-			var offset = cameraOffset();
+			var offset = spatialCameraOffset();
 			var channel = SoundEffects.playGameSound(Assets.getSound(ENGINE_SOUND), request.x, request.y, offset.x, offset.y, request.volume, 0, 999);
 			if (channel != null) {
 				jetSoundChannels.set(request.target, channel);
@@ -124,9 +127,14 @@ class RaceSounds {
 
 	private function playSpatial(path:String, worldX:Float, worldY:Float, volume:Float):Void {
 		if (Assets.exists(path)) {
-			var offset = cameraOffset();
+			var offset = spatialCameraOffset();
 			SoundEffects.playGameSound(Assets.getSound(path), worldX, worldY, offset.x, offset.y, volume);
 		}
+	}
+
+	@:allow(pr2.audio.AudioRuntimeTest)
+	private function spatialCameraOffset():RaceCameraOffset {
+		return logicalCameraOffset();
 	}
 
 	private function playGlobal(path:String, volume:Float):Void {

@@ -156,6 +156,7 @@ class CourseRosterController {
 		remote.onStopJetSound = owner.stopJetSound;
 		owner.particleEffects.install(remote);
 		remote.onParentChange = function(parentLayer:String):Void {
+			remote.setPresentationLayer(parentLayer);
 			owner.moveCharacterToLayer(remote, parentLayer);
 		};
 		owner.remoteCharacters.set(init.tempId, remote);

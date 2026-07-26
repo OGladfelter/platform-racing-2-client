@@ -42,6 +42,7 @@ class ProgressBar extends Sprite {
 	}
 
 	private function update(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		widthPx += (targetPx - widthPx) * lerpFactor;
 		if (fill != null) fill.width = widthPx;
 	}

@@ -41,6 +41,7 @@ class ArrowBlockView extends Sprite {
 	}
 
 	private function advance(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		if (currentFrame >= 8) {
 			currentFrame = 1;
 			renderFrame();

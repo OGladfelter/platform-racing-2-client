@@ -94,6 +94,7 @@ class MenuMusic extends Sprite {
 	}
 
 	private function crossfadeTick(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		percentage1 += crossfadeRate;
 		percentage2 -= crossfadeRate;
 		if (percentage1 <= 0) { percentage1 = 0; percentage2 = 1; removeEventListener(Event.ENTER_FRAME, crossfadeTick); }
@@ -102,6 +103,7 @@ class MenuMusic extends Sprite {
 	}
 
 	private function volumeFadeTick(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		volume += volume < targetVolume ? 0.05 : -0.05;
 		if (Math.abs(volume - targetVolume) <= 0.05) {
 			volume = targetVolume;

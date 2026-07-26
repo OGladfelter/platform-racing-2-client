@@ -69,6 +69,7 @@ class Popup extends Removable {
 	}
 
 	private function fadeIn(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		alpha += 0.15;
 		if (alpha >= 1) {
 			alpha = 1;
@@ -78,6 +79,7 @@ class Popup extends Removable {
 	}
 
 	private function fadeOut(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		alpha -= 0.15;
 		if (alpha <= 0) {
 			remove();

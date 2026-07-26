@@ -6,6 +6,7 @@ import pr2.character.CharacterPartIds;
 import pr2.gameplay.Items;
 import pr2.gameplay.RotationMath;
 import pr2.gameplay.RotationMath.RotatedPoint;
+import pr2.runtime.FrameClock;
 
 /** A `(x, y)` block-touch probe point in stage space (see `blockTouchProbes`). */
 typedef BlockTouchProbe = {
@@ -100,6 +101,8 @@ class Character extends Sprite {
 
 	public final display:CharacterView;
 	public var dateControlsReversed(default, null):Bool = false;
+	public var presentationWorldOffsetX(default, null):Float = 0;
+	public var presentationWorldOffsetY(default, null):Float = 0;
 
 	// ---- appearance: hats ------------------------------------------------
 	public var hat1(get, set):Int;
@@ -192,6 +195,20 @@ class Character extends Sprite {
 
 		resetHats();
 		changeState("stand");
+	}
+
+	/**
+		Publishes the disposable world-space offset used by effects that follow
+		this character. Gameplay and the next simulation tick must not read it.
+	**/
+	public function setPresentationWorldOffset(offsetX:Float, offsetY:Float):Void {
+		presentationWorldOffsetX = offsetX;
+		presentationWorldOffsetY = offsetY;
+	}
+
+	public function clearPresentationWorldOffset():Void {
+		presentationWorldOffsetX = 0;
+		presentationWorldOffsetY = 0;
 	}
 
 	// ---- colours ---------------------------------------------------------
@@ -549,6 +566,7 @@ class Character extends Sprite {
 
 	@:allow(pr2.character.CharacterBaseTest)
 	private function recoveryTick(_:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) return;
 		var phase = recoveryFrames % 8;
 		if (!fadeOutStarted) {
 			alpha = phase >= 4 ? 0.5 : 0.75;
@@ -630,6 +648,7 @@ class Character extends Sprite {
 
 	@:allow(pr2.character.CharacterBaseTest)
 	private function fadeOut(_:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) return;
 		alpha -= 0.02;
 		if (alpha <= 0) {
 			remove();
@@ -646,6 +665,7 @@ class Character extends Sprite {
 		removeListeners();
 		clearParticleEmitter();
 		clearDjinnEmitters();
+		clearPresentationWorldOffset();
 		if (!removed) {
 			removed = fadeOutStarted = true;
 			removeEventListener(Event.ENTER_FRAME, fadeOut);
@@ -802,6 +822,7 @@ class Character extends Sprite {
 	}
 
 	private function jetPackTick(_:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) return;
 		if (!setCurrentJetPackFrame("on")) return;
 		display.setJetFlame(jetFlameRandom() * 0.5 + 0.5, jetFlameRandom() * 0.5 + 0.5);
 	}

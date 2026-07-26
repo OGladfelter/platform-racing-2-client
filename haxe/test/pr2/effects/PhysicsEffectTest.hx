@@ -6,6 +6,9 @@ import pr2.effects.PhysicsEffect.PhysicsEffectContext;
 import pr2.level.ObjectCodes;
 import pr2.level.Level;
 import pr2.level.Level.LevelBlock;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateDiagnostics;
+import pr2.runtime.FrameRateSettings;
 
 class PhysicsEffectTest {
 	private static var assertions:Int = 0;
@@ -88,11 +91,21 @@ class PhysicsEffectTest {
 			};
 		});
 		assertEquals(true, effect.hasEventListener(Event.ENTER_FRAME), "PhysicsEffect activates its frame listener");
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true), new FrameRateDiagnostics(function():Float return 0));
+		@:privateAccess FrameClock.setCurrentForTests(clock);
+		clock.advanceFrame();
 		effect.dispatchEvent(new Event(Event.ENTER_FRAME));
 		assertEquals(1, contextCalls, "enter-frame driver advances with the provided context");
 		assertEquals(true, effect.isGrounded(), "enter-frame step applies physics");
+		clock.advanceFrame();
+		effect.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(1, contextCalls, "presentation-only frame does not advance PhysicsEffect");
+		clock.advanceFrame();
+		effect.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(2, contextCalls, "next simulation frame advances PhysicsEffect once");
 
 		effect.remove();
+		@:privateAccess FrameClock.setCurrentForTests(null);
 		assertEquals(false, effect.hasEventListener(Event.ENTER_FRAME), "remove clears the enter-frame listener");
 		assertEquals(null, EffectBackground.instance, "standalone physics test leaves no effect background singleton");
 	}

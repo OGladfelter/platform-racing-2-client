@@ -4,6 +4,9 @@ import openfl.events.Event;
 import pr2.gameplay.RotationMath;
 import pr2.level.Level;
 import pr2.level.Level.LevelBlock;
+import pr2.runtime.FrameClock;
+import pr2.gameplay.presentation.CharacterPresentationLayer;
+import pr2.gameplay.presentation.PresentationPose;
 
 typedef ShotEffectContext = {
 	final level:Level;
@@ -41,6 +44,13 @@ class ShotEffect extends Effect {
 	public final type:String;
 
 	private var contextProvider:Null<Void->ShotEffectContext>;
+	private final presentationPose:PresentationPose = new PresentationPose();
+	private var authoritativeDisplayX:Float;
+	private var authoritativeDisplayY:Float;
+	private var authoritativeDisplayRotation:Float;
+	private var previousSimulationVelX:Float = 0;
+	private var previousSimulationVelY:Float = 0;
+	private var presentationCollisionPending:Bool = true;
 
 	public function new(startX:Float, startY:Float, startAngle:Float, startRot:Int, tempID:Int, item:String, startCourseRotation:Int = 0,
 			?contextProvider:Void->ShotEffectContext) {
@@ -52,6 +62,8 @@ class ShotEffect extends Effect {
 		this.contextProvider = contextProvider;
 		super(startX, startY);
 		setAngle(startAngle);
+		previousSimulationVelX = velX;
+		previousSimulationVelY = velY;
 		rotation = startAngle + startCourseRotation - startRot;
 		addEventListener(Event.ENTER_FRAME, onEnterFrame);
 		position(startCourseRotation);
@@ -72,9 +84,39 @@ class ShotEffect extends Effect {
 	}
 
 	public function step(level:Level, courseRotation:Int, ?players:Array<ShotEffectPlayer>):Void {
+		presentationPose.beginSimulationTick(
+			authoritativeDisplayX,
+			authoritativeDisplayY,
+			authoritativeDisplayRotation,
+			velX < 0 ? -1 : 1,
+			CharacterPresentationLayer.Front
+		);
+		var directionChanged = PresentationPose.velocityReversed(previousSimulationVelX, velX)
+			|| PresentationPose.velocityReversed(previousSimulationVelY, velY);
 		move();
 		position(courseRotation);
 		checkCollisions(level, courseRotation, players);
+		authoritativeDisplayX = x;
+		authoritativeDisplayY = y;
+		authoritativeDisplayRotation = rotation;
+		var presentationDiscontinuity = presentationCollisionPending
+			|| directionChanged
+			|| PresentationPose.movementTooLarge(
+				authoritativeDisplayX - presentationPose.previousX,
+				authoritativeDisplayY - presentationPose.previousY,
+				60
+			);
+		presentationPose.finishSimulationTick(
+			authoritativeDisplayX,
+			authoritativeDisplayY,
+			authoritativeDisplayRotation,
+			velX < 0 ? -1 : 1,
+			CharacterPresentationLayer.Front,
+			presentationDiscontinuity
+		);
+		presentationCollisionPending = false;
+		previousSimulationVelX = velX;
+		previousSimulationVelY = velY;
 		life--;
 		if (life <= 0) {
 			onLifeEnd();
@@ -91,6 +133,9 @@ class ShotEffect extends Effect {
 		x = pos.x;
 		y = pos.y;
 		rotation = angle + courseRotation - rot;
+		authoritativeDisplayX = x;
+		authoritativeDisplayY = y;
+		authoritativeDisplayRotation = rotation;
 	}
 
 	function checkCollisions(level:Level, courseRotation:Int, ?players:Array<ShotEffectPlayer>):Void {
@@ -128,11 +173,13 @@ class ShotEffect extends Effect {
 	}
 
 	function hitBlock(block:LevelBlock):Void {
+		presentationCollisionPending = true;
 		onBlockDamage(block, velX);
 		hitAnything();
 	}
 
 	function hitPlayer(player:ShotEffectPlayer):Void {
+		presentationCollisionPending = true;
 		if (player.local && player.onHit != null) {
 			player.onHit(velX, velY);
 		}
@@ -149,11 +196,23 @@ class ShotEffect extends Effect {
 	}
 
 	private function onEnterFrame(_:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) {
+			renderPresentationFrame();
+			return;
+		}
 		if (contextProvider == null) {
 			return;
 		}
 		var context = contextProvider();
 		step(context.level, context.courseRotation, context.players);
+	}
+
+	public function renderPresentationFrame():Void {
+		if (!presentationPose.hasSamples) return;
+		var factor = presentationPose.discontinuity ? 0.0 : 0.5;
+		x = presentationPose.extrapolatedX(factor);
+		y = presentationPose.extrapolatedY(factor);
+		rotation = presentationPose.extrapolatedRotation(factor);
 	}
 
 	override public function remove():Void {

@@ -1,6 +1,9 @@
 package pr2.effects;
 
 import openfl.events.Event;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateDiagnostics;
+import pr2.runtime.FrameRateSettings;
 
 /** Characterizes the native replacement for the authored mine placement clip. */
 class MineAppearTest {
@@ -33,8 +36,31 @@ class MineAppearTest {
 		assertEquals(null, effect.animation, "completion tears down the native animation");
 		effect.remove(true);
 		assertEquals(1, completions, "explicit removal cannot replay completion");
+		testEffectLifetimeMatchesAtBothPresentationRates();
 
 		trace('MineAppearTest passed $assertions assertions');
+	}
+
+	private static function testEffectLifetimeMatchesAtBothPresentationRates():Void {
+		var baseline = runEffectCadence(false);
+		var smooth = runEffectCadence(true);
+		assertEquals("33:33:1:true", baseline, "30 FPS mine effect completes after 33 authoritative frames");
+		assertEquals("33:65:1:true", smooth,
+			"60 FPS mine effect keeps its 33-frame lifetime and ignores presentation-only frames");
+	}
+
+	private static function runEffectCadence(smooth:Bool):String {
+		var clock = new FrameClock(FrameRateSettings.fromQuery(smooth ? "?smooth60=1" : null, true),
+			new FrameRateDiagnostics(function():Float return 0));
+		@:privateAccess FrameClock.setCurrentForTests(clock);
+		var completions = 0;
+		var effect = new MineAppear(0, 0, 0, 0, 0, function():Void completions++, false);
+		while (effect.animation != null) {
+			clock.advanceFrame();
+			effect.dispatchEvent(new Event(Event.ENTER_FRAME));
+		}
+		@:privateAccess FrameClock.setCurrentForTests(null);
+		return '${clock.simulationFrameNumber}:${clock.stageFrameNumber}:$completions:${effect.animation == null}';
 	}
 
 	private static function advance(effect:MineAppear, frames:Int):Void {

@@ -76,6 +76,7 @@ class GpNotification extends Sprite {
 	}
 
 	private function advanceFrame(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		currentFrame++;
 		applyFrame();
 		if (currentFrame >= 71) remove();

@@ -4,6 +4,7 @@ import openfl.display.DisplayObject;
 import openfl.display.Sprite;
 import openfl.events.Event;
 import pr2.character.Character;
+import pr2.runtime.FrameClock;
 import pr2.runtime.SvgAsset;
 
 /** Shared authored animation that follows a character and fades itself out. */
@@ -34,15 +35,23 @@ class FollowFadeEffect extends Sprite {
 	}
 
 	private function tick(_:Event):Void {
-		positionOnOwner();
+		if (!FrameClock.shouldRunSimulationFrame()) {
+			renderPresentationFrame();
+			return;
+		}
+		positionOnOwner(false);
 		alpha -= fadePerFrame;
 		if (alpha <= 0) remove();
 	}
 
-	private function positionOnOwner():Void {
+	private function positionOnOwner(usePresentationOffset:Bool = false):Void {
 		if (owner == null) return;
-		x = owner.x;
-		y = owner.y;
+		x = owner.x + (usePresentationOffset ? owner.presentationWorldOffsetX : 0);
+		y = owner.y + (usePresentationOffset ? owner.presentationWorldOffsetY : 0);
+	}
+
+	public function renderPresentationFrame():Void {
+		positionOnOwner(true);
 	}
 
 	public function remove():Void {

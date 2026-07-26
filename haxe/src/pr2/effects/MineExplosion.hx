@@ -29,6 +29,7 @@ class MineExplosion extends Sprite {
 	}
 
 	private function tick(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		framesRemaining--;
 		if (framesRemaining <= 0) {
 			remove();

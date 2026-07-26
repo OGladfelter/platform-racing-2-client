@@ -6,6 +6,7 @@ import pr2.gameplay.RotationMath;
 import pr2.gameplay.RotationMath.RotatedPoint;
 import pr2.level.Level;
 import pr2.level.Level.LevelBlock;
+import pr2.runtime.FrameClock;
 
 typedef PhysicsEffectContext = {
 	final level:Level;
@@ -106,6 +107,7 @@ class PhysicsEffect extends Effect {
 	}
 
 	private function go(_:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) return;
 		if (contextProvider == null) {
 			return;
 		}

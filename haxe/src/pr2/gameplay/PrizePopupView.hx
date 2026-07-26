@@ -186,6 +186,7 @@ class PrizePartSymbol extends Sprite {
 	}
 
 	private function advanceOverlay(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		stepOverlay();
 	}
 

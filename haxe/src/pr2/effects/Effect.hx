@@ -3,6 +3,7 @@ package pr2.effects;
 import pr2.display.Removable;
 import pr2.gameplay.EffectBackground;
 import openfl.events.Event;
+import pr2.runtime.FrameClock;
 
 /**
 	Shared Flash `effects.Effect` base: starts at world coordinates, mounts on
@@ -29,6 +30,7 @@ class Effect extends Removable {
 	}
 
 	private function onRemoveFrame(_:Event):Void {
+		if (!FrameClock.shouldRunSimulationFrame()) return;
 		removeFramesRemaining--;
 		if (removeFramesRemaining <= 0) {
 			remove();

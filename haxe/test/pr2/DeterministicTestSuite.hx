@@ -53,6 +53,7 @@ import pr2.gameplay.PlaceArtifactTest;
 import pr2.gameplay.LevelConfigTest;
 import pr2.gameplay.ModesTest;
 import pr2.gameplay.RoguelikeModeTest;
+import pr2.gameplay.presentation.PresentationPoseTest;
 import pr2.graphics.JPEGEncoderCompatTest;
 import pr2.gameplay.GameShellMountTest;
 import pr2.gameplay.CharacterLifecycleTest;
@@ -131,6 +132,11 @@ import pr2.page.CampaignTestScreenTest;
 import pr2.page.IntroPageTest;
 import pr2.runtime.EpicFlashTest;
 import pr2.runtime.ExplicitBitmapCacheTest;
+import pr2.runtime.FrameClockTest;
+import pr2.runtime.FrameRateDebugSignalsTest;
+import pr2.runtime.FrameRateDiagnosticsTest;
+import pr2.runtime.FrameRateFallbackPolicyTest;
+import pr2.runtime.FrameRateSettingsTest;
 import pr2.runtime.SvgAssetTest;
 import pr2.ui.EmblemLoaderTest;
 import pr2.ui.ArrowButtonsTest;
@@ -149,6 +155,11 @@ class DeterministicTestSuite {
 		DeterministicTestMode.runSuite("ScreenTest", ["runtime"], ScreenTest.main);
 		DeterministicTestMode.runSuite("EpicFlashTest", ["runtime"], EpicFlashTest.main);
 		DeterministicTestMode.runSuite("ExplicitBitmapCacheTest", ["runtime", "character"], ExplicitBitmapCacheTest.main);
+		DeterministicTestMode.runSuite("FrameClockTest", ["runtime"], FrameClockTest.main);
+		DeterministicTestMode.runSuite("FrameRateDebugSignalsTest", ["runtime"], FrameRateDebugSignalsTest.main);
+		DeterministicTestMode.runSuite("FrameRateDiagnosticsTest", ["runtime"], FrameRateDiagnosticsTest.main);
+		DeterministicTestMode.runSuite("FrameRateFallbackPolicyTest", ["runtime"], FrameRateFallbackPolicyTest.main);
+		DeterministicTestMode.runSuite("FrameRateSettingsTest", ["runtime"], FrameRateSettingsTest.main);
 		DeterministicTestMode.runSuite("SvgAssetTest", ["runtime", "ui", "character", "level-rendering"], SvgAssetTest.main);
 		DeterministicTestMode.runSuite("GpNotificationTest", ["ui"], GpNotificationTest.main);
 		DeterministicTestMode.runSuite("NativePresentationFoundationTest", ["ui", "runtime"], NativePresentationFoundationTest.main);
@@ -211,6 +222,7 @@ class DeterministicTestSuite {
 		DeterministicTestMode.runSuite("PlaceArtifactTest", ["gameplay"], PlaceArtifactTest.main);
 		DeterministicTestMode.runSuite("ModesTest", ["gameplay"], ModesTest.main);
 		DeterministicTestMode.runSuite("RoguelikeModeTest", ["gameplay"], RoguelikeModeTest.main);
+		DeterministicTestMode.runSuite("PresentationPoseTest", ["gameplay"], PresentationPoseTest.main);
 		DeterministicTestMode.runSuite("JPEGEncoderCompatTest", ["runtime"], JPEGEncoderCompatTest.main);
 		DeterministicTestMode.runSuite("LevelConfigTest", ["gameplay", "level-rendering", "blocks"], LevelConfigTest.main);
 		DeterministicTestMode.runSuite("GameShellMountTest", ["gameplay", "physics", "level-rendering", "blocks", "items"], GameShellMountTest.main);
@@ -286,7 +298,7 @@ class DeterministicTestSuite {
 		if (DeterministicTestMode.hasGroupSelection()) {
 			trace('DeterministicTestSuite selected run passed (${DeterministicTestMode.selectionSummary()})');
 		} else if (DeterministicTestMode.isSmoke()) {
-			trace("DeterministicTestSuite smoke run passed (127 suites)");
+			trace("DeterministicTestSuite smoke run passed (133 suites)");
 		} else {
 			trace("DeterministicTestSuite passed");
 		}

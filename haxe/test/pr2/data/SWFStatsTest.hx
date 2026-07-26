@@ -11,6 +11,8 @@ class SWFStatsTest {
 		testFrameRateDriftResetsBeforeFullWindow();
 		testFastThirtySampleAverageResetsFrameRate();
 		testNormalAverageDoesNotResetFrameRate();
+		testConfiguredSixtyFrameTarget();
+		testRuntimeFallbackTarget();
 		trace('SWFStatsTest passed $assertions assertions');
 	}
 
@@ -66,6 +68,30 @@ class SWFStatsTest {
 		assertEquals(0, harness.setRates.length, "normal average reset count");
 	}
 
+	private static function testConfiguredSixtyFrameTarget():Void {
+		var harness = new WatchdogHarness(60);
+		assertEquals(60, harness.stats.targetFrameRate, "configured target stored");
+		harness.frameRate = 30;
+
+		harness.advanceAndReset(1000);
+
+		assertEquals(60, harness.frameRate, "drifted smooth presentation rate reset");
+		assertEquals(1, harness.setRates.length, "smooth drift reset count");
+		assertEquals(60, harness.setRates[0], "smooth drift reset target");
+	}
+
+	private static function testRuntimeFallbackTarget():Void {
+		var harness = new WatchdogHarness(60);
+		harness.stats.useTargetFrameRate(30);
+		harness.frameRate = 30;
+
+		harness.advanceAndReset(1000);
+
+		assertEquals(30, harness.stats.targetFrameRate, "fallback target stored");
+		assertEquals(30, harness.frameRate, "fallback target remains active");
+		assertEquals(0, harness.setRates.length, "watchdog does not restore smooth target");
+	}
+
 	private static function assertTrue(value:Bool, message:String):Void {
 		assertions++;
 		if (!value) throw '$message: expected true';
@@ -84,12 +110,13 @@ class SWFStatsTest {
 
 private class WatchdogHarness {
 	public var now:Float = 0;
-	public var frameRate:Float = 30;
+	public var frameRate:Float;
 	public var setRates:Array<Float> = [];
 	public var stats:SWFStats;
 
-	public function new() {
-		stats = new SWFStats(false, getNow, getFrameRate, setFrameRate);
+	public function new(targetFrameRate:Int = 30) {
+		frameRate = targetFrameRate;
+		stats = new SWFStats(targetFrameRate, false, getNow, getFrameRate, setFrameRate);
 	}
 
 	public function advanceAndReset(delta:Float):Void {

@@ -289,7 +289,7 @@ class LocalCharacterTest {
 		}
 		assertBelow(normal.stateSnapshot().vx * 1.4, jumpStart.stateSnapshot().vx, "jump-start speed burst boosts movement");
 
-		for (_ in 0...(Constants.FRAME_RATE * 2 - 24)) {
+		for (_ in 0...(Constants.SIMULATION_FRAME_RATE * 2 - 24)) {
 			jumpStart.step(new LocalPlayerInput(false, true));
 		}
 		assertEquals(null, jumpStart.stateSnapshot().itemId, "jump-start speed burst expires after two seconds");

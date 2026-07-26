@@ -35,6 +35,7 @@ class StarEffect extends Sprite {
 	}
 
 	private function tick(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		frameIndex = Std.int(Math.min(frameIndex + 1, Y.length - 1));
 		applyFrame(frameIndex);
 		framesRemaining--;

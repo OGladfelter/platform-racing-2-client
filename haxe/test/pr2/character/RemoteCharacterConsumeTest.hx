@@ -9,6 +9,9 @@ import pr2.level.Level;
 import pr2.level.Level.LevelBlock;
 import pr2.level.LevelRenderer;
 import pr2.net.CommandHandler;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateDiagnostics;
+import pr2.runtime.FrameRateSettings;
 
 class RemoteCharacterConsumeTest {
 	private static var assertions:Int = 0;
@@ -20,8 +23,100 @@ class RemoteCharacterConsumeTest {
 		testCatchupClampAndBlockTouches();
 		testRemoteBlockTouchesActivateRealMapEffects();
 		testRemoteAnimationAdvancesEachStageFrame();
+		testRemoteQueueConsumesOnlySimulationFrames();
+		testRemotePresentationPolicySelection();
+		testSpectateSnapSurvivesSimulationPhase();
 		testHeartStingAndHatCommands();
 		trace('RemoteCharacterConsumeTest passed $assertions assertions');
+	}
+
+	private static function testSpectateSnapSurvivesSimulationPhase():Void {
+		var remote = new RemoteCharacter(12, null, "Spectated", 1, 1, 1, 1, "0", new CommandHandler());
+		remote.stepFrame();
+		remote.requestPresentationSnap();
+		assertEquals(true, @:privateAccess remote.externalPresentationSnapPending,
+			"spectate snap waits for a presentation frame");
+
+		remote.stepFrame();
+		assertEquals(true, @:privateAccess remote.presentationPose.discontinuity,
+			"spectate snap survives an intervening simulation frame");
+		assertEquals(true, @:privateAccess remote.externalPresentationSnapPending,
+			"simulation frame does not consume spectate snap");
+
+		@:privateAccess remote.renderPresentationFrame();
+		assertClose(0, remote.display.x, "spectate snap renders authoritative remote x");
+		assertClose(0, remote.display.y, "spectate snap renders authoritative remote y");
+		assertEquals(false, @:privateAccess remote.externalPresentationSnapPending,
+			"presentation frame consumes spectate snap");
+		remote.remove();
+	}
+
+	private static function testRemotePresentationPolicySelection():Void {
+		var previous = 0.0;
+		var current = 10.0;
+		var next = 20.0;
+		var delayed = RemotePresentationPolicy.delayedInterpolation(previous, current);
+		var extrapolated = RemotePresentationPolicy.guardedExtrapolation(previous, current, false);
+		assertEquals("guarded-extrapolation", RemotePresentationPolicy.SELECTED,
+			"remote strategy explicitly selects guarded extrapolation");
+		assertClose(5, delayed, "delayed interpolation renders the older midpoint");
+		assertClose(15, extrapolated, "guarded extrapolation renders a forward half-step");
+		assertTrue(RemotePresentationPolicy.correctionDistance(extrapolated, next)
+			< RemotePresentationPolicy.correctionDistance(delayed, next),
+			"guarded extrapolation has the smaller constant-motion correction");
+		assertClose(current, RemotePresentationPolicy.guardedExtrapolation(previous, current, true),
+			"guarded extrapolation snaps discontinuities to current authority");
+	}
+
+	private static function testRemoteQueueConsumesOnlySimulationFrames():Void {
+		var remote = new RemoteCharacter(8, null, "Remote", 1, 1, 1, 1, "0", new CommandHandler());
+		remote.pos(["30", "0"]);
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true), new FrameRateDiagnostics(function():Float return 0));
+		@:privateAccess FrameClock.setCurrentForTests(clock);
+
+		clock.advanceFrame();
+		remote.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(4, remote.updateQueueLength, "simulation phase consumes one queued remote frame");
+		var animationFrame = remote.display.currentFrame;
+		var simulationX = remote.x;
+		var simulationY = remote.y;
+		var simulationPosX = remote.posX;
+		var simulationPosY = remote.posY;
+		var simulationCatchup = remote.catchupRate;
+
+		clock.advanceFrame();
+		remote.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(4, remote.updateQueueLength, "presentation-only phase preserves remote queue");
+		assertEquals(animationFrame, remote.display.currentFrame, "presentation-only phase preserves remote animation");
+		assertClose(simulationX, remote.x, "presentation-only phase preserves remote authoritative x");
+		assertClose(simulationY, remote.y, "presentation-only phase preserves remote authoritative y");
+		assertClose(simulationPosX, remote.posX, "presentation-only phase preserves catch-up source x");
+		assertClose(simulationPosY, remote.posY, "presentation-only phase preserves catch-up source y");
+		assertClose(simulationCatchup, remote.catchupRate, "presentation-only phase preserves catch-up rate");
+
+		clock.advanceFrame();
+		remote.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(3, remote.updateQueueLength, "next simulation phase consumes one queued remote frame");
+		var pose = @:privateAccess remote.presentationPose;
+		assertEquals(false, pose.discontinuity, "continuous remote update is eligible for presentation");
+		var authoritativeX = remote.x;
+		var authoritativeY = remote.y;
+		var queuedFrames = remote.updateQueueLength;
+		animationFrame = remote.display.currentFrame;
+
+		clock.advanceFrame();
+		remote.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertClose(authoritativeX, remote.x, "extra remote frame leaves authoritative x unchanged");
+		assertClose(authoritativeY, remote.y, "extra remote frame leaves authoritative y unchanged");
+		assertEquals(queuedFrames, remote.updateQueueLength, "extra remote frame consumes no queued update");
+		assertEquals(animationFrame, remote.display.currentFrame, "extra remote frame advances no authored animation");
+		assertClose(pose.extrapolatedX(0.5) - pose.currentX, remote.display.x,
+			"extra remote frame applies half-step visual x");
+		assertClose(pose.extrapolatedY(0.5) - pose.currentY, remote.display.y,
+			"extra remote frame applies half-step visual y");
+
+		remote.remove();
+		@:privateAccess FrameClock.setCurrentForTests(null);
 	}
 
 	private static function testRegistersAndTearsDownTempCommands():Void {

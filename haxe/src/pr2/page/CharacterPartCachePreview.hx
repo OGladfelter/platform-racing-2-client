@@ -72,6 +72,7 @@ class CharacterPartCachePreview extends Sprite {
 		renderWindow = stage.window;
 		renderWindow.onRender.add(beforeRender, false, 10000);
 		renderWindow.onRender.add(afterRender, false, -10000);
+		// Presentation-rate by design: this screen benchmarks every rendered frame.
 		addEventListener(Event.ENTER_FRAME, animateCharacters);
 		startPhase(0);
 	}

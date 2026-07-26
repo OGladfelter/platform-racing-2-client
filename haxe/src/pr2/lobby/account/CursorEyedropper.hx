@@ -50,6 +50,7 @@ class CursorEyedropper extends CustomCursor {
 	override public function init():Void {
 		super.init();
 		visible = false;
+		// Presentation-rate by design: sample the latest pointer/display state.
 		addEventListener(Event.ENTER_FRAME, maybeUpdate);
 	}
 

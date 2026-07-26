@@ -6,6 +6,9 @@ import openfl.events.Event;
 import openfl.geom.ColorTransform;
 import pr2.assets.NativeAssetIds.StaticSvg;
 import pr2.assets.NativeAssets;
+import pr2.runtime.FrameClock;
+import pr2.gameplay.presentation.CharacterPresentationLayer;
+import pr2.gameplay.presentation.PresentationPose;
 
 typedef PhysicsParticleParams = {
 	var graphic:String;
@@ -57,6 +60,14 @@ class PhysicsParticle extends Sprite {
 	private var velScaleY:Float;
 	private var velRotation:Float;
 	private final random:Void->Float;
+	private final presentationPose:PresentationPose = new PresentationPose();
+	private var authoritativeX:Float;
+	private var authoritativeY:Float;
+	private var authoritativeRotation:Float;
+	private var authoritativeScaleX:Float;
+	private var authoritativeScaleY:Float;
+	private var previousScaleX:Float;
+	private var previousScaleY:Float;
 
 	public function new(params:PhysicsParticleParams, ?random:Void->Float) {
 		super();
@@ -66,6 +77,11 @@ class PhysicsParticle extends Sprite {
 		y = randRange(params.minY, params.maxY);
 		rotation = randRange(params.minRotation, params.maxRotation);
 		scaleX = scaleY = randRange(params.minScale, params.maxScale);
+		authoritativeX = x;
+		authoritativeY = y;
+		authoritativeRotation = rotation;
+		authoritativeScaleX = previousScaleX = scaleX;
+		authoritativeScaleY = previousScaleY = scaleY;
 		velX = randRange(params.minVelX, params.maxVelX);
 		velY = randRange(params.minVelY, params.maxVelY);
 		fricX = params.fricX == null ? 1 : params.fricX;
@@ -114,13 +130,38 @@ class PhysicsParticle extends Sprite {
 
 	@:allow(pr2.character.ParticleEmitterTest)
 	private function tick(_:Event):Void {
-		x += velX;
-		y += velY;
+		if (!FrameClock.shouldRunSimulationFrame()) {
+			renderPresentationFrame();
+			return;
+		}
+		presentationPose.beginSimulationTick(
+			authoritativeX,
+			authoritativeY,
+			authoritativeRotation,
+			1,
+			CharacterPresentationLayer.Front
+		);
+		previousScaleX = authoritativeScaleX;
+		previousScaleY = authoritativeScaleY;
+		authoritativeX += velX;
+		authoritativeY += velY;
 		velX = (velX + accelX) * fricX;
 		velY = (velY + accelY) * fricY;
-		scaleX += velScaleX;
-		scaleY += velScaleY;
-		rotation += velRotation;
+		authoritativeScaleX += velScaleX;
+		authoritativeScaleY += velScaleY;
+		authoritativeRotation += velRotation;
+		x = authoritativeX;
+		y = authoritativeY;
+		scaleX = authoritativeScaleX;
+		scaleY = authoritativeScaleY;
+		rotation = authoritativeRotation;
+		presentationPose.finishSimulationTick(
+			authoritativeX,
+			authoritativeY,
+			authoritativeRotation,
+			1,
+			CharacterPresentationLayer.Front
+		);
 		curAlpha += velAlpha;
 		if (curAlpha > 1) {
 			curAlpha = 1;
@@ -130,6 +171,16 @@ class PhysicsParticle extends Sprite {
 		if (life <= 0) {
 			remove();
 		}
+	}
+
+	public function renderPresentationFrame():Void {
+		if (!presentationPose.hasSamples) return;
+		var factor = presentationPose.discontinuity ? 0.0 : 0.5;
+		x = presentationPose.extrapolatedX(factor);
+		y = presentationPose.extrapolatedY(factor);
+		rotation = presentationPose.extrapolatedRotation(factor);
+		scaleX = authoritativeScaleX + factor * (authoritativeScaleX - previousScaleX);
+		scaleY = authoritativeScaleY + factor * (authoritativeScaleY - previousScaleY);
 	}
 
 	public function remove():Void {

@@ -52,6 +52,7 @@ class LoadingView extends NativeView {
 	}
 
 	private function onFrame(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		currentFrame = currentFrame % 574 + 1;
 		// Symbol 1052 advances one of its 14 authored rotation keys each root frame.
 		applySpinnerFrame((currentFrame - 1) % 14);

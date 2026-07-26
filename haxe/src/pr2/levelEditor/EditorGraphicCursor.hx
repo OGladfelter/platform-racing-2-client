@@ -20,6 +20,8 @@ class EditorGraphicCursor extends EditorToolCursor {
 		}
 		if (scaleWithObjectLayer) {
 			updateObjectLayerScale();
+			// Presentation-rate by design: keep the pointer graphic aligned with
+			// the latest display transform between editor simulation ticks.
 			addEventListener(Event.ENTER_FRAME, updateObjectLayerScale);
 		}
 	}

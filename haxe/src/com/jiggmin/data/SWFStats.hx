@@ -6,8 +6,9 @@ import pr2.Constants;
 import pr2.app.AppStage;
 
 class SWFStats extends Sprite {
-	public static inline var TARGET_FRAME_RATE:Int = Constants.FRAME_RATE;
+	public static inline var DEFAULT_TARGET_FRAME_RATE:Int = Constants.DEFAULT_PRESENTATION_FRAME_RATE;
 
+	public var targetFrameRate(default, null):Int;
 	private var lastReset:Float;
 	private var lagArray:Array<Float> = [];
 	private var keepCount:Int = 30;
@@ -16,8 +17,10 @@ class SWFStats extends Sprite {
 	private var getFrameRate:Void->Float;
 	private var setFrameRate:Float->Void;
 
-	public function new(autoStart:Bool = true, ?now:Void->Float, ?getFrameRate:Void->Float, ?setFrameRate:Float->Void) {
+	public function new(targetFrameRate:Int = DEFAULT_TARGET_FRAME_RATE, autoStart:Bool = true, ?now:Void->Float, ?getFrameRate:Void->Float,
+			?setFrameRate:Float->Void) {
 		super();
+		this.targetFrameRate = targetFrameRate;
 		this.now = now == null ? defaultNow : now;
 		this.getFrameRate = getFrameRate == null ? defaultGetFrameRate : getFrameRate;
 		this.setFrameRate = setFrameRate == null ? defaultSetFrameRate : setFrameRate;
@@ -45,6 +48,11 @@ class SWFStats extends Sprite {
 		}
 	}
 
+	/** Keeps the watchdog aligned with a deliberate runtime presentation-rate change. */
+	public function useTargetFrameRate(value:Int):Void {
+		targetFrameRate = value;
+	}
+
 	public function resetStats():Void {
 		var time = now();
 		var diff = time - lastReset;
@@ -54,8 +62,8 @@ class SWFStats extends Sprite {
 			lagArray.shift();
 		}
 		var averageLag = averageLagWindow();
-		if (averageLag < 900 || getFrameRate() != TARGET_FRAME_RATE) {
-			setFrameRate(TARGET_FRAME_RATE);
+		if (averageLag < 900 || getFrameRate() != targetFrameRate) {
+			setFrameRate(targetFrameRate);
 		}
 	}
 
@@ -82,8 +90,8 @@ class SWFStats extends Sprite {
 		return Date.now().getTime();
 	}
 
-	private static function defaultGetFrameRate():Float {
-		return AppStage.stage == null ? TARGET_FRAME_RATE : AppStage.stage.frameRate;
+	private function defaultGetFrameRate():Float {
+		return AppStage.stage == null ? targetFrameRate : AppStage.stage.frameRate;
 	}
 
 	private static function defaultSetFrameRate(value:Float):Void {

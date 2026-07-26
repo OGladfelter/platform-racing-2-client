@@ -4,6 +4,8 @@ import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.text.TextField;
 import pr2.net.CommandHandler;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateSettings;
 import pr2.ui.view.LoadingView;
 import pr2.util.TestDisplayUtil as DisplayUtil;
 
@@ -13,8 +15,28 @@ class GpNotificationTest {
 	public static function main():Void {
 		testGpGainCommandMountsAuthoredNotification();
 		testLoadingViewUsesAuthoredNestedTimelines();
+		testLoadingViewAdvancesOnlyOnSimulationFrames();
 		if (pr2.DeterministicTestMode.finishSmokeSuite("GpNotificationTest")) return;
 		trace('GpNotificationTest passed $assertions assertions');
+	}
+
+	private static function testLoadingViewAdvancesOnlyOnSimulationFrames():Void {
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true));
+		FrameClock.setCurrentForTests(clock);
+		var loading = new LoadingView();
+
+		clock.advanceFrame();
+		loading.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(2, loading.currentFrame, "loading advances on the simulation half of smooth presentation");
+
+		clock.advanceFrame();
+		loading.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(2, loading.currentFrame, "loading holds on the presentation-only half of smooth presentation");
+
+		clock.advanceFrame();
+		loading.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(3, loading.currentFrame, "loading resumes on the next simulation frame");
+		FrameClock.setCurrentForTests(null);
 	}
 
 	private static function testLoadingViewUsesAuthoredNestedTimelines():Void {

@@ -54,7 +54,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	private static inline var ITEM_SNAKE:Int = 10;
 	private static inline var TELEPORT_ITEM_DISTANCE:Float = 120;
 	private static inline var SPEED_BURST_FRAMES:Int = 135;
-	private static inline var FRAME_RATE:Int = Constants.FRAME_RATE;
+	private static inline var SIMULATION_FRAME_RATE:Int = Constants.SIMULATION_FRAME_RATE;
 	private static inline var JET_PACK_TOTAL_FUEL:Int = 200;
 	private static inline var FAST_ITEM_RELOAD_FRAMES:Int = 22;
 	private static inline var ICE_WAVE_RELOAD_FRAMES:Int = 27;
@@ -76,6 +76,8 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	public var itemUses(default, null):Null<Int> = null;
 	public var lastItemEffect(default, null):Null<String> = null;
 	public var courseRotation(default, null):Int = 0;
+	public var movementDiscontinuityVersion(default, null):Int = 0;
+	public var collisionVersion(default, null):Int = 0;
 	public var courseTweenRotation(default, null):Int = 0;
 	public var characterRotation(default, null):Int = 0;
 	public var finished(default, null):Bool = false;
@@ -217,10 +219,12 @@ class LocalPlayerController implements ItemRuntimeOwner {
 
 	public function setPosition(px:Float, py:Float):Void {
 		setPlayerPos(px, py);
+		markMovementDiscontinuity();
 	}
 
 	public function resetPreRacePosition(px:Float, py:Float):Void {
 		setPlayerPos(px, py);
+		markMovementDiscontinuity();
 		roguelikeStartX = px;
 		roguelikeStartY = py;
 		vx = 0;
@@ -1310,6 +1314,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		courseTweenRotation = 0;
 		characterRotation = 0;
 		setMode(MODE_LAND);
+		markMovementDiscontinuity();
 	}
 
 	private function pushBlock(block:LevelBlock, dx:Int, dy:Int):Void {
@@ -1453,6 +1458,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		// original start coordinate into the controller's current physics axes.
 		var rotatedStart = RotationMath.rotatePoint(roguelikeStartX, roguelikeStartY, -courseRotation);
 		setPlayerPos(rotatedStart.x, rotatedStart.y);
+		markMovementDiscontinuity();
 		vx = 0;
 		vy = 0;
 		grounded = false;
@@ -1707,6 +1713,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 			state.depletedVisualSupply = true;
 		}
 		movePlayerBy((dest.x - block.x) * level.tileSize, (dest.y - block.y) * level.tileSize);
+		markMovementDiscontinuity();
 		blockVisualEvents.push(new BlockVisualEvent(BlockVisualEventKind.TeleportBlockPop, block.x, block.y, 1, null, null, startX, startY));
 		blockVisualEvents.push(new BlockVisualEvent(BlockVisualEventKind.TeleportBlockPop, dest.x, dest.y, 1, null, null, x, y - 25));
 	}
@@ -1791,6 +1798,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		touchedBlockX = block.x;
 		touchedBlockY = block.y;
 		lastCollisionEvent = event + ":" + Std.string(block.type) + "@" + block.x + "," + block.y;
+		collisionVersion++;
 	}
 
 	private function traceCharacterFrame(phase:String):Void traceReporter.traceCharacterFrame(phase);
@@ -1895,6 +1903,10 @@ class LocalPlayerController implements ItemRuntimeOwner {
 
 	private function movePlayerBy(dx:Float, dy:Float):Void {
 		setPlayerPos(x + dx, y + dy);
+	}
+
+	private function markMovementDiscontinuity():Void {
+		movementDiscontinuityVersion++;
 	}
 
 	private static function flashCoordinate(value:Float):Float {

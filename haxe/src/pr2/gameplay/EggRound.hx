@@ -16,6 +16,8 @@ import pr2.net.LobbySocket;
 import pr2.util.FlashRandom;
 import pr2.util.DisplayUtil;
 import pr2.runtime.SvgAsset;
+import pr2.gameplay.presentation.CharacterPresentationLayer;
+import pr2.gameplay.presentation.PresentationPose;
 
 typedef EggState = {
 	final id:Int;
@@ -31,6 +33,9 @@ typedef EggState = {
 	var attackCooldown:Int;
 	var removing:Bool;
 	var removeFrames:Int;
+	var displayRotation:Float;
+	final presentationPose:PresentationPose;
+	var presentationDiscontinuityPending:Bool;
 	final display:EggView;
 }
 
@@ -48,6 +53,9 @@ typedef EggAttackVisual = {
 	var angle:Float;
 	var baseAngle:Float;
 	var rot:Int;
+	var rotation:Float;
+	final presentationPose:PresentationPose;
+	var presentationDiscontinuityPending:Bool;
 	var display:Sprite;
 }
 
@@ -79,6 +87,7 @@ class EggRound {
 	private final onIceBlockHit:LevelBlock->Void;
 	private final playLaserHitSound:Int->Int->Void;
 	private var eggs:Map<Int, EggState> = new Map();
+	private var presentationEggs:Array<EggState> = [];
 	private var attackVisuals:Array<EggAttackVisual> = [];
 
 	public function new(commandHandler:CommandHandler, onCollect:Int->Void, ?displayLayer:Sprite, ?cameraOffset:Void->Point,
@@ -167,6 +176,8 @@ class EggRound {
 			egg.display.parent.removeChild(egg.display);
 		}
 		eggs.remove(id);
+		var presentationIndex = presentationEggs.indexOf(egg);
+		if (presentationIndex >= 0) presentationEggs.splice(presentationIndex, 1);
 		commandHandler.defineCommand('removeEgg$id', null);
 		return true;
 	}
@@ -175,6 +186,7 @@ class EggRound {
 		for (id in ids()) {
 			removeEgg(id);
 		}
+		presentationEggs.resize(0);
 		clearAttackVisuals();
 	}
 
@@ -207,6 +219,25 @@ class EggRound {
 		return attackVisuals.length;
 	}
 
+	public function renderPresentationFrame():Void {
+		for (index in 0...presentationEggs.length) {
+			var egg = presentationEggs[index];
+			if (egg.removing || !egg.presentationPose.hasSamples) continue;
+			var factor = egg.presentationPose.discontinuity ? 0.0 : 0.5;
+			egg.display.x = egg.presentationPose.extrapolatedX(factor);
+			egg.display.y = egg.presentationPose.extrapolatedY(factor);
+			egg.display.rotation = egg.presentationPose.extrapolatedRotation(factor);
+		}
+		for (index in 0...attackVisuals.length) {
+			var visual = attackVisuals[index];
+			if (!visual.presentationPose.hasSamples) continue;
+			var factor = visual.presentationPose.discontinuity ? 0.0 : 0.5;
+			visual.display.x = visual.presentationPose.extrapolatedX(factor);
+			visual.display.y = visual.presentationPose.extrapolatedY(factor);
+			visual.display.rotation = visual.presentationPose.extrapolatedRotation(factor);
+		}
+	}
+
 	private function spawn(level:Level):Void {
 		var id = nextId++;
 		var minX = Std.int(Math.min(level.minX, level.maxX));
@@ -233,7 +264,7 @@ class EggRound {
 		if (displayLayer != null) {
 			displayLayer.addChild(display);
 		}
-		eggs.set(id, {
+		var egg:EggState = {
 			id: id,
 			posX: x,
 			posY: y,
@@ -247,8 +278,13 @@ class EggRound {
 			attackCooldown: 0,
 			removing: false,
 			removeFrames: 0,
+			displayRotation: rot,
+			presentationPose: new PresentationPose(),
+			presentationDiscontinuityPending: true,
 			display: display
-		});
+		};
+		eggs.set(id, egg);
+		presentationEggs.push(egg);
 		commandHandler.defineCommand('removeEgg$id', function(_:Array<String>):Void {
 			removeEggNow(id);
 		});
@@ -273,6 +309,16 @@ class EggRound {
 
 	private function stepEgg(egg:EggState, level:Level, courseRotation:Int, ?playerX:Float, ?playerY:Float, playerCrouching:Bool = false,
 			playerRemoved:Bool = false, wrapAroundLevel:Bool = true):Void {
+		var previousVelX = egg.velX;
+		var previousVelY = egg.velY;
+		var previousGrounded = egg.grounded;
+		egg.presentationPose.beginSimulationTick(
+			egg.x,
+			egg.y,
+			egg.displayRotation,
+			egg.velX < 0 ? -1 : 1,
+			CharacterPresentationLayer.Front
+		);
 		egg.velY += 0.2;
 		if (egg.velY > 8) {
 			egg.velY = 8;
@@ -326,8 +372,27 @@ class EggRound {
 		egg.display.x = egg.x;
 		egg.display.y = egg.y;
 		egg.display.rotation = displayRotation;
+		egg.displayRotation = displayRotation;
 		egg.display.scaleX = egg.velX > 0 ? 0.12 : -0.12;
 		egg.display.scaleY = 0.12;
+		var presentationDiscontinuity = egg.presentationDiscontinuityPending
+			|| (!previousGrounded && egg.grounded)
+			|| PresentationPose.velocityReversed(previousVelX, egg.velX)
+			|| PresentationPose.velocityReversed(previousVelY, egg.velY)
+			|| PresentationPose.movementTooLarge(
+				egg.x - egg.presentationPose.previousX,
+				egg.y - egg.presentationPose.previousY,
+				15
+			);
+		egg.presentationPose.finishSimulationTick(
+			egg.x,
+			egg.y,
+			egg.displayRotation,
+			egg.velX < 0 ? -1 : 1,
+			CharacterPresentationLayer.Front,
+			presentationDiscontinuity
+		);
+		egg.presentationDiscontinuityPending = false;
 		if (egg.display.alpha < 1) {
 			egg.display.alpha += 0.02;
 		}
@@ -397,6 +462,7 @@ class EggRound {
 				var laser = addAttackVisual("LaserShotGraphic", x, y, 1, 1, Math.cos(angle * Math.PI / 180) * 29,
 					Math.sin(angle * Math.PI / 180) * 29, 100, false, "Laser", shooterId);
 				laser.display.rotation = angle - rot;
+				laser.rotation = laser.display.rotation;
 			case "IceWave":
 				var base = parsePartInt(parts, 3);
 				var rot = parsePartInt(parts, 4);
@@ -434,6 +500,9 @@ class EggRound {
 			angle: 0,
 			baseAngle: 0,
 			rot: 0,
+			rotation: display.rotation,
+			presentationPose: new PresentationPose(),
+			presentationDiscontinuityPending: true,
 			display: display
 		};
 		attackVisuals.push(visual);
@@ -446,6 +515,16 @@ class EggRound {
 		var spawned:Array<EggAttackVisual> = [];
 		var activeIceCount = iceWaveCount(attackVisuals);
 		for (visual in attackVisuals) {
+			var previousVelX = visual.velX;
+			var previousVelY = visual.velY;
+			var previousHitBlock = visual.hitBlock;
+			visual.presentationPose.beginSimulationTick(
+				visual.posX,
+				visual.posY,
+				visual.rotation,
+				visual.velX < 0 ? -1 : 1,
+				CharacterPresentationLayer.Front
+			);
 			visual.posX += visual.velX;
 			visual.posY += visual.velY;
 			visual.display.x = visual.posX;
@@ -483,6 +562,24 @@ class EggRound {
 					playLaserHitSound(Std.int(visual.posX), Std.int(visual.posY));
 				}
 			}
+			var presentationDiscontinuity = visual.presentationDiscontinuityPending
+				|| (!previousHitBlock && visual.hitBlock)
+				|| PresentationPose.velocityReversed(previousVelX, visual.velX)
+				|| PresentationPose.velocityReversed(previousVelY, visual.velY)
+				|| PresentationPose.movementTooLarge(
+					visual.posX - visual.presentationPose.previousX,
+					visual.posY - visual.presentationPose.previousY,
+					30
+				);
+			visual.presentationPose.finishSimulationTick(
+				visual.posX,
+				visual.posY,
+				visual.rotation,
+				visual.velX < 0 ? -1 : 1,
+				CharacterPresentationLayer.Front,
+				presentationDiscontinuity
+			);
+			visual.presentationDiscontinuityPending = false;
 			visual.life--;
 			if (visual.life <= 0) {
 				removeAttackVisual(visual);
@@ -521,6 +618,9 @@ class EggRound {
 			angle: angle,
 			baseAngle: baseAngle,
 			rot: rot,
+			rotation: display.rotation,
+			presentationPose: new PresentationPose(),
+			presentationDiscontinuityPending: true,
 			display: display
 		};
 		skipIcePastSpawn(visual);

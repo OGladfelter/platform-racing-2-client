@@ -56,8 +56,10 @@ class BlockDisplayCulling {
 	}
 
 	public function updateViewWindow(force:Bool):Void {
-		var toLocal = owner.blockLayer.transform.matrix.clone();
-		toLocal.concat(owner.worldContainer.transform.matrix);
+		// Culling is authoritative 30 Hz work. Never derive its bounds from the
+		// disposable fractional matrix currently displayed between ticks.
+		var toLocal = owner.layerMatrix(owner.offsetX, owner.offsetY);
+		toLocal.concat(owner.tweenRotationMatrix(owner.tweenRotation));
 		toLocal.invert();
 		var minX = Math.POSITIVE_INFINITY;
 		var minY = Math.POSITIVE_INFINITY;

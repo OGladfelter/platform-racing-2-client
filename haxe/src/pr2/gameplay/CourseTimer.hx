@@ -181,6 +181,7 @@ class CourseTimer extends Removable {
 	}
 
 	private function go(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		if (holder == null) {
 			removeEventListener(Event.ENTER_FRAME, go);
 			return;

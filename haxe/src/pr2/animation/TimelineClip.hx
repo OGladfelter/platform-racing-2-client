@@ -140,6 +140,7 @@ class TimelineClip extends Sprite {
 	}
 
 	private function advance(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		if (!playing || completed) return;
 		if (currentFrame < totalFrames) {
 			currentFrame++;

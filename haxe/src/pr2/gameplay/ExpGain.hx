@@ -68,6 +68,7 @@ class ExpGain extends Removable {
 	public function textGeometryForTests():Array<Float> return textBox == null ? [] : [textBox.x, textBox.y, textBox.width, textBox.height];
 
 	private function go(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
 		expStart += expStep;
 		if (expStart >= expEnd) {
 			removeEventListener(Event.ENTER_FRAME, go);
