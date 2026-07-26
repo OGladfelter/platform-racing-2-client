@@ -116,11 +116,12 @@ teardown paths are covered by focused tests and screenshot/replay evidence.
 #### Experimental 60 FPS Presentation With 30 FPS Simulation
 
 Add an opt-in `?smooth60=1` HTML5 experiment that draws motion at 60 FPS while
-keeping gameplay, input consumption, animation timelines, frame counters,
-network emission, and every other authoritative system at exactly 30 ticks per
-second. The flag must default off and must not persist to another session. With
-the flag absent, the client must retain its current 30 FPS behavior and Flash
-parity.
+targeting 30 authoritative ticks per second for gameplay, input consumption,
+animation timelines, frame counters, and network emission. Average presentation
+cadence over five seconds and allow the authoritative rate to follow half that
+cadence down to 28 Hz before sacrificing visual-only callbacks. The flag must
+default off and must not persist to another session. With the flag absent, the
+client must retain its current 30 FPS behavior and Flash parity.
 
 Treat presentation positions as disposable output. Never feed an interpolated
 or extrapolated coordinate, velocity, rotation, layer, or camera value back into

@@ -43,6 +43,7 @@ import pr2.runtime.FrameRateDebugSignals;
 import pr2.runtime.FrameRateDiagnostics;
 import pr2.runtime.FrameRateFallbackPolicy;
 import pr2.runtime.FrameRateSettings;
+import pr2.runtime.Html5PresentationPacer;
 import pr2.ui.GpNotification;
 import pr2.ui.MuteButton;
 import pr2.ui.controls.NativeControl;
@@ -88,7 +89,7 @@ class Main extends Sprite {
 		frameClock = new FrameClock(frameRateSettings);
 		frameClock.onFrame = publishFrameRateDiagnostics;
 		frameClock.install(stage);
-		swfStats = new SWFStats(frameRateSettings.presentationFrameRate);
+		swfStats = new SWFStats(frameRateSettings.presentationFrameRate, true, null, null, applyStageFrameRate);
 		FatalErrorReporter.installGlobalHandlers();
 		GpNotification.init(stage);
 		BrowserAudioUnlock.install();
@@ -131,7 +132,7 @@ class Main extends Sprite {
 		// therefore the next simulation tick, with no duplicate or skipped phase.
 		if (fallbackPending && clock.isSimulationFrame) {
 			clock.use30FpsPresentation();
-			stage.frameRate = Constants.DEFAULT_PRESENTATION_FRAME_RATE;
+			applyStageFrameRate(Constants.DEFAULT_PRESENTATION_FRAME_RATE);
 			if (swfStats != null) {
 				swfStats.useTargetFrameRate(Constants.DEFAULT_PRESENTATION_FRAME_RATE);
 			}
@@ -147,8 +148,12 @@ class Main extends Sprite {
 
 	private function applyPresentationFrameRate():Void {
 		#if (js && html5)
-		stage.frameRate = frameRateSettings.presentationFrameRate;
+		applyStageFrameRate(frameRateSettings.presentationFrameRate);
 		#end
+	}
+
+	private function applyStageFrameRate(value:Float):Void {
+		Html5PresentationPacer.apply(stage, value, frameRateSettings.smooth60Enabled);
 	}
 
 	private static inline function smooth60SupportedOnCurrentTarget():Bool {

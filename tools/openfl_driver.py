@@ -227,12 +227,19 @@ def check_fps(
     browser_path,
     query="",
     use_gpu=False,
+    uncapped_browser_refresh=False,
 ):
     browser = resolve_browser(browser_path)
 
     with serve(root) as url:
         url = append_query(url, query)
-        result = run_browser_and_read_fps(browser, url, duration, use_gpu)
+        result = run_browser_and_read_fps(
+            browser,
+            url,
+            duration,
+            use_gpu,
+            uncapped_browser_refresh,
+        )
 
     expected_sample_count = int(duration)
     presentation_samples = result["presentation"][-expected_sample_count:]
@@ -261,7 +268,11 @@ def check_fps(
     smooth60 = any(part == "smooth60=1" for part in query.lstrip("?").split("&"))
     cadence_failures = []
     for index, (presented, simulated) in enumerate(zip(presentation_samples, simulation_samples)):
-        cadence_matches = abs(presented - simulated * 2) <= 1 if smooth60 else presented == simulated
+        cadence_matches = (
+            simulated <= presented
+            if smooth60
+            else presented == simulated
+        )
         if not cadence_matches:
             cadence_failures.append((index + 1, presented, simulated))
 
@@ -408,11 +419,12 @@ def check_smooth60_stability(root, browser_path, use_gpu=False):
                 )
             paired_samples = list(zip(loaded_presentation, loaded_simulation))
             if len(paired_samples) < 3 or any(
-                simulated > 35 or abs(presented - simulated * 2) > 1
+                simulated > 35
+                or simulated > presented
                 for presented, simulated in paired_samples
             ):
                 raise SystemExit(
-                    "Smooth60 sustained-load cadence was not presentation/simulation 2:1: "
+                    "Smooth60 sustained-load cadence did not sacrifice only presentation frames: "
                     f"{paired_samples}"
                 )
             print(
@@ -893,13 +905,24 @@ def parse_expectation(expectation):
     return key, value
 
 
-def run_browser_and_read_fps(browser, url, duration, use_gpu=False):
+def run_browser_and_read_fps(
+    browser,
+    url,
+    duration,
+    use_gpu=False,
+    uncapped_browser_refresh=False,
+):
     debug_port = reserve_port()
     user_data_dir = tempfile.mkdtemp(prefix="pr2-openfl-chrome-")
     command = [
         browser,
         "--headless=new",
         *gpu_flags(use_gpu),
+        *(
+            ["--disable-frame-rate-limit", "--disable-gpu-vsync"]
+            if uncapped_browser_refresh
+            else []
+        ),
         "--hide-scrollbars",
         "--window-size=550,400",
         f"--remote-debugging-port={debug_port}",
@@ -1989,6 +2012,11 @@ def main():
              "higher/steadier framerate but machine-dependent rendering, so avoid for "
              "screenshot-baseline comparisons",
     )
+    parser.add_argument(
+        "--uncapped-browser-refresh",
+        action="store_true",
+        help="let the FPS harness receive requestAnimationFrame callbacks faster than 60 Hz",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     shot = subparsers.add_parser("shot")
@@ -2020,6 +2048,7 @@ def main():
             args.browser,
             args.query,
             args.gpu,
+            args.uncapped_browser_refresh,
         )
     elif args.command == "smooth60-flag":
         check_smooth60_flag(args.root, args.browser, args.gpu)

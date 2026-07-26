@@ -13,6 +13,9 @@ class FrameClockTest {
 		testResetRebasesWithoutSynthesizingTicks();
 		testLongRunCadence();
 		testRepeatedPhaseResets();
+		testPresentationBudgetPreservesVisualFramesAt57Fps();
+		testPresentationBudgetProtects28FpsAt55Fps();
+		testHighRefreshDoesNotAccelerateSimulation();
 		testTransitionBackTo30FpsPresentation();
 		testFallbackImmediatelyAfterSimulationPreservesTickSequence();
 		trace('FrameClockTest passed $assertions assertions');
@@ -36,6 +39,39 @@ class FrameClockTest {
 		assertEquals(3000, unflagged.simulationFrameNumber, "unflagged long run simulates every frame");
 		assertEquals(0, unflagged.presentationOnlyFrameNumber, "unflagged long run has no extra frames");
 		assertEquals(3000, unflaggedDiagnostics.totalSimulationTicks, "unflagged diagnostics count every frame as simulation");
+	}
+
+	private static function testPresentationBudgetPreservesVisualFramesAt57Fps():Void {
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
+			new FrameRateDiagnostics(currentTime));
+		var callbackPeriodMs = 1000.0 / 57;
+		for (frame in 0...(57 * 5)) clock.advanceFrame(frame * callbackPeriodMs);
+
+		assertEquals(285, clock.stageFrameNumber, "57 FPS budget records every available callback");
+		assertEquals(143, clock.simulationFrameNumber, "57 FPS budget naturally averages 28.5 physics FPS");
+		assertEquals(142, clock.presentationOnlyFrameNumber, "57 FPS budget preserves the natural visual-only half");
+	}
+
+	private static function testPresentationBudgetProtects28FpsAt55Fps():Void {
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
+			new FrameRateDiagnostics(currentTime));
+		var callbackPeriodMs = 1000.0 / 55;
+		for (frame in 0...(55 * 5)) clock.advanceFrame(frame * callbackPeriodMs);
+
+		assertEquals(275, clock.stageFrameNumber, "55 FPS budget records every available callback");
+		assertEquals(140, clock.simulationFrameNumber, "55 FPS budget protects twenty-eight physics FPS");
+		assertEquals(135, clock.presentationOnlyFrameNumber, "55 FPS budget sacrifices five visual-only callbacks");
+	}
+
+	private static function testHighRefreshDoesNotAccelerateSimulation():Void {
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
+			new FrameRateDiagnostics(currentTime));
+		var callbackPeriodMs = 1000.0 / 120;
+		for (frame in 0...120) clock.advanceFrame(frame * callbackPeriodMs);
+
+		assertEquals(120, clock.stageFrameNumber, "high refresh records every supplied callback");
+		assertEquals(30, clock.simulationFrameNumber, "high refresh remains fixed at thirty simulation ticks");
+		assertEquals(90, clock.presentationOnlyFrameNumber, "extra high-refresh callbacks remain presentation-only");
 	}
 
 	private static function testRepeatedPhaseResets():Void {

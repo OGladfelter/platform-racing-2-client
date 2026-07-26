@@ -10,6 +10,7 @@ class FrameRateSettingsTest {
 		if (pr2.DeterministicTestMode.finishSmokeSuite("FrameRateSettingsTest")) return;
 		testExactOptIn();
 		testNormalQueryParsing();
+		testHtml5PresentationPacing();
 		trace('FrameRateSettingsTest passed $assertions assertions');
 	}
 
@@ -46,6 +47,17 @@ class FrameRateSettingsTest {
 		assertEquals(true, FrameRateSettings.fromQuery("?smooth60=0&smooth60=1", true).smooth60Enabled, "last repeated opt-in wins");
 	}
 
+	private static function testHtml5PresentationPacing():Void {
+		assertEquals(true, Html5PresentationPacer.shouldCapNativeRefresh(true, 60),
+			"smooth 60 opts into elapsed-time presentation pacing");
+		assertEquals(false, Html5PresentationPacer.shouldCapNativeRefresh(false, 60),
+			"regular mode does not alter native-refresh pacing");
+		assertEquals(false, Html5PresentationPacer.shouldCapNativeRefresh(true, 30),
+			"fallback 30 FPS keeps Lime's normal pacing");
+		assertClose(1000.0 / 60, Html5PresentationPacer.framePeriodMs(60),
+			"smooth presentation uses a 60 Hz millisecond interval");
+	}
+
 	private static function assertDisabled(settings:FrameRateSettings, message:String):Void {
 		assertEquals(false, settings.smooth60Enabled, '$message enabled state');
 		assertEquals(Constants.DEFAULT_PRESENTATION_FRAME_RATE, settings.presentationFrameRate, '$message presentation rate');
@@ -54,5 +66,10 @@ class FrameRateSettingsTest {
 	private static function assertEquals(expected:Dynamic, actual:Dynamic, message:String):Void {
 		assertions++;
 		if (expected != actual) throw '$message: expected $expected, got $actual';
+	}
+
+	private static function assertClose(expected:Float, actual:Float, message:String):Void {
+		assertions++;
+		if (Math.abs(expected - actual) > 0.000001) throw '$message: expected $expected, got $actual';
 	}
 }

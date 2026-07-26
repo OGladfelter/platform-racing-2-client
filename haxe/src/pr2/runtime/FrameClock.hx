@@ -9,8 +9,10 @@ import pr2.Constants;
 	Application-owned classifier for stage frames.
 
 	At the default presentation rate every stage frame is a simulation frame.
-	With smooth presentation enabled, simulation and presentation-only frames
-	alternate. Time-dependent owners migrate to this clock in later stages.
+	With smooth presentation enabled, simulation targets half the rolling
+	five-second presentation rate, clamped to 28-30 Hz. Presentation-only frames
+	are sacrificed only after the natural half-rate cadence would fall below the
+	28 Hz physics budget.
 **/
 class FrameClock {
 	public static var current(default, null):Null<FrameClock>;
@@ -26,10 +28,13 @@ class FrameClock {
 	public var onFrame:Null<FrameClock->Void>;
 
 	private final diagnostics:FrameRateDiagnostics;
-	// Startup always begins with one simulation frame. The following stage frame
-	// is presentation-only in smooth mode, preventing both an initial skipped
-	// gameplay tick and a doubled pair of gameplay ticks.
-	private var nextFrameIsSimulation:Bool = true;
+	private static inline var PRESENTATION_RATE_WINDOW_MS:Float = 5000.0;
+	private static inline var MIN_SMOOTH_SIMULATION_FRAME_RATE:Float = 28.0;
+	private static inline var CREDIT_EPSILON:Float = 0.000001;
+	private final recentPresentationFrameTimes:Array<Float> = [];
+	private var lastFrameTimeMs:Null<Float>;
+	private var simulationCredit:Float = 0;
+	private var syntheticFrameTimeMs:Float = 0;
 	private var installedStage:Null<Stage>;
 
 	public function new(settings:FrameRateSettings, ?diagnostics:FrameRateDiagnostics) {
@@ -72,7 +77,9 @@ class FrameClock {
 		synthetic tick or reclassify callbacks still running in the current frame.
 	**/
 	public function resetPresentationPhase():Void {
-		nextFrameIsSimulation = true;
+		recentPresentationFrameTimes.resize(0);
+		lastFrameTimeMs = null;
+		simulationCredit = 0;
 	}
 
 	/**
@@ -106,12 +113,14 @@ class FrameClock {
 		current = value;
 	}
 
-	/** Advances one stage-frame phase. Public for deterministic clock harnesses. */
-	public function advanceFrame():Void {
-		isSimulationFrame = !isSmoothPresentationActive || nextFrameIsSimulation;
-		if (isSmoothPresentationActive) {
-			nextFrameIsSimulation = !nextFrameIsSimulation;
-		}
+	/**
+		Advances one stage-frame phase. Production passes monotonic wall time.
+		Deterministic harnesses may omit it to advance at the configured nominal
+		presentation rate.
+	**/
+	public function advanceFrame(?frameTimeMs:Float):Void {
+		var resolvedFrameTimeMs = resolveFrameTime(frameTimeMs);
+		isSimulationFrame = !isSmoothPresentationActive || smoothSimulationIsDue(resolvedFrameTimeMs);
 		stageFrameNumber++;
 		if (isSimulationFrame) {
 			simulationFrameNumber++;
@@ -128,7 +137,62 @@ class FrameClock {
 	}
 
 	private function onStageFrame(_:Event):Void {
-		advanceFrame();
+		advanceFrame(haxe.Timer.stamp() * 1000.0);
+	}
+
+	private function smoothSimulationIsDue(frameTimeMs:Float):Bool {
+		recordPresentationFrameTime(frameTimeMs);
+		var previousFrameTimeMs = lastFrameTimeMs;
+		lastFrameTimeMs = frameTimeMs;
+		if (previousFrameTimeMs == null) {
+			simulationCredit = 0;
+			return true;
+		}
+
+		var elapsedMs = Math.max(0, frameTimeMs - previousFrameTimeMs);
+		var desiredSimulationRate = rollingDesiredSimulationRate();
+		simulationCredit += elapsedMs * desiredSimulationRate / 1000.0;
+		if (simulationCredit + CREDIT_EPSILON < 1) {
+			return false;
+		}
+		// Preserve fractional credit so a 28 Hz budget remains exact over the
+		// rolling window, but retain at most one whole catch-up tick after a long
+		// stall or a callback rate below the physics floor.
+		simulationCredit = Math.min(1, Math.max(0, simulationCredit - 1));
+		return true;
+	}
+
+	private function recordPresentationFrameTime(frameTimeMs:Float):Void {
+		recentPresentationFrameTimes.push(frameTimeMs);
+		var cutoff = frameTimeMs - PRESENTATION_RATE_WINDOW_MS;
+		while (recentPresentationFrameTimes.length > 1 && recentPresentationFrameTimes[0] < cutoff) {
+			recentPresentationFrameTimes.shift();
+		}
+	}
+
+	private function rollingDesiredSimulationRate():Float {
+		if (recentPresentationFrameTimes.length < 2) {
+			return Constants.SIMULATION_FRAME_RATE;
+		}
+		var first = recentPresentationFrameTimes[0];
+		var last = recentPresentationFrameTimes[recentPresentationFrameTimes.length - 1];
+		var elapsedMs = last - first;
+		if (elapsedMs <= 0) {
+			return Constants.SIMULATION_FRAME_RATE;
+		}
+		var presentationRate = (recentPresentationFrameTimes.length - 1) * 1000.0 / elapsedMs;
+		return Math.max(MIN_SMOOTH_SIMULATION_FRAME_RATE,
+			Math.min(Constants.SIMULATION_FRAME_RATE, presentationRate / 2.0));
+	}
+
+	private function resolveFrameTime(frameTimeMs:Null<Float>):Float {
+		if (frameTimeMs != null) {
+			syntheticFrameTimeMs = frameTimeMs + 1000.0 / presentationFrameRate;
+			return frameTimeMs;
+		}
+		var result = syntheticFrameTimeMs;
+		syntheticFrameTimeMs += 1000.0 / presentationFrameRate;
+		return result;
 	}
 
 	private function onPhaseBoundary(_:Event):Void {
