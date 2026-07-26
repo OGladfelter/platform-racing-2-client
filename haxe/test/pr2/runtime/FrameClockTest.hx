@@ -14,7 +14,8 @@ class FrameClockTest {
 		testLongRunCadence();
 		testRepeatedPhaseResets();
 		testPresentationBudgetPreservesVisualFramesAt57Fps();
-		testPresentationBudgetProtects28FpsAt55Fps();
+		testPresentationBudgetPreservesVisualFramesAt55Fps();
+		testPresentationBudgetProtects27FpsAt53Fps();
 		testHighRefreshDoesNotAccelerateSimulation();
 		testTransitionBackTo30FpsPresentation();
 		testFallbackImmediatelyAfterSimulationPreservesTickSequence();
@@ -52,15 +53,26 @@ class FrameClockTest {
 		assertEquals(142, clock.presentationOnlyFrameNumber, "57 FPS budget preserves the natural visual-only half");
 	}
 
-	private static function testPresentationBudgetProtects28FpsAt55Fps():Void {
+	private static function testPresentationBudgetPreservesVisualFramesAt55Fps():Void {
 		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
 			new FrameRateDiagnostics(currentTime));
 		var callbackPeriodMs = 1000.0 / 55;
 		for (frame in 0...(55 * 5)) clock.advanceFrame(frame * callbackPeriodMs);
 
 		assertEquals(275, clock.stageFrameNumber, "55 FPS budget records every available callback");
-		assertEquals(140, clock.simulationFrameNumber, "55 FPS budget protects twenty-eight physics FPS");
-		assertEquals(135, clock.presentationOnlyFrameNumber, "55 FPS budget sacrifices five visual-only callbacks");
+		assertEquals(138, clock.simulationFrameNumber, "55 FPS budget naturally averages 27.5 physics FPS");
+		assertEquals(137, clock.presentationOnlyFrameNumber, "55 FPS budget preserves the natural visual-only half");
+	}
+
+	private static function testPresentationBudgetProtects27FpsAt53Fps():Void {
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
+			new FrameRateDiagnostics(currentTime));
+		var callbackPeriodMs = 1000.0 / 53;
+		for (frame in 0...(53 * 5)) clock.advanceFrame(frame * callbackPeriodMs);
+
+		assertEquals(265, clock.stageFrameNumber, "53 FPS budget records every available callback");
+		assertEquals(135, clock.simulationFrameNumber, "53 FPS budget protects twenty-seven physics FPS");
+		assertEquals(130, clock.presentationOnlyFrameNumber, "53 FPS budget sacrifices five visual-only callbacks");
 	}
 
 	private static function testHighRefreshDoesNotAccelerateSimulation():Void {

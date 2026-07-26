@@ -13,7 +13,7 @@ import lime.app.Application;
 	Lime 8.3.2 treats a Stage frame rate of 60 or greater as "use every
 	requestAnimationFrame callback". On high-refresh displays that makes a
 	requested 60 FPS stage run at 120 Hz or faster. Smooth presentation targets
-	at most one visual-only frame between 28-30 Hz simulation ticks, so opt it
+	at most one visual-only frame between 27-30 Hz simulation ticks, so opt it
 	back into Lime's elapsed-time limiter after setting the public Stage rate.
 **/
 final class Html5PresentationPacer {

@@ -10,9 +10,9 @@ partial preload window, and validates the two streams independently. In
 `smooth60=1` mode it also requires every paired sample to contain at least as
 many presented frames as simulation ticks. At a steady 60 FPS the normal
 cadence remains 2:1. The clock averages presentation cadence over five seconds
-and targets half that rate, clamped to 28-30 physics ticks per second.
+and targets half that rate, clamped to 27-30 physics ticks per second.
 Visual-only callbacks are converted into simulation frames only when the
-natural half-rate cadence would fall below 28 Hz. Without smooth mode, the two
+natural half-rate cadence would fall below 27 Hz. Without smooth mode, the two
 counts must be identical.
 
 Example:

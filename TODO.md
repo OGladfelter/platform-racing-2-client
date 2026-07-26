@@ -119,7 +119,7 @@ Add an opt-in `?smooth60=1` HTML5 experiment that draws motion at 60 FPS while
 targeting 30 authoritative ticks per second for gameplay, input consumption,
 animation timelines, frame counters, and network emission. Average presentation
 cadence over five seconds and allow the authoritative rate to follow half that
-cadence down to 28 Hz before sacrificing visual-only callbacks. The flag must
+cadence down to 27 Hz before sacrificing visual-only callbacks. The flag must
 default off and must not persist to another session. With the flag absent, the
 client must retain its current 30 FPS behavior and Flash parity.
 

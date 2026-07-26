@@ -10,9 +10,9 @@ import pr2.Constants;
 
 	At the default presentation rate every stage frame is a simulation frame.
 	With smooth presentation enabled, simulation targets half the rolling
-	five-second presentation rate, clamped to 28-30 Hz. Presentation-only frames
+	five-second presentation rate, clamped to 27-30 Hz. Presentation-only frames
 	are sacrificed only after the natural half-rate cadence would fall below the
-	28 Hz physics budget.
+	27 Hz physics budget.
 **/
 class FrameClock {
 	public static var current(default, null):Null<FrameClock>;
@@ -29,7 +29,7 @@ class FrameClock {
 
 	private final diagnostics:FrameRateDiagnostics;
 	private static inline var PRESENTATION_RATE_WINDOW_MS:Float = 5000.0;
-	private static inline var MIN_SMOOTH_SIMULATION_FRAME_RATE:Float = 28.0;
+	private static inline var MIN_SMOOTH_SIMULATION_FRAME_RATE:Float = 27.0;
 	private static inline var CREDIT_EPSILON:Float = 0.000001;
 	private final recentPresentationFrameTimes:Array<Float> = [];
 	private var lastFrameTimeMs:Null<Float>;
@@ -155,7 +155,7 @@ class FrameClock {
 		if (simulationCredit + CREDIT_EPSILON < 1) {
 			return false;
 		}
-		// Preserve fractional credit so a 28 Hz budget remains exact over the
+		// Preserve fractional credit so a 27 Hz budget remains exact over the
 		// rolling window, but retain at most one whole catch-up tick after a long
 		// stall or a callback rate below the physics floor.
 		simulationCredit = Math.min(1, Math.max(0, simulationCredit - 1));
