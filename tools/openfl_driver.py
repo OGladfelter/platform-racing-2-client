@@ -15,7 +15,7 @@ Shot options:
   --browser <path>              Chrome/Chromium binary path
   --base-url <url>              use an existing server (for example dev_proxy.py)
   --fps-duration <seconds>      FPS validation duration, default 30.0
-  --fps-target <fps>            FPS validation target, default 27
+  --fps-target <fps>            FPS validation target, default 30
   --fps-tolerance <fps>         FPS validation tolerance, default 5
   --expect <key=value>          expected debug-state field, repeatable
   --metrics-out <path>          write JSON metrics collected by sequence metrics steps
@@ -1392,7 +1392,7 @@ def main():
     parser.add_argument("--browser")
     parser.add_argument("--base-url", help="existing static/proxy server URL")
     parser.add_argument("--fps-duration", type=float, default=30.0)
-    parser.add_argument("--fps-target", type=int, default=27)
+    parser.add_argument("--fps-target", type=int, default=30)
     parser.add_argument("--fps-tolerance", type=int, default=5)
     parser.add_argument("--expect", action="append", default=[])
     parser.add_argument("--metrics-out")

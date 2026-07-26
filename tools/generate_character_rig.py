@@ -173,7 +173,7 @@ def part_variants(kind: str, include_excluded: bool = False) -> list[dict[str, o
             overlay = ANIMATED_HAT_OVERLAYS[part_id]
             record["fixed"] = f"assets/svg/character/hat/{directory.name}/static_base.svg"
             record["overlayAnimation"] = {
-                "frameRate": 27,
+                "frameRate": 30,
                 "endBehavior": "loop",
                 "frames": [
                     f"assets/svg/character/hat/{directory.name}/overlay_frames/frame_{frame:03d}.svg"
@@ -184,7 +184,7 @@ def part_variants(kind: str, include_excluded: bool = False) -> list[dict[str, o
             record["channelAnimations"] = [
                 {
                     "channel": channel,
-                    "frameRate": 27,
+                    "frameRate": 30,
                     "endBehavior": "loop",
                     "frames": [
                         f"assets/svg/character/body/021_bubble/{channel}_frames/frame_{frame:03d}.svg"
@@ -341,7 +341,7 @@ def animation_record(
         ]
     return {
         "name": name,
-        "frameRate": motion["frameRate"] if use_lottie and name in LOTTIE_STATES else 27,
+        "frameRate": motion["frameRate"] if use_lottie and name in LOTTIE_STATES else 30,
         "frameCount": total,
         "endBehavior": motion["endBehavior"] if use_lottie and name in LOTTIE_STATES else end_behavior,
         "endSignal": motion["endSignal"] if use_lottie and name in LOTTIE_STATES else end_signal,

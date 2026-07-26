@@ -49,10 +49,12 @@ target remains the required development path.
 `openfl ...` also works if you install the optional OpenFL command shim, but
 `haxelib run openfl ...` works with the repo-local haxelib setup.
 
-The initial skeleton uses the Flash/XFL constants confirmed in the source:
+The port uses the Flash/XFL stage size with a 30 FPS runtime target:
 
 - Stage: 550x400
-- Frame rate: 27 FPS
+- Port frame rate: 30 FPS
+- Generated Lottie frame rate: 30 FPS
+- Authored Flash/XFL animation rate: 27 FPS
 - XFL source of truth: `flash/platform-racing-2-xfl/`
 
 Generated build output is written under `export/`.

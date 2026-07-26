@@ -133,7 +133,7 @@ class CharacterViewTest {
 		for (item in expected) {
 			var animation = CharacterRig.animation(rig, item.name);
 			assertEquals(item.frames, animation.frameCount, '${item.name} preserves its authored frame count');
-			assertEquals(27, animation.frameRate, '${item.name} preserves the Flash frame rate');
+			assertEquals(30, animation.frameRate, '${item.name} uses the port frame rate');
 			assertEquals(item.end, animation.endBehavior, '${item.name} preserves its end behavior');
 			assertTrue(animation.slots.length >= 5, '${item.name} exposes all body/item slots');
 			for (slot in animation.slots) assertEquals(item.frames, slot.frames.length, '${item.name}.${slot.name} has one transform per frame');

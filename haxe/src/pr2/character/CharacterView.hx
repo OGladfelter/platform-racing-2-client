@@ -59,7 +59,7 @@ class CharacterView extends Sprite {
 	public var currentFrame(default, null):Int = 1;
 	public var currentState(default, null):String = "stand";
 	public var frameCount(default, null):Int = 0;
-	public var frameRate(default, null):Int = 27;
+	public var frameRate(default, null):Int = 30;
 	public var primaryColor(default, null):Int;
 	public var secondaryColor(default, null):Int;
 	public var endSignal(default, null):Null<String>;

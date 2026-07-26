@@ -516,7 +516,7 @@
           "channelAnimations": [
             {
               "channel": "primary",
-              "frameRate": 27,
+              "frameRate": 30,
               "endBehavior": "loop",
               "frames": [
                 "assets/svg/character/body/021_bubble/primary_frames/frame_001.svg",
@@ -544,7 +544,7 @@
             },
             {
               "channel": "static",
-              "frameRate": 27,
+              "frameRate": 30,
               "endBehavior": "loop",
               "frames": [
                 "assets/svg/character/body/021_bubble/static_frames/frame_001.svg",
@@ -1113,7 +1113,7 @@
           "primary": "assets/svg/character/hat/004_prop/primary.svg",
           "secondary": "assets/svg/character/hat/004_prop/secondary.svg",
           "overlayAnimation": {
-            "frameRate": 27,
+            "frameRate": 30,
             "endBehavior": "loop",
             "frames": [
               "assets/svg/character/hat/004_prop/overlay_frames/frame_001.svg",
@@ -1186,7 +1186,7 @@
           "primary": "assets/svg/character/hat/013_jigg/primary.svg",
           "secondary": "assets/svg/character/hat/013_jigg/secondary.svg",
           "overlayAnimation": {
-            "frameRate": 27,
+            "frameRate": 30,
             "endBehavior": "loop",
             "frames": [
               "assets/svg/character/hat/013_jigg/overlay_frames/frame_001.svg",
@@ -4141,7 +4141,7 @@
   "animations": [
     {
       "name": "stand",
-      "frameRate": 27,
+      "frameRate": 30,
       "frameCount": 31,
       "endBehavior": "loop",
       "endSignal": null,
@@ -5599,7 +5599,7 @@
     },
     {
       "name": "run",
-      "frameRate": 27,
+      "frameRate": 30,
       "frameCount": 7,
       "endBehavior": "loop",
       "endSignal": null,
@@ -5977,7 +5977,7 @@
     },
     {
       "name": "jump",
-      "frameRate": 27,
+      "frameRate": 30,
       "frameCount": 50,
       "endBehavior": "hold",
       "endSignal": null,
@@ -8290,7 +8290,7 @@
     },
     {
       "name": "superJump",
-      "frameRate": 27,
+      "frameRate": 30,
       "frameCount": 51,
       "endBehavior": "hold",
       "endSignal": null,
@@ -13003,7 +13003,7 @@
     },
     {
       "name": "bumped",
-      "frameRate": 27,
+      "frameRate": 30,
       "frameCount": 56,
       "endBehavior": "loop",
       "endSignal": "bumpedComplete",
@@ -15586,7 +15586,7 @@
     },
     {
       "name": "crouch",
-      "frameRate": 27,
+      "frameRate": 30,
       "frameCount": 11,
       "endBehavior": "loop",
       "endSignal": null,
@@ -16144,7 +16144,7 @@
     },
     {
       "name": "crouchWalk",
-      "frameRate": 27,
+      "frameRate": 30,
       "frameCount": 11,
       "endBehavior": "loop",
       "endSignal": null,
@@ -16702,7 +16702,7 @@
     },
     {
       "name": "swim",
-      "frameRate": 27,
+      "frameRate": 30,
       "frameCount": 13,
       "endBehavior": "loop",
       "endSignal": null,
@@ -17350,7 +17350,7 @@
     },
     {
       "name": "frozen",
-      "frameRate": 27,
+      "frameRate": 30,
       "frameCount": 48,
       "endBehavior": "hold-complete",
       "endSignal": "complete",

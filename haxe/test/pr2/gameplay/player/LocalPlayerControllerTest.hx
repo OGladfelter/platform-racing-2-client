@@ -1960,7 +1960,7 @@ class LocalPlayerControllerTest {
 
 		assertClose(0.5, player.blockColorMultiplierAt(2, 3), "used teleport tints during cooldown");
 		assertClose(0.5, player.blockColorMultiplierAt(4, 3), "same-color destination teleport tints during cooldown");
-		for (_ in 0...80) {
+		for (_ in 0...(BlockController.TELEPORT_RESET_FRAMES - 1)) {
 			player.step(new LocalPlayerInput());
 		}
 		assertClose(0.5, player.blockColorMultiplierAt(2, 3), "teleport cooldown stays tinted before reset");

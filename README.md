@@ -125,7 +125,7 @@ PR2_API_HOST=/api haxe test/real-server.hxml
 ## Porting Status
 
 The port targets a faithful Haxe/OpenFL browser build of the original Flash
-client: 550x400 stage, 27 FPS timing, Flash-compatible gameplay behavior, and
+client: 550x400 stage, 30 FPS timing, Flash-compatible gameplay behavior, and
 visual parity measured by deterministic state and screenshot comparisons. Normal
 development and CI should use committed Haxe/OpenFL source and generated assets;
 Adobe Animate is only a migration tool for regenerating source assets.
@@ -450,7 +450,7 @@ python3 tools/compare_symbol_render.py --symbol UI/Global/MuteButton --reference
 Check approximate OpenFL frame rate:
 
 ```sh
-python3 tools/openfl_driver.py --fps-duration 30 --fps-target 27 --fps-tolerance 5 fps
+python3 tools/openfl_driver.py --fps-duration 30 --fps-target 30 --fps-tolerance 5 fps
 ```
 
 Run a scripted OpenFL driver sequence:

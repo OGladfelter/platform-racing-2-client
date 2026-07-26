@@ -35,13 +35,13 @@ class SWFStatsTest {
 
 	private static function testFrameRateDriftResetsBeforeFullWindow():Void {
 		var harness = new WatchdogHarness();
-		harness.frameRate = 30;
+		harness.frameRate = 27;
 
 		harness.advanceAndReset(1000);
 
-		assertEquals(27, harness.frameRate, "drifted frame rate reset");
+		assertEquals(30, harness.frameRate, "drifted frame rate reset");
 		assertEquals(1, harness.setRates.length, "drift reset count");
-		assertEquals(27, harness.setRates[0], "drift reset target");
+		assertEquals(30, harness.setRates[0], "drift reset target");
 		assertTrue(Math.isNaN(harness.stats.averageLagForTests()), "drift reset does not require full window");
 	}
 
@@ -53,7 +53,7 @@ class SWFStatsTest {
 
 		assertClose(850, harness.stats.averageLagForTests(), "fast average");
 		assertEquals(1, harness.setRates.length, "fast average reset count");
-		assertEquals(27, harness.setRates[0], "fast average reset target");
+		assertEquals(30, harness.setRates[0], "fast average reset target");
 	}
 
 	private static function testNormalAverageDoesNotResetFrameRate():Void {
@@ -84,7 +84,7 @@ class SWFStatsTest {
 
 private class WatchdogHarness {
 	public var now:Float = 0;
-	public var frameRate:Float = 27;
+	public var frameRate:Float = 30;
 	public var setRates:Array<Float> = [];
 	public var stats:SWFStats;
 

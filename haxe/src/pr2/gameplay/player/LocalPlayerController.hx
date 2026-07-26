@@ -4,6 +4,7 @@ package pr2.gameplay.player;
 import js.Browser;
 #end
 import pr2.character.CharacterState;
+import pr2.Constants;
 import pr2.level.Level;
 import pr2.level.Level.LevelBlock;
 import pr2.level.BlockType;
@@ -53,7 +54,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	private static inline var ITEM_SNAKE:Int = 10;
 	private static inline var TELEPORT_ITEM_DISTANCE:Float = 120;
 	private static inline var SPEED_BURST_FRAMES:Int = 135;
-	private static inline var FRAME_RATE:Int = 27;
+	private static inline var FRAME_RATE:Int = Constants.FRAME_RATE;
 	private static inline var JET_PACK_TOTAL_FUEL:Int = 200;
 	private static inline var FAST_ITEM_RELOAD_FRAMES:Int = 22;
 	private static inline var ICE_WAVE_RELOAD_FRAMES:Int = 27;

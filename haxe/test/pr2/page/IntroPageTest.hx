@@ -92,7 +92,7 @@ class IntroPageTest {
 	private static function assertSemanticTimeline(kind:String, totalFrames:Int, layerCount:Int, hasLogoAttachment:Bool, frameOneMarkers:Array<String>):Void {
 		var animation = new IntroAnimationView(kind);
 		assertEquals('assets/intro/$kind.lottie.json', animation.timeline.sourcePath, '$kind uses semantic Lottie data');
-		assertEquals(27.0, animation.timeline.frameRate, '$kind retains the XFL document frame rate');
+			assertEquals(30.0, animation.timeline.frameRate, '$kind uses the port frame rate');
 		assertEquals(totalFrames, animation.totalFrames, '$kind retains its authored duration');
 		assertEquals(frameOneMarkers.join(","), animation.timeline.markersAtFrame(1).join(","), '$kind retains its authored frame-one cues');
 		assertEquals(layerCount, animation.timeline.numChildren, '$kind builds reusable semantic layers');
