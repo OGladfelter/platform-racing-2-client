@@ -97,6 +97,8 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	public var crownHatActive:Bool = false;
 	public var cheeseHatActive:Bool = false;
 	public var onHeartGain:Null<Void->Void> = null;
+	/** Flash samples the current authored `curWeapon` registration when placing a mine. */
+	public var weaponEffectPosition:Null<Void->PixelPoint> = null;
 	/** Called for Flash `LocalCharacter.hit` damage, including mine collisions. */
 	public var onHitAccepted:Null<Void->Void> = null;
 	/** Starts the character-alpha recovery used by Flash `bumpPlayer`. */
@@ -283,7 +285,9 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		lastItemEffect = null;
 		animationLeft = input.left;
 		animationRight = input.right;
-		updatePendingMinePlacements();
+		// MineAppear's listener runs after Flash's older LocalCharacter listener:
+		// expire its timer now, but materialize the block after this collision pass.
+		var readyMinePlacements = updatePendingMinePlacements();
 		updatePendingProjectileDamages();
 		itemController.updateReload();
 		// LocalCharacter.updateKeys applies RIGHT first and LEFT second, so LEFT
@@ -317,6 +321,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		}
 		itemController.updateTimedEffects();
 		blockController.update();
+		itemController.placePendingMinePlacements(readyMinePlacements);
 		traceCharacterFrame("after");
 	}
 
@@ -1590,7 +1595,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	public function snakeGridDirection(dx:Int, dy:Int):{x:Int, y:Int} return itemController.snakeGridDirection(dx, dy);
 	public function enterSnakeTile(tileX:Int, tileY:Int):String return itemController.enterSnakeTile(tileX, tileY);
 
-	private function updatePendingMinePlacements():Void itemController.updatePendingMinePlacements();
+	private function updatePendingMinePlacements():Array<PendingMinePlacement> return itemController.updatePendingMinePlacements();
 	private function updatePendingProjectileDamages():Void itemController.updatePendingProjectileDamages();
 	private function activateSpeedBurst(frames:Int):Void itemController.activateSpeedBurst(frames);
 	private function consumeHeldItemCompletely():Void itemController.consumeHeldItemCompletely();

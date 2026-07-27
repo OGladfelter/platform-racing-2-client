@@ -1,6 +1,8 @@
 package pr2.character;
 
+import openfl.geom.Point;
 import pr2.gameplay.player.LocalPlayerController;
+import pr2.gameplay.player.LocalPlayerControllerTypes.PixelPoint;
 import pr2.gameplay.player.LocalPlayerState;
 import pr2.gameplay.player.LocalPlayerInput;
 import pr2.gameplay.BlockController;
@@ -49,9 +51,27 @@ class LocalCharacter extends Character {
 		baseGravityMultiplier = level.gravity;
 		controller = new LocalPlayerController(level, blockController);
 		controller.onHeartGain = gainHeart;
+		controller.weaponEffectPosition = currentWeaponEffectPosition;
 		controller.onHitAccepted = dropHighestHatFromHit;
 		controller.onBumpRecovery = function(frames:Int):Void beginRecovery(frames);
 		syncFromController();
+	}
+
+	/**
+		Equivalent of Flash `Item.getWeaponEffectPos()`: resolve the current
+		authored held-item socket into the character's world coordinate space.
+		The facing scale is taken from the controller because Flash changes
+		`scaleX` immediately before dispatching item use.
+	**/
+	private function currentWeaponEffectPosition():PixelPoint {
+		var socketGlobal = display.heldItemSocket.localToGlobal(new Point());
+		var socketInDisplay = display.globalToLocal(socketGlobal);
+		var characterPoint = new Point(socketInDisplay.x * controller.facingScaleX, socketInDisplay.y * display.scaleY);
+		var worldPoint = localToGlobal(characterPoint);
+		if (parent != null) {
+			worldPoint = parent.globalToLocal(worldPoint);
+		}
+		return new PixelPoint(worldPoint.x, worldPoint.y);
 	}
 
 	override public function setHats(hatArray:Array<Int>):Void {

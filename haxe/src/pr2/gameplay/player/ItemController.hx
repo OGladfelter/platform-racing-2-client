@@ -5,6 +5,7 @@ import pr2.gameplay.RotationMath;
 import pr2.gameplay.player.BlockVisualEvent.BlockVisualEventKind;
 import pr2.gameplay.player.LocalPlayerControllerTypes.PendingMinePlacement;
 import pr2.gameplay.player.LocalPlayerControllerTypes.PendingProjectileDamage;
+import pr2.gameplay.player.LocalPlayerControllerTypes.PixelPoint;
 import pr2.level.BlockType;
 import pr2.level.Level.LevelBlock;
 
@@ -149,7 +150,15 @@ class ItemController {
 	}
 
 	public function useMineItem():Void {
-		var tile = owner.rotatedTileAtPixel(owner.x + owner.facingDirection * owner.level.tileSize, owner.y - 15);
+		// Preserved Flash quirk: start at the live authored curWeapon registration,
+		// then apply this unrotated, unflipped world-space bias before flooring to
+		// a tile. In particular, the +15 remains positive while facing left.
+		var weaponPos = owner.weaponEffectPosition == null
+			? new PixelPoint(owner.x + owner.facingDirection * 7.757170104980469, owner.y - 23.49652557373047)
+			: owner.weaponEffectPosition();
+		var probeX = Math.round(weaponPos.x + 15);
+		var probeY = Math.round(weaponPos.y + 10);
+		var tile = owner.rotatedTileAtPixel(probeX, probeY);
 		if (owner.level.blockAt(tile.x, tile.y) != null) {
 			return;
 		}
@@ -159,20 +168,28 @@ class ItemController {
 		consumeHeldItemUse();
 	}
 
-	public function updatePendingMinePlacements():Void {
+	public function updatePendingMinePlacements():Array<PendingMinePlacement> {
+		var ready:Array<PendingMinePlacement> = [];
 		if (owner.pendingMinePlacements.length == 0) {
-			return;
+			return ready;
 		}
 		var stillPending:Array<PendingMinePlacement> = [];
 		for (placement in owner.pendingMinePlacements) {
 			placement.framesRemaining--;
 			if (placement.framesRemaining <= 0) {
-				owner.blockController.addBlock(new LevelBlock(placement.tileX, placement.tileY, BlockType.Mine));
+				ready.push(placement);
 			} else {
 				stillPending.push(placement);
 			}
 		}
 		owner.pendingMinePlacements = stillPending;
+		return ready;
+	}
+
+	public function placePendingMinePlacements(ready:Array<PendingMinePlacement>):Void {
+		for (placement in ready) {
+			owner.blockController.addBlock(new LevelBlock(placement.tileX, placement.tileY, BlockType.Mine));
+		}
 	}
 
 	public function queueProjectileBlockDamage(angleDegrees:Float, damageForce:Float, maxFrames:Int):Void {

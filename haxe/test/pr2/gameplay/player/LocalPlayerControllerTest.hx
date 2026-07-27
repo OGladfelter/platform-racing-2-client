@@ -81,6 +81,7 @@ class LocalPlayerControllerTest {
 		testLaserSkipsPreviouslyDestroyedBrick();
 		testTopHatLaserDamagesVanishBlock();
 		testMineItemPlacesMineAndConsumesItem();
+		testMineItemLeftFacingKeepsFlashWorldSpaceBias();
 		testMineItemBlockedByOccupiedTile();
 		testMineItemReusesDestroyedBrickTile();
 		testMineAppearSkipsPlacementWhenTileBecomesOccupied();
@@ -1529,18 +1530,33 @@ class LocalPlayerControllerTest {
 		var player = collectItem(level, 2);
 
 		makeItemAvailable(player);
+		player.resetControllerForRaceStart(61, 180);
 		player.step(new LocalPlayerInput(false, false, false, false, true));
 		var state = player.stateSnapshot();
 
 		assertEquals(null, state.itemId, "mine item consumes after placing mine");
 		assertEquals(0, Lambda.count(level.blocks, function(block) return block.type == BlockType.Mine), "mine item waits for appear animation");
-		assertEquals("mine:105,165:0", state.lastItemEffect, "mine item emits centered mine effect");
+		assertEquals("mine:75,165:0", state.lastItemEffect, "mine item uses Flash's held-weapon probe instead of forcing the next tile");
 		stepFrames(player, 32);
 		assertEquals(0, Lambda.count(level.blocks, function(block) return block.type == BlockType.Mine), "mine does not place before frame 33");
 		player.step(new LocalPlayerInput());
 		var mine = Lambda.find(level.blocks, function(block) return block.type == BlockType.Mine);
 		assertEquals(true, mine != null, "mine item places a mine block after appear animation");
-		assertEquals("mine:105,165:0", 'mine:${mine.x * 30 + 15},${mine.y * 30 + 15}:0', "placed mine matches effect center");
+		assertEquals("mine:75,165:0", 'mine:${mine.x * 30 + 15},${mine.y * 30 + 15}:0', "placed mine matches effect center");
+		player.step(new LocalPlayerInput());
+		assertEquals("hurt", player.stateSnapshot().mode, "same-tile mine becomes touchable on the frame after MineAppear completes");
+		assertEquals(null, level.blockAt(mine.x, mine.y), "same-tile mine explodes on that following collision pass");
+	}
+
+	private static function testMineItemLeftFacingKeepsFlashWorldSpaceBias():Void {
+		var player = collectItem(heldItemLevel(2), 2);
+
+		makeItemAvailable(player);
+		player.resetControllerForRaceStart(89, 180);
+		player.step(new LocalPlayerInput(true, false, false, false, true));
+
+		assertEquals("mine:105,165:0", player.stateSnapshot().lastItemEffect,
+			"left-facing mine flips the weapon socket but keeps Flash's subsequent +15 world-space bias");
 	}
 
 	private static function testMineItemBlockedByOccupiedTile():Void {
