@@ -131,7 +131,7 @@ class PhysicsParticle extends Sprite {
 	@:allow(pr2.character.ParticleEmitterTest)
 	private function tick(_:Event):Void {
 		if (!FrameClock.shouldRunSimulationFrame()) {
-			renderPresentationFrame();
+			if (FrameClock.shouldRenderIntermediatePresentationFrame()) renderPresentationFrame();
 			return;
 		}
 		presentationPose.beginSimulationTick(

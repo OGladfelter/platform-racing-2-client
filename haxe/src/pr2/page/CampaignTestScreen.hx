@@ -500,6 +500,7 @@ class CampaignTestScreen extends Sprite {
 	/** Presentation-rate by design: this only reports harness diagnostics; the
 		Course owns the simulation-timed gameplay/render/HUD update. */
 	private function onHarnessFrame(event:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunBrowserFrame()) return;
 		if (course == null || course.levelRenderer == null) {
 			return;
 		}

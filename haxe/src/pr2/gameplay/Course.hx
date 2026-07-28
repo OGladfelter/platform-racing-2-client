@@ -873,14 +873,16 @@ class Course extends Sprite {
 
 	private function onEnterFrame(event:Event):Void {
 		if (!FrameClock.shouldRunSimulationFrame()) {
-			renderLocalPresentationFrame();
-			renderRemotePresentationFrames();
-			renderFollowFadePresentationFrames();
-			if (snakeManager != null) snakeManager.renderPresentationFrame();
-			if (eggRound != null) eggRound.renderPresentationFrame();
-			renderLooseHatPresentationFrame();
-			renderCameraPresentationFrame();
-			renderCourseRotationPresentationFrame();
+			if (FrameClock.shouldRenderIntermediatePresentationFrame()) {
+				renderLocalPresentationFrame();
+				renderRemotePresentationFrames();
+				renderFollowFadePresentationFrames();
+				if (snakeManager != null) snakeManager.renderPresentationFrame();
+				if (eggRound != null) eggRound.renderPresentationFrame();
+				renderLooseHatPresentationFrame();
+				renderCameraPresentationFrame();
+				renderCourseRotationPresentationFrame();
+			}
 			return;
 		}
 		if (frameCounterActive) {

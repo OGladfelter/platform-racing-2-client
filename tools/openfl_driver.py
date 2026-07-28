@@ -265,11 +265,29 @@ def check_fps(
         for index, sample in enumerate(simulation_samples)
         if sample < simulation_low or sample > simulation_high
     ]
-    smooth60 = any(part == "smooth60=1" for part in query.lstrip("?").split("&"))
+    query_parts = query.lstrip("?").split("&")
+    requested_strategy = next(
+        (
+            part.split("=", 1)[1]
+            for part in reversed(query_parts)
+            if part.startswith("frame_strategy=")
+        ),
+        None,
+    )
+    smooth60 = (
+        requested_strategy == "60smooth"
+        or (
+            requested_strategy not in {"30smooth", "30fixed", "60smooth", "60fixed"}
+            and any(part == "smooth60=1" for part in query_parts)
+        )
+    )
+    fixed = requested_strategy in {"30fixed", "60fixed"}
     cadence_failures = []
     for index, (presented, simulated) in enumerate(zip(presentation_samples, simulation_samples)):
         cadence_matches = (
-            simulated <= presented
+            True
+            if fixed
+            else simulated <= presented
             if smooth60
             else presented == simulated
         )
@@ -312,15 +330,24 @@ def check_smooth60_flag(root, browser_path, use_gpu=False):
     with serve(root) as url:
         with browser_devtools_session(browser, url, use_gpu) as devtools:
             cases = [
-                ("default", "", "0", "30"),
-                ("non-exact value", "smooth60=true", "0", "30"),
-                ("exact opt-in", "smooth60=1", "1", "60"),
-                ("navigation without flag", "screen=intro", "0", "30"),
+                ("default", "", "30smooth", "0", "30"),
+                ("non-exact legacy value", "smooth60=true", "30smooth", "0", "30"),
+                ("invalid strategy", "frame_strategy=invalid", "30smooth", "0", "30"),
+                ("legacy exact opt-in", "smooth60=1", "60smooth", "1", "60"),
+                ("explicit 30smooth", "frame_strategy=30smooth", "30smooth", "0", "30"),
+                ("explicit 30fixed", "frame_strategy=30fixed", "30fixed", "0", "60"),
+                ("explicit 60smooth", "frame_strategy=60smooth", "60smooth", "1", "60"),
+                ("explicit 60fixed", "frame_strategy=60fixed", "60fixed", "0", "60"),
+                ("explicit strategy wins", "smooth60=1&frame_strategy=30fixed", "30fixed", "0", "60"),
+                ("navigation without flag", "screen=intro", "30smooth", "0", "30"),
             ]
-            for label, query, expected_enabled, expected_target in cases:
+            for label, query, expected_strategy, expected_enabled, expected_target in cases:
                 destination = append_query(url, query)
                 devtools.request("Page.navigate", {"url": destination})
                 wait_for_app_ready(devtools)
+                actual_strategy = devtools.evaluate(
+                    'document.body.getAttribute("data-pr2-frame-strategy") || ""'
+                )
                 actual_enabled = devtools.evaluate(
                     'document.body.getAttribute("data-pr2-smooth60") || ""'
                 )
@@ -328,20 +355,24 @@ def check_smooth60_flag(root, browser_path, use_gpu=False):
                     'document.body.getAttribute("data-pr2-presentation-fps-target") || ""'
                 )
                 actual_search = devtools.evaluate("location.search")
-                if actual_enabled != expected_enabled or actual_target != expected_target:
+                if (
+                    actual_strategy != expected_strategy
+                    or actual_enabled != expected_enabled
+                    or actual_target != expected_target
+                ):
                     raise SystemExit(
-                        f"Smooth60 {label} failed: enabled={actual_enabled}, target={actual_target}, "
-                        f"query={actual_search}"
+                        f"Frame strategy {label} failed: strategy={actual_strategy}, "
+                        f"smooth60={actual_enabled}, target={actual_target}, query={actual_search}"
                     )
                 if label == "navigation without flag" and "smooth60" in actual_search:
                     raise SystemExit(
                         f"Smooth60 flag survived navigation without its parameter: {actual_search}"
                     )
                 print(
-                    f"Smooth60 {label}: enabled={actual_enabled}, "
+                    f"Frame strategy {label}: strategy={actual_strategy}, smooth60={actual_enabled}, "
                     f"presentationTarget={actual_target}, query={actual_search or '<none>'}"
                 )
-    print("Smooth60 browser flag validation passed.")
+    print("Frame-strategy browser validation passed.")
 
 
 def check_smooth60_stability(root, browser_path, use_gpu=False):
@@ -365,17 +396,13 @@ def check_smooth60_stability(root, browser_path, use_gpu=False):
             initial_requested = devtools.evaluate(
                 'document.body.getAttribute("data-pr2-smooth60") || ""'
             )
-            initial_fallback = devtools.evaluate(
-                'document.body.getAttribute("data-pr2-smooth60-fallback") || ""'
-            )
             initial_target = devtools.evaluate(
                 'document.body.getAttribute("data-pr2-presentation-fps-target") || ""'
             )
-            if (initial_requested, initial_fallback, initial_target) != ("1", "0", "60"):
+            if (initial_requested, initial_target) != ("1", "60"):
                 raise SystemExit(
                     "Smooth60 stability fixture did not begin in requested 60 FPS mode: "
-                    f"requested={initial_requested}, fallback={initial_fallback}, "
-                    f"target={initial_target}"
+                    f"requested={initial_requested}, target={initial_target}"
                 )
             presentation_count = len(read_all_int_attribute(
                 devtools,
@@ -401,17 +428,14 @@ def check_smooth60_stability(root, browser_path, use_gpu=False):
             requested = devtools.evaluate(
                 'document.body.getAttribute("data-pr2-smooth60") || ""'
             )
-            fallback = devtools.evaluate(
-                'document.body.getAttribute("data-pr2-smooth60-fallback") || ""'
-            )
             target = devtools.evaluate(
                 'document.body.getAttribute("data-pr2-presentation-fps-target") || ""'
             )
             search = devtools.evaluate("location.search")
-            if fallback != "0" or requested != "1" or target != "60":
+            if requested != "1" or target != "60":
                 raise SystemExit(
                     "Smooth60 changed mode under sustained load: "
-                    f"requested={requested}, fallback={fallback}, target={target}, query={search}"
+                    f"requested={requested}, target={target}, query={search}"
                 )
             if "smooth60=1" not in search:
                 raise SystemExit(
@@ -420,17 +444,17 @@ def check_smooth60_stability(root, browser_path, use_gpu=False):
             paired_samples = list(zip(loaded_presentation, loaded_simulation))
             if len(paired_samples) < 3 or any(
                 simulated > 35
-                or simulated > presented
+                or abs(simulated * 2 - presented) > 2
                 for presented, simulated in paired_samples
             ):
                 raise SystemExit(
-                    "Smooth60 sustained-load cadence did not sacrifice only presentation frames: "
+                    "Smooth60 sustained-load cadence did not preserve strict alternation: "
                     f"{paired_samples}"
                 )
             print(
                 "Smooth60 sustained-load stability: "
-                f"requested={requested}, fallback={fallback}, "
-                f"presentationTarget={target}, samples={paired_samples}, query={search}"
+                f"requested={requested}, presentationTarget={target}, "
+                f"samples={paired_samples}, query={search}"
             )
     print("Smooth60 browser stability validation passed.")
 
@@ -641,16 +665,13 @@ def benchmark_smooth60(root, browser_path, out_path, duration, use_gpu=False):
                             f"Benchmark {device}/{scene} observed unsafe presentation/simulation "
                             f"cadence: {invalid_cadence}"
                         )
-                    fallback_active = devtools.evaluate(
-                        'document.body.getAttribute("data-pr2-smooth60-fallback") || ""'
-                    ) == "1"
                     effective_target = int(devtools.evaluate(
                         'document.body.getAttribute("data-pr2-presentation-fps-target") || "0"'
                     ))
-                    if fallback_active or effective_target != 60:
+                    if effective_target != 60:
                         raise SystemExit(
                             f"Benchmark {device}/{scene} changed requested smooth60 mode: "
-                            f"fallback={fallback_active}, target={effective_target}"
+                            f"target={effective_target}"
                         )
                     metrics_after = read_performance_metrics(devtools)
                     heap_peak = max(heap_samples)
@@ -664,7 +685,6 @@ def benchmark_smooth60(root, browser_path, out_path, duration, use_gpu=False):
                         "durationSeconds": duration,
                         "presentationFps": average(presentation_samples),
                         "simulationFps": average(simulation_samples),
-                        "fallbackActive": fallback_active,
                         "effectivePresentationTargetFps": effective_target,
                         "presentationSamples": presentation_samples,
                         "simulationSamples": simulation_samples,
@@ -689,8 +709,7 @@ def benchmark_smooth60(root, browser_path, out_path, duration, use_gpu=False):
                     print(
                         f"Smooth60 benchmark {device}/{scene}: "
                         f"presentation={result['presentationFps']:.1f}, simulation={result['simulationFps']:.1f}, "
-                        f"fallback={fallback_active}, target={effective_target}, "
-                        f"frame p95={result['frameTimeMs']['p95']:.2f}ms, "
+                        f"target={effective_target}, frame p95={result['frameTimeMs']['p95']:.2f}ms, "
                         f"heap peak={heap_peak}"
                     )
             devtools.request("Emulation.setCPUThrottlingRate", {"rate": 1})

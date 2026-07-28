@@ -135,7 +135,6 @@ import pr2.runtime.ExplicitBitmapCacheTest;
 import pr2.runtime.FrameClockTest;
 import pr2.runtime.FrameRateDebugSignalsTest;
 import pr2.runtime.FrameRateDiagnosticsTest;
-import pr2.runtime.FrameRateFallbackPolicyTest;
 import pr2.runtime.FrameRateSettingsTest;
 import pr2.runtime.SvgAssetTest;
 import pr2.ui.EmblemLoaderTest;
@@ -158,7 +157,6 @@ class DeterministicTestSuite {
 		DeterministicTestMode.runSuite("FrameClockTest", ["runtime"], FrameClockTest.main);
 		DeterministicTestMode.runSuite("FrameRateDebugSignalsTest", ["runtime"], FrameRateDebugSignalsTest.main);
 		DeterministicTestMode.runSuite("FrameRateDiagnosticsTest", ["runtime"], FrameRateDiagnosticsTest.main);
-		DeterministicTestMode.runSuite("FrameRateFallbackPolicyTest", ["runtime"], FrameRateFallbackPolicyTest.main);
 		DeterministicTestMode.runSuite("FrameRateSettingsTest", ["runtime"], FrameRateSettingsTest.main);
 		DeterministicTestMode.runSuite("SvgAssetTest", ["runtime", "ui", "character", "level-rendering"], SvgAssetTest.main);
 		DeterministicTestMode.runSuite("GpNotificationTest", ["ui"], GpNotificationTest.main);

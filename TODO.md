@@ -115,13 +115,13 @@ teardown paths are covered by focused tests and screenshot/replay evidence.
 
 #### Experimental 60 FPS Presentation With 30 FPS Simulation
 
-Add an opt-in `?smooth60=1` HTML5 experiment that draws motion at 60 FPS while
-targeting 30 authoritative ticks per second for gameplay, input consumption,
-animation timelines, frame counters, and network emission. Average presentation
-cadence over five seconds and allow the authoritative rate to follow half that
-cadence down to 27 Hz before sacrificing visual-only callbacks. The flag must
-default off and must not persist to another session. With the flag absent, the
-client must retain its current 30 FPS behavior and Flash parity.
+The original opt-in `?smooth60=1` HTML5 experiment now remains as an alias for
+`?frame_strategy=60smooth`. That strategy draws motion at a paced 60 FPS and
+strictly alternates physics and visual frames, without protecting physics when
+the accepted presentation rate falls below 60. The selectable fixed strategies
+use elapsed time to preserve 30 authoritative ticks per active wall-clock
+second. URL choices must not persist to another session, and the default
+`30smooth` strategy retains the original 30 FPS behavior and Flash parity.
 
 Treat presentation positions as disposable output. Never feed an interpolated
 or extrapolated coordinate, velocity, rotation, layer, or camera value back into
@@ -138,9 +138,8 @@ identical with `smooth60` enabled and disabled.
 - [x] Split the current shared frame-rate constant into explicit 30 Hz
   simulation and configurable presentation rates without changing physics
   formulas or frame-duration constants.
-- [x] Parse `smooth60=1` through the normal query-parameter path and expose one
-  immutable runtime setting; missing, empty, `0`, and invalid values must leave
-  the feature disabled.
+- [x] Parse `frame_strategy` through the normal query-parameter path and expose
+  one immutable runtime setting; keep `smooth60=1` as a `60smooth` alias.
 - [x] Keep the project/window bootstrap at 30 FPS, then request a 60 FPS stage
   only after startup has resolved that the HTML5 experiment is enabled.
 - [x] Make native targets ignore `smooth60` until the presentation clock and
@@ -157,8 +156,8 @@ identical with `smooth60` enabled and disabled.
 - [x] Add one application-owned frame clock, installed before production
   screens, that identifies 30 Hz simulation ticks and intervening presentation
   frames when the stage runs at 60 FPS.
-- [x] Make every stage frame a simulation tick when `smooth60` is disabled so
-  the default path retains the current event ordering and behavior.
+- [x] Make every stage frame a simulation tick in the default `30smooth`
+  strategy so the default path retains the current event ordering and behavior.
 - [x] Define and test the clock's initial phase so enabling the experiment does
   not run, skip, or duplicate a simulation tick during startup.
 - [x] Reset presentation phase safely across deactivate/reactivate, focus loss,
@@ -276,22 +275,11 @@ identical with `smooth60` enabled and disabled.
 - [x] Benchmark representative small, large, art-heavy, and multiplayer levels
   on desktop and a lower-powered browser device; record simulation rate,
   presentation rate, frame-time percentiles, and memory/GC behavior.
-- [x] Define a sustained-frame-time threshold for declaring 60 FPS presentation
-  unsupported on the current device.
-- [x] Add a safe session-only fallback to 30 FPS presentation when that threshold
-  is exceeded; rebasing the presentation clock must not skip or duplicate a
-  simulation tick.
-- [x] Show the fallback state in diagnostics and keep `smooth60=1` in the URL so
-  performance failures are distinguishable from an unrequested experiment.
-  Automatic fallback is currently compile-time disabled so `smooth60=1`
-  remains a definitive 60 FPS test control; the policy and diagnostics remain
-  available for a later re-enable.
 - [x] Run the focused runtime, gameplay, character, effects, network,
   level-rendering, and UI deterministic domains plus the HTML5 replay/performance
   cases; do not substitute a full-suite pass for targeted evidence.
-- [x] Document `?smooth60=1`, its experimental/default-off status, fallback
-  behavior, known visual snap cases, and the guarantee that authoritative
-  gameplay remains 30 Hz.
+- [x] Document `?smooth60=1`, its experimental/default-off status, known visual
+  snap cases, and the guarantee that authoritative gameplay remains 30 Hz.
 - [x] Keep the experiment opt-in until the state/packet equivalence checks,
   visual replay set, and performance thresholds pass; make any later proposal
   to enable it by default a separate parity and product decision.

@@ -20,8 +20,8 @@ class FrameRateDebugSignalsTest {
 		var diagnostics = new FrameRateDiagnostics(currentTime);
 
 		publisher.publish(settings, diagnostics);
+		assertEquals("60smooth", writes.get("frame-strategy"), "resolved strategy signal");
 		assertEquals("1", writes.get("smooth60"), "enabled flag signal");
-		assertEquals("0", writes.get("smooth60-fallback"), "fallback initially inactive");
 		assertEquals("60", writes.get("presentation-fps-target"), "enabled presentation-rate target signal");
 		assertEquals("pending", writes.get("presentation-fps"), "initial presentation signal");
 		assertEquals("pending", writes.get("simulation-fps"), "initial simulation signal");
@@ -39,10 +39,6 @@ class FrameRateDebugSignalsTest {
 		assertEquals("60", writes.get("presentation-frame-samples"), "harness receives exact presented-frame window counts");
 		assertEquals("30", writes.get("simulation-tick-samples"), "harness receives exact simulation-tick window counts");
 
-		publisher.publish(settings, diagnostics, 30, true);
-		assertEquals("1", writes.get("smooth60"), "requested experiment remains visible after fallback");
-		assertEquals("1", writes.get("smooth60-fallback"), "fallback becomes visible");
-		assertEquals("30", writes.get("presentation-fps-target"), "effective target reflects fallback");
 	}
 
 	private static function testDisabledFlag():Void {

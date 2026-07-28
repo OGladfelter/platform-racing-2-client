@@ -36,7 +36,7 @@ class FollowFadeEffect extends Sprite {
 
 	private function tick(_:Event):Void {
 		if (!FrameClock.shouldRunSimulationFrame()) {
-			renderPresentationFrame();
+			if (FrameClock.shouldRenderIntermediatePresentationFrame()) renderPresentationFrame();
 			return;
 		}
 		positionOnOwner(false);

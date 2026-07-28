@@ -15,14 +15,10 @@ class FrameRateDebugSignals {
 		this.setSignal = setSignal == null ? DebugSignal.set : setSignal;
 	}
 
-	public function publish(settings:FrameRateSettings, diagnostics:FrameRateDiagnostics,
-			?effectivePresentationFrameRate:Int, fallbackActive:Bool = false):Void {
-		var effectiveRate = effectivePresentationFrameRate == null
-			? settings.presentationFrameRate
-			: effectivePresentationFrameRate;
+	public function publish(settings:FrameRateSettings, diagnostics:FrameRateDiagnostics):Void {
+		setIfChanged("frame-strategy", Std.string(settings.strategy));
 		setIfChanged("smooth60", settings.smooth60Enabled ? "1" : "0");
-		setIfChanged("smooth60-fallback", fallbackActive ? "1" : "0");
-		setIfChanged("presentation-fps-target", Std.string(effectiveRate));
+		setIfChanged("presentation-fps-target", Std.string(settings.presentationFrameRate));
 		setIfChanged("presentation-fps", formatRate(diagnostics.presentedFramesPerSecond));
 		setIfChanged("simulation-fps", formatRate(diagnostics.simulationTicksPerSecond));
 		if (diagnostics.completedWindows > lastSampledWindow) {

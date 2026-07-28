@@ -197,7 +197,7 @@ class ShotEffect extends Effect {
 
 	private function onEnterFrame(_:Event):Void {
 		if (!FrameClock.shouldRunSimulationFrame()) {
-			renderPresentationFrame();
+			if (FrameClock.shouldRenderIntermediatePresentationFrame()) renderPresentationFrame();
 			return;
 		}
 		if (contextProvider == null) {

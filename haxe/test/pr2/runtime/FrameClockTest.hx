@@ -13,12 +13,13 @@ class FrameClockTest {
 		testResetRebasesWithoutSynthesizingTicks();
 		testLongRunCadence();
 		testRepeatedPhaseResets();
-		testPresentationBudgetPreservesVisualFramesAt57Fps();
-		testPresentationBudgetPreservesVisualFramesAt55Fps();
-		testPresentationBudgetProtects27FpsAt53Fps();
-		testHighRefreshDoesNotAccelerateSimulation();
-		testTransitionBackTo30FpsPresentation();
-		testFallbackImmediatelyAfterSimulationPreservesTickSequence();
+		testSmoothAlternationAt57Fps();
+		testSmoothAlternationAt55Fps();
+		testSmoothDoesNotProtectLowFrameRates();
+		testSmoothClockReliesOn60HzBrowserPacer();
+		testFixedNominalCadence();
+		testFixedCatchUpAndRemainder();
+		testFixedPresentationPolicies();
 		trace('FrameClockTest passed $assertions assertions');
 	}
 
@@ -42,48 +43,93 @@ class FrameClockTest {
 		assertEquals(3000, unflaggedDiagnostics.totalSimulationTicks, "unflagged diagnostics count every frame as simulation");
 	}
 
-	private static function testPresentationBudgetPreservesVisualFramesAt57Fps():Void {
+	private static function testSmoothAlternationAt57Fps():Void {
 		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
 			new FrameRateDiagnostics(currentTime));
 		var callbackPeriodMs = 1000.0 / 57;
 		for (frame in 0...(57 * 5)) clock.advanceFrame(frame * callbackPeriodMs);
 
-		assertEquals(285, clock.stageFrameNumber, "57 FPS budget records every available callback");
-		assertEquals(143, clock.simulationFrameNumber, "57 FPS budget naturally averages 28.5 physics FPS");
-		assertEquals(142, clock.presentationOnlyFrameNumber, "57 FPS budget preserves the natural visual-only half");
+		assertEquals(285, clock.stageFrameNumber, "57 FPS smooth mode records every accepted callback");
+		assertEquals(143, clock.simulationFrameNumber, "57 FPS smooth mode runs physics on alternating frames");
+		assertEquals(142, clock.presentationOnlyFrameNumber, "57 FPS smooth mode preserves strict alternation");
 	}
 
-	private static function testPresentationBudgetPreservesVisualFramesAt55Fps():Void {
+	private static function testSmoothAlternationAt55Fps():Void {
 		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
 			new FrameRateDiagnostics(currentTime));
 		var callbackPeriodMs = 1000.0 / 55;
 		for (frame in 0...(55 * 5)) clock.advanceFrame(frame * callbackPeriodMs);
 
-		assertEquals(275, clock.stageFrameNumber, "55 FPS budget records every available callback");
-		assertEquals(138, clock.simulationFrameNumber, "55 FPS budget naturally averages 27.5 physics FPS");
-		assertEquals(137, clock.presentationOnlyFrameNumber, "55 FPS budget preserves the natural visual-only half");
+		assertEquals(275, clock.stageFrameNumber, "55 FPS smooth mode records every accepted callback");
+		assertEquals(138, clock.simulationFrameNumber, "55 FPS smooth mode runs physics on alternating frames");
+		assertEquals(137, clock.presentationOnlyFrameNumber, "55 FPS smooth mode preserves strict alternation");
 	}
 
-	private static function testPresentationBudgetProtects27FpsAt53Fps():Void {
+	private static function testSmoothDoesNotProtectLowFrameRates():Void {
 		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
 			new FrameRateDiagnostics(currentTime));
 		var callbackPeriodMs = 1000.0 / 53;
 		for (frame in 0...(53 * 5)) clock.advanceFrame(frame * callbackPeriodMs);
 
-		assertEquals(265, clock.stageFrameNumber, "53 FPS budget records every available callback");
-		assertEquals(135, clock.simulationFrameNumber, "53 FPS budget protects twenty-seven physics FPS");
-		assertEquals(130, clock.presentationOnlyFrameNumber, "53 FPS budget sacrifices five visual-only callbacks");
+		assertEquals(265, clock.stageFrameNumber, "53 FPS smooth mode records every accepted callback");
+		assertEquals(133, clock.simulationFrameNumber, "53 FPS smooth mode deliberately allows physics below twenty-seven FPS");
+		assertEquals(132, clock.presentationOnlyFrameNumber, "53 FPS smooth mode never sacrifices its visual phases");
 	}
 
-	private static function testHighRefreshDoesNotAccelerateSimulation():Void {
+	private static function testSmoothClockReliesOn60HzBrowserPacer():Void {
 		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
 			new FrameRateDiagnostics(currentTime));
 		var callbackPeriodMs = 1000.0 / 120;
 		for (frame in 0...120) clock.advanceFrame(frame * callbackPeriodMs);
 
-		assertEquals(120, clock.stageFrameNumber, "high refresh records every supplied callback");
-		assertEquals(30, clock.simulationFrameNumber, "high refresh remains fixed at thirty simulation ticks");
-		assertEquals(90, clock.presentationOnlyFrameNumber, "extra high-refresh callbacks remain presentation-only");
+		assertEquals(120, clock.stageFrameNumber, "clock records every callback supplied by its upstream pacer");
+		assertEquals(60, clock.simulationFrameNumber, "strict alternation relies on Lime's elapsed-time 60 Hz cap");
+		assertEquals(60, clock.presentationOnlyFrameNumber, "strict alternation does not perform a second internal high-refresh cap");
+	}
+
+	private static function testFixedNominalCadence():Void {
+		for (strategy in ["30fixed", "60fixed"]) {
+			var diagnostics = new FrameRateDiagnostics(currentTime);
+			var clock = new FrameClock(FrameRateSettings.fromQuery('?frame_strategy=$strategy', true), diagnostics);
+			for (_ in 0...6000) clock.advanceFrame();
+			assertEquals(6000, clock.stageFrameNumber, '$strategy accepted-frame count');
+			assertEquals(3000, clock.simulationFrameNumber, '$strategy exact nominal 30 Hz simulation');
+			assertEquals(3000, diagnostics.totalSimulationTicks, '$strategy diagnostics count every fixed tick');
+		}
+	}
+
+	private static function testFixedCatchUpAndRemainder():Void {
+		var clock = new FrameClock(FrameRateSettings.fromQuery("?frame_strategy=60fixed", true),
+			new FrameRateDiagnostics(currentTime));
+		clock.advanceFrame(0);
+		assertEquals(1, clock.simulationTicksThisBrowserFrame, "fixed clock starts with an immediate authoritative tick");
+		clock.advanceFrame(10);
+		assertEquals(0, clock.simulationTicksThisBrowserFrame, "fixed clock can spend a callback on presentation only");
+		clock.advanceFrame(40);
+		assertEquals(1, clock.simulationTicksThisBrowserFrame, "fixed clock preserves sub-tick elapsed credit");
+		clock.advanceFrame(140);
+		assertEquals(3, clock.simulationTicksThisBrowserFrame, "fixed clock catches up multiple authoritative ticks");
+		assertEquals(5, clock.simulationFrameNumber, "fixed catch-up total includes every due tick");
+		assertEquals(4, clock.stageFrameNumber, "catch-up ticks do not become browser frames");
+	}
+
+	private static function testFixedPresentationPolicies():Void {
+		var fixed30 = new FrameClock(FrameRateSettings.fromQuery("?frame_strategy=30fixed", true),
+			new FrameRateDiagnostics(currentTime));
+		FrameClock.setCurrentForTests(fixed30);
+		fixed30.advanceFrame(0);
+		fixed30.advanceFrame(10);
+		assertEquals(false, FrameClock.shouldRenderIntermediatePresentationFrame(),
+			"30fixed leaves no-tick browser frames on the authoritative pose");
+
+		var fixed60 = new FrameClock(FrameRateSettings.fromQuery("?frame_strategy=60fixed", true),
+			new FrameRateDiagnostics(currentTime));
+		FrameClock.setCurrentForTests(fixed60);
+		fixed60.advanceFrame(0);
+		fixed60.advanceFrame(10);
+		assertEquals(true, FrameClock.shouldRenderIntermediatePresentationFrame(),
+			"60fixed renders an intermediate pose when no physics tick is due");
+		FrameClock.setCurrentForTests(null);
 	}
 
 	private static function testRepeatedPhaseResets():Void {
@@ -101,51 +147,6 @@ class FrameClockTest {
 		assertEquals(true, clock.isSimulationFrame, "repeated resets still rebase next frame to simulation");
 		clock.advanceFrame();
 		assertEquals(false, clock.isSimulationFrame, "alternation resumes after rebased simulation frame");
-	}
-
-	private static function testTransitionBackTo30FpsPresentation():Void {
-		now = 0;
-		var diagnostics = new FrameRateDiagnostics(currentTime);
-		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true), diagnostics);
-		clock.advanceFrame();
-		clock.advanceFrame();
-		assertEquals(false, clock.isSimulationFrame, "transition starts on presentation-only phase");
-
-		clock.use30FpsPresentation();
-		assertEquals(false, clock.isSimulationFrame, "transition does not reclassify current frame");
-		assertEquals(2, clock.stageFrameNumber, "transition does not synthesize a presented frame");
-		assertEquals(1, clock.simulationFrameNumber, "transition does not synthesize a simulation frame");
-		assertEquals(30, clock.presentationFrameRate, "transition records 30 FPS presentation");
-		assertEquals(false, clock.isSmoothPresentationActive, "transition disables presentation-only phases");
-
-		for (_ in 0...120) {
-			clock.advanceFrame();
-			assertEquals(true, clock.isSimulationFrame, "every 30 FPS fallback frame simulates");
-		}
-		assertEquals(122, clock.stageFrameNumber, "fallback presented-frame count remains monotonic");
-		assertEquals(121, clock.simulationFrameNumber, "fallback simulation count resumes without a skipped tick");
-		assertEquals(1, clock.presentationOnlyFrameNumber, "fallback never adds another presentation-only frame");
-		assertEquals(122, diagnostics.totalPresentedFrames, "fallback diagnostics remain monotonic");
-
-		var unflagged = new FrameClock(FrameRateSettings.fromQuery(null, true), new FrameRateDiagnostics(currentTime));
-		unflagged.advanceFrame();
-		unflagged.use30FpsPresentation();
-		unflagged.advanceFrame();
-		assertEquals(2, unflagged.simulationFrameNumber, "30 FPS rebase is harmless when already unflagged");
-	}
-
-	private static function testFallbackImmediatelyAfterSimulationPreservesTickSequence():Void {
-		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true),
-			new FrameRateDiagnostics(currentTime));
-		clock.advanceFrame();
-		assertEquals(1, clock.simulationFrameNumber, "fallback fixture begins with authoritative tick one");
-		clock.use30FpsPresentation();
-		assertEquals(1, clock.simulationFrameNumber, "fallback rebase does not duplicate the current tick");
-		clock.advanceFrame();
-		assertEquals(2, clock.simulationFrameNumber, "first 30 FPS callback advances exactly to tick two");
-		assertEquals(2, clock.stageFrameNumber, "fallback does not insert a synthetic display callback");
-		assertEquals(0, clock.presentationOnlyFrameNumber,
-			"authoritative-boundary fallback does not consume an orphaned presentation phase");
 	}
 
 	private static function testResetRebasesWithoutSynthesizingTicks():Void {

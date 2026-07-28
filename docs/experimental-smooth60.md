@@ -1,7 +1,9 @@
-# Experimental 60 FPS Presentation
+# Legacy Smooth60 Alias
 
-The HTML5 client has an opt-in presentation experiment that draws an additional
-visual frame between the game's authoritative 30 Hz simulation ticks.
+The HTML5 client now exposes four selectable frame strategies. See
+[frame-strategies.md](frame-strategies.md) for their current behavior.
+`smooth60=1` remains as a compatibility alias for
+`frame_strategy=60smooth`.
 
 ## Enable it
 
@@ -17,16 +19,23 @@ from the current URL only: it is not saved, and a navigation without the
 parameter returns to the default 30 FPS presentation. Native builds currently
 ignore the parameter.
 
-The experiment remains default-off. Removing `smooth60=1` restores the existing
-30 FPS behavior and Flash timing.
+The alias remains default-off. Removing `smooth60=1` restores the default
+`30smooth` behavior and Flash timing unless an explicit `frame_strategy` is
+present.
 
 ## What changes
 
-With the experiment active, HTML5 requests a 60 FPS presentation rate while the
-simulation stays at 30 Hz. On the extra frame, disposable presentation poses
-predict half of the most recent authoritative movement delta. This covers the
-local character, guarded remote-character motion, camera/course transforms,
-course rotation, and supported moving effects.
+With the alias active, HTML5 requests a nominal 60 FPS presentation rate and
+strictly alternates simulation and visual frames. Lime treats 60 as unlimited,
+so the client also applies its elapsed-time 60 Hz limiter. On the extra frame,
+disposable presentation poses predict half of the most recent authoritative
+movement delta. This covers the local character, guarded remote-character
+motion, camera/course transforms, course rotation, and supported moving
+effects.
+
+There is deliberately no low-frame-rate physics safeguard in this strategy. A
+browser delivering fewer than 60 accepted frames per second runs fewer than 30
+simulation ticks per second.
 
 Character animation timelines still advance at 30 Hz. This experiment smooths
 world-space motion; it does not synthesize blended body-art frames.
@@ -59,19 +68,13 @@ These snaps favor correct placement over carrying stale motion across a
 discontinuity. Minimap dots intentionally remain on authoritative 30 Hz
 positions.
 
-## Performance fallback status
+## Diagnostics
 
-Automatic performance fallback is currently disabled so `smooth60=1` is a
-definitive testing control. Once enabled, it requests a 60 FPS presentation
-target for the entire page session even when the browser cannot sustain that
-rate. Physics and networking remain at 30 Hz.
-
-The fallback policy and diagnostics remain available for a later re-enable.
-While it is disabled, HTML5 diagnostics remain:
+HTML5 diagnostics include:
 
 - `data-pr2-smooth60="1"` — the experiment was requested;
-- `data-pr2-smooth60-fallback="0"` — no automatic downgrade occurred;
-- `data-pr2-presentation-fps-target="60"` — the effective target remains 60.
+- `data-pr2-frame-strategy="60smooth"` — the resolved strategy;
+- `data-pr2-presentation-fps-target="60"` — the requested presentation target.
 
 ## Release status
 

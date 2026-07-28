@@ -75,6 +75,7 @@ class CursorEyedropper extends CustomCursor {
 	}
 
 	private function maybeUpdate(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunBrowserFrame()) return;
 		var me = getMouse();
 		var targetObj = me != null ? Std.downcast(me.target, DisplayObject) : null;
 		if (targetObj == null && sampleSource != null) {

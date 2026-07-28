@@ -97,6 +97,7 @@ class CharacterPartCachePreview extends Sprite {
 	}
 
 	private function animateCharacters(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunBrowserFrame()) return;
 		for (character in characters) character.advanceOneFrame();
 	}
 

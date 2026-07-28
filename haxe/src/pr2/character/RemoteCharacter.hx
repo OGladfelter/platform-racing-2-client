@@ -163,7 +163,7 @@ class RemoteCharacter extends Character {
 
 	private function onEnterFrame(event:Event):Void {
 		if (!FrameClock.shouldRunSimulationFrame()) {
-			renderPresentationFrame();
+			if (FrameClock.shouldRenderIntermediatePresentationFrame()) renderPresentationFrame();
 			return;
 		}
 		stepSimulationFrame(event);

@@ -1,6 +1,5 @@
 package pr2.runtime;
 
-import pr2.Constants;
 import pr2.app.QueryParams;
 
 /**
@@ -10,19 +9,30 @@ import pr2.app.QueryParams;
 	stage and scheduling 30 Hz simulation ticks are separate responsibilities.
 **/
 final class FrameRateSettings {
+	public final strategy:FrameStrategy;
 	public final smooth60Enabled:Bool;
 	public final presentationFrameRate:Int;
+	public final usesFixedSimulationClock:Bool;
+	public final rendersIntermediatePresentationFrames:Bool;
+	public final requires60HzPacing:Bool;
 
-	public static function fromQuery(query:Null<String>, smooth60Supported:Bool):FrameRateSettings {
-		var smooth60Enabled = smooth60Supported && QueryParams.get(query, "smooth60") == "1";
-		return new FrameRateSettings(
-			smooth60Enabled,
-			smooth60Enabled ? Constants.SMOOTH_PRESENTATION_FRAME_RATE : Constants.DEFAULT_PRESENTATION_FRAME_RATE
-		);
+	public static function fromQuery(query:Null<String>, frameStrategiesSupported:Bool):FrameRateSettings {
+		var strategy = FrameStrategy.fromQueryValue(QueryParams.get(query, "frame_strategy"));
+		if (strategy == null && QueryParams.get(query, "smooth60") == "1") {
+			strategy = FrameStrategy.Smooth60;
+		}
+		if (strategy == null || !frameStrategiesSupported) {
+			strategy = FrameStrategy.Smooth30;
+		}
+		return new FrameRateSettings(strategy);
 	}
 
-	private function new(smooth60Enabled:Bool, presentationFrameRate:Int) {
-		this.smooth60Enabled = smooth60Enabled;
-		this.presentationFrameRate = presentationFrameRate;
+	private function new(strategy:FrameStrategy) {
+		this.strategy = strategy;
+		smooth60Enabled = strategy == FrameStrategy.Smooth60;
+		presentationFrameRate = strategy.presentationFrameRate;
+		usesFixedSimulationClock = strategy.usesFixedSimulationClock;
+		rendersIntermediatePresentationFrames = strategy.rendersIntermediatePresentationFrames;
+		requires60HzPacing = strategy.requires60HzPacing;
 	}
 }

@@ -37,6 +37,7 @@ class EditorGraphicCursor extends EditorToolCursor {
 	}
 
 	private function updateObjectLayerScale(?_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunBrowserFrame()) return;
 		if (!scaleWithObjectLayer) {
 			return;
 		}

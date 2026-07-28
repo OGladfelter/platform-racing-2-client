@@ -41,7 +41,6 @@ import pr2.page.PopupPreview;
 import pr2.runtime.FrameClock;
 import pr2.runtime.FrameRateDebugSignals;
 import pr2.runtime.FrameRateDiagnostics;
-import pr2.runtime.FrameRateFallbackPolicy;
 import pr2.runtime.FrameRateSettings;
 import pr2.runtime.Html5PresentationPacer;
 import pr2.ui.GpNotification;
@@ -60,9 +59,6 @@ class Main extends Sprite {
 
 	private var swfStats:Null<SWFStats>;
 	private final frameRateDebugSignals:FrameRateDebugSignals = new FrameRateDebugSignals();
-	private final frameRateFallbackPolicy:FrameRateFallbackPolicy = new FrameRateFallbackPolicy();
-	private var lastFallbackDiagnosticWindow:Int = 0;
-	private var fallbackPending:Bool = false;
 	public var frameRateSettings(default, null):FrameRateSettings;
 	public var frameClock(default, null):FrameClock;
 
@@ -81,7 +77,7 @@ class Main extends Sprite {
 
 		stage.frameRate = Constants.DEFAULT_PRESENTATION_FRAME_RATE;
 		var query = currentQuery();
-		frameRateSettings = FrameRateSettings.fromQuery(query, smooth60SupportedOnCurrentTarget());
+		frameRateSettings = FrameRateSettings.fromQuery(query, frameStrategiesSupportedOnCurrentTarget());
 		configureStage(query);
 		applyPresentationFrameRate();
 		frameRateDebugSignals.publish(frameRateSettings, FrameRateDiagnostics.shared);
@@ -117,33 +113,8 @@ class Main extends Sprite {
 		}
 	}
 
-	private function publishFrameRateDiagnostics(clock:FrameClock):Void {
-		var diagnostics = FrameRateDiagnostics.shared;
-		if (Constants.SMOOTH60_AUTOMATIC_FALLBACK_ENABLED
-			&& frameRateSettings.smooth60Enabled && clock.isSmoothPresentationActive
-			&& diagnostics.completedWindows > lastFallbackDiagnosticWindow) {
-			lastFallbackDiagnosticWindow = diagnostics.completedWindows;
-			fallbackPending = frameRateFallbackPolicy.observeWindow(
-				diagnostics.lastWindowPresentedFrames,
-				diagnostics.lastWindowElapsedMs
-			);
-		}
-		// Rebase only after an authoritative frame. The next 30 FPS callback is
-		// therefore the next simulation tick, with no duplicate or skipped phase.
-		if (fallbackPending && clock.isSimulationFrame) {
-			clock.use30FpsPresentation();
-			applyStageFrameRate(Constants.DEFAULT_PRESENTATION_FRAME_RATE);
-			if (swfStats != null) {
-				swfStats.useTargetFrameRate(Constants.DEFAULT_PRESENTATION_FRAME_RATE);
-			}
-			fallbackPending = false;
-		}
-		frameRateDebugSignals.publish(
-			frameRateSettings,
-			diagnostics,
-			clock.presentationFrameRate,
-			frameRateFallbackPolicy.unsupported
-		);
+	private function publishFrameRateDiagnostics(_:FrameClock):Void {
+		frameRateDebugSignals.publish(frameRateSettings, FrameRateDiagnostics.shared);
 	}
 
 	private function applyPresentationFrameRate():Void {
@@ -153,10 +124,10 @@ class Main extends Sprite {
 	}
 
 	private function applyStageFrameRate(value:Float):Void {
-		Html5PresentationPacer.apply(stage, value, frameRateSettings.smooth60Enabled);
+		Html5PresentationPacer.apply(stage, value, frameRateSettings.requires60HzPacing);
 	}
 
-	private static inline function smooth60SupportedOnCurrentTarget():Bool {
+	private static inline function frameStrategiesSupportedOnCurrentTarget():Bool {
 		#if (js && html5)
 		return true;
 		#else
