@@ -22,6 +22,7 @@ class FinishedPageTest {
 		testExpGainClamp();
 		testRatingFromOffset();
 		testNativeRatingMeter();
+		testPreparedAssetsAreReused();
 		closeAll();
 		trace('FinishedPageTest passed $assertions assertions');
 	}
@@ -126,6 +127,18 @@ class FinishedPageTest {
 		assertEquals(1070, Math.round(rating.meterBackgroundHeightForTests() * 100),
 			"rating background uses the 10.7px star geometry instead of an opaque 11px strip");
 		rating.remove();
+	}
+
+	private static function testPreparedAssetsAreReused():Void {
+		var assets = new FinishedPageAssets(12345);
+		var shell = assets.prepareShell();
+		var rating = assets.prepareRating();
+		var exp = assets.prepareExpGain();
+		var page = new FinishedPage(12345, null, null, 7, assets);
+		assertEquals(page, shell.parent, "finished page adopts the pre-rendered shell");
+		assertEquals(page, rating.parent, "finished page adopts the pre-rendered rating control");
+		assertEquals(page, exp.parent, "finished page adopts the pre-rendered experience bar");
+		page.remove();
 	}
 
 	private static function closeAll():Void {

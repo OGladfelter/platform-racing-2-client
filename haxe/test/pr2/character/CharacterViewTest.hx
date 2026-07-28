@@ -161,6 +161,11 @@ class CharacterViewTest {
 			assertEquals(name, view.itemFrameName, '$name is selected by its protocol frame name');
 			assertEquals(1, view.heldItemSocket.numChildren, '$name renders through the stable held-item socket');
 		}
+		view.setItemFrameName("Teleport");
+		var warmedTeleport = view.heldItemSocket.getChildAt(0);
+		view.setItemFrameName("None");
+		view.setItemFrameName("Teleport");
+		assertEquals(warmedTeleport, view.heldItemSocket.getChildAt(0), "held-item artwork is reused after its first render");
 		view.setItemFrameName("Laser");
 		assertTrue(view.playItemUseAnimation("Laser"), "laser starts its authored recoil");
 		assertEquals(2, view.itemActionFrame, "laser starts at the XFL shoot label");

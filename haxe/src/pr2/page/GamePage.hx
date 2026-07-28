@@ -1,5 +1,8 @@
 package pr2.page;
 
+import openfl.display.DisplayObject;
+import openfl.display.Shape;
+import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.events.KeyboardEvent;
 import openfl.events.MouseEvent;
@@ -12,11 +15,13 @@ import pr2.gameplay.CatCaptcha;
 import pr2.gameplay.Course;
 import pr2.gameplay.CowboyMode;
 import pr2.gameplay.FinishedPage;
+import pr2.gameplay.FinishedPageAssets;
 import pr2.gameplay.GameCommandShell;
 import pr2.gameplay.GameCommandShell.GameCommandDelegate;
 import pr2.gameplay.GameCommandShell.LocalCharacterInit;
 import pr2.gameplay.GameCommandShell.RemoteCharacterInit;
 import pr2.gameplay.HappyHour;
+import pr2.gameplay.ItemDisplay;
 import pr2.gameplay.LevelConfig;
 import pr2.gameplay.LevelEntry;
 import pr2.gameplay.LuxPopup;
@@ -52,6 +57,15 @@ class GamePage extends Page implements GameCommandDelegate {
 	private var loadingText:Null<TextField>;
 	private var quitButton:Null<QuitButton>;
 	private var finishedPage:Null<FinishedPage>;
+	private var finishedPageAssets:Null<FinishedPageAssets>;
+	private var warmupHost:Null<Sprite>;
+	private var warmupCover:Null<Shape>;
+	private var warmupStep:Int = -1;
+	private var warmupWaitForFirstRender:Bool = false;
+	private var warmupItemIndex:Int = -1;
+	private var warmupCharacterViewIndex:Int = -1;
+	private var warmupCharacterViewX:Float = 0;
+	private var warmupCharacterViewY:Float = 0;
 	private var playerDone:Bool = false;
 	private var pendingLocalInit:Null<LocalCharacterInit>;
 	private var pendingRemoteInits:Array<RemoteCharacterInit> = [];
@@ -151,9 +165,7 @@ class GamePage extends Page implements GameCommandDelegate {
 				course.setLife(pendingLife);
 				pendingLife = null;
 			}
-			// Below the quit button / finish overlay, above nothing else yet.
-			addChildAt(course, 0);
-			clearLoadingText();
+			prepareGameplayAssets();
 		} catch (error:Dynamic) {
 			showError('Level $levelId could not be decoded:\n${Std.string(error)}');
 		}
@@ -161,6 +173,177 @@ class GamePage extends Page implements GameCommandDelegate {
 
 	private function onLevelError(message:String):Void {
 		showError('Could not load level $levelId:\n$message');
+	}
+
+	/**
+		Render cold gameplay UI behind the loading screen, one asset group per
+		frame. Reusing these exact instances avoids paying their first-render cost
+		when an item is awarded or the race ends.
+	**/
+	private function prepareGameplayAssets():Void {
+		if (course == null) return;
+		finishedPageAssets = new FinishedPageAssets(levelId);
+
+		// Headless deterministic tests do not have a renderer to warm. Keep their
+		// synchronous mount behavior and let FinishedPage finish lazy preparation.
+		if (stage == null) {
+			mountCourse();
+			return;
+		}
+
+		var item = course.itemDisplay;
+		warmupItemIndex = item.parent == course ? course.getChildIndex(item) : -1;
+		if (item.parent != null) item.parent.removeChild(item);
+
+		warmupHost = new Sprite();
+		warmupHost.x = Constants.STAGE_WIDTH / 2;
+		warmupHost.y = Constants.STAGE_HEIGHT / 2;
+		addChildAt(warmupHost, 0);
+
+		// OpenFL still renders the display objects below this opaque cover, while
+		// the player continues to see the ordinary loading state.
+		warmupCover = new Shape();
+		warmupCover.graphics.beginFill(0x000000);
+		warmupCover.graphics.drawRect(0, 0, Constants.STAGE_WIDTH, Constants.STAGE_HEIGHT);
+		warmupCover.graphics.endFill();
+		addChildAt(warmupCover, 1);
+
+		item.x = -Constants.STAGE_WIDTH / 2 + 5;
+		item.y = -Constants.STAGE_HEIGHT / 2 + 5;
+		item.setItemCode(1);
+		warmupHost.addChild(item);
+		var characterView = course.localCharacter.display;
+		warmupCharacterViewIndex = characterView.parent == course.localCharacter
+			? course.localCharacter.getChildIndex(characterView)
+			: -1;
+		warmupCharacterViewX = characterView.x;
+		warmupCharacterViewY = characterView.y;
+		if (characterView.parent != null) characterView.parent.removeChild(characterView);
+		warmupStep = 0;
+		warmupWaitForFirstRender = true;
+		addEventListener(Event.ENTER_FRAME, advanceGameplayWarmup);
+	}
+
+	private function advanceGameplayWarmup(_:Event):Void {
+		if (course == null || finishedPageAssets == null || warmupHost == null) {
+			cancelGameplayWarmup(false);
+			return;
+		}
+		if (warmupWaitForFirstRender) {
+			warmupWaitForFirstRender = false;
+			return;
+		}
+		try {
+			warmupStep++;
+			if (warmupStep < 10) {
+				course.itemDisplay.setItemCode(warmupStep + 1);
+				return;
+			}
+
+			clearWarmupHost();
+			switch (warmupStep) {
+				case 10:
+					restoreWarmupItemDisplay();
+					presentCharacterItem(1);
+				case 11, 12, 13, 14, 15, 16, 17, 18, 19:
+					presentCharacterItem(warmupStep - 9);
+				case 20:
+					restoreWarmupCharacterView();
+					presentWarmupAsset(finishedPageAssets.prepareShell(), 0, 0);
+				case 21:
+					presentWarmupAsset(finishedPageAssets.prepareRating(), 6, 87);
+				case 22:
+					presentWarmupAsset(finishedPageAssets.prepareExpGain(), 0, 47);
+				default:
+					finishGameplayWarmup();
+			}
+		} catch (_:Dynamic) {
+			// Warmup is an optimization. If a renderer/backend cannot perform it,
+			// preserve the normal lazy construction path and start the race.
+			cancelGameplayWarmup(true);
+			mountCourse();
+		}
+	}
+
+	private function presentWarmupAsset(asset:DisplayObject, x:Float, y:Float):Void {
+		if (warmupHost == null) return;
+		asset.x = x;
+		asset.y = y;
+		warmupHost.addChild(asset);
+	}
+
+	private function clearWarmupHost():Void {
+		if (warmupHost == null) return;
+		while (warmupHost.numChildren > 0) warmupHost.removeChildAt(0);
+	}
+
+	private function presentCharacterItem(itemCode:Int):Void {
+		if (course == null || warmupHost == null) return;
+		var characterView = course.localCharacter.display;
+		characterView.setItemFrameName(ItemDisplay.itemNameFromCode(itemCode));
+		characterView.x = 0;
+		characterView.y = 0;
+		warmupHost.addChild(characterView);
+	}
+
+	private function restoreWarmupCharacterView():Void {
+		if (course == null || course.localCharacter == null || warmupCharacterViewIndex < 0) return;
+		var characterView = course.localCharacter.display;
+		if (characterView.parent != null) characterView.parent.removeChild(characterView);
+		characterView.setItemFrameName("None");
+		characterView.x = warmupCharacterViewX;
+		characterView.y = warmupCharacterViewY;
+		var index = Std.int(Math.min(warmupCharacterViewIndex, course.localCharacter.numChildren));
+		course.localCharacter.addChildAt(characterView, index);
+		warmupCharacterViewIndex = -1;
+	}
+
+	private function restoreWarmupItemDisplay():Void {
+		if (course == null || course.itemDisplay == null || warmupItemIndex < 0) return;
+		var item = course.itemDisplay;
+		if (item.parent != null) item.parent.removeChild(item);
+		item.setItemCode(0);
+		item.x = Course.ITEM_X;
+		item.y = Course.ITEM_Y;
+		var index = Std.int(Math.min(warmupItemIndex, course.numChildren));
+		course.addChildAt(item, index);
+		warmupItemIndex = -1;
+	}
+
+	private function finishGameplayWarmup():Void {
+		removeEventListener(Event.ENTER_FRAME, advanceGameplayWarmup);
+		clearWarmupHost();
+		if (warmupHost != null && warmupHost.parent != null) warmupHost.parent.removeChild(warmupHost);
+		warmupHost = null;
+		if (warmupCover != null && warmupCover.parent != null) warmupCover.parent.removeChild(warmupCover);
+		warmupCover = null;
+		warmupStep = -1;
+		mountCourse();
+	}
+
+	private function cancelGameplayWarmup(disposeFinishedAssets:Bool):Void {
+		removeEventListener(Event.ENTER_FRAME, advanceGameplayWarmup);
+		restoreWarmupItemDisplay();
+		restoreWarmupCharacterView();
+		clearWarmupHost();
+		if (warmupHost != null && warmupHost.parent != null) warmupHost.parent.removeChild(warmupHost);
+		warmupHost = null;
+		if (warmupCover != null && warmupCover.parent != null) warmupCover.parent.removeChild(warmupCover);
+		warmupCover = null;
+		warmupStep = -1;
+		warmupWaitForFirstRender = false;
+		if (disposeFinishedAssets && finishedPageAssets != null) {
+			finishedPageAssets.dispose();
+			finishedPageAssets = null;
+		}
+	}
+
+	private function mountCourse():Void {
+		if (course != null && course.parent != this) {
+			// Below the quit button / finish overlay.
+			addChildAt(course, 0);
+		}
+		clearLoadingText();
 	}
 
 	private function onCourseFrame(state:LocalPlayerState):Void {
@@ -181,6 +364,7 @@ class GamePage extends Page implements GameCommandDelegate {
 		detachSpecialEventListeners();
 		specialEvent = null;
 		stopHatCountdown();
+		cancelGameplayWarmup(true);
 		for (mode in cowboyModes.copy()) {
 			mode.remove();
 		}
@@ -543,7 +727,8 @@ class GamePage extends Page implements GameCommandDelegate {
 		}
 		captureFinishedPhysicsFrames();
 		var physicsFrames = finishedPhysicsFrames == null ? 0 : finishedPhysicsFrames;
-		finishedPage = new FinishedPage(levelId, returnToLobby, clearFinishedPage, physicsFrames);
+		finishedPage = new FinishedPage(levelId, returnToLobby, clearFinishedPage, physicsFrames, finishedPageAssets);
+		finishedPageAssets = null;
 		for (awardArgs in pendingAwards) {
 			applyAwardToFinishedPage(awardArgs);
 		}

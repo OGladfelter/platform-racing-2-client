@@ -86,6 +86,7 @@ class CharacterView extends Sprite {
 	private var hatIds:Array<Int>;
 	private var hatColors:Array<CharacterViewPartColor> = [];
 	private var activeItem:Null<RigHeldItem>;
+	private final heldItemArtworkCache:StringMap<Sprite> = new StringMap();
 	private var idleAnimationEnabled:Bool = false;
 	private var idleTicking:Bool = false;
 	private var superJumpWobbleRandom:Void->Float = Math.random;
@@ -695,11 +696,24 @@ class CharacterView extends Sprite {
 	private function renderHeldItem():Void {
 		while (heldItemSocket.numChildren > 0) heldItemSocket.removeChildAt(0);
 		if (itemFrameName == "None") return;
-		if (itemFrameName == "Snake") {
-			heldItemSocket.addChild(createSnakeHeldItem());
-			return;
+		var key = heldItemArtworkKey();
+		var holder = heldItemArtworkCache.get(key);
+		if (holder == null) {
+			holder = createHeldItemArtwork();
+			if (holder == null) return;
+			heldItemArtworkCache.set(key, holder);
 		}
-		if (activeItem == null) return;
+		heldItemSocket.addChild(holder);
+	}
+
+	private function heldItemArtworkKey():String {
+		if (itemFrameName == "Snake") return "Snake";
+		return itemFrameName + ":" + itemActionFrame + ":" + (jetActive ? "active" : "idle");
+	}
+
+	private function createHeldItemArtwork():Null<Sprite> {
+		if (itemFrameName == "Snake") return createSnakeHeldItem();
+		if (activeItem == null) return null;
 		var holder = new Sprite();
 		holder.name = "heldItemArtwork";
 		var matrix = activeItem.matrix;
@@ -712,7 +726,7 @@ class CharacterView extends Sprite {
 		} else {
 			holder.addChild(SvgAsset.create(activeItem.frames[itemActionFrame - 1]));
 		}
-		heldItemSocket.addChild(holder);
+		return holder;
 	}
 
 	private function createActiveJetPackArtwork(assetPath:String):Sprite {

@@ -31,12 +31,15 @@ class FinishedPage extends Popup {
 	private var returnBinding:Null<Binding>;
 	private var closeBinding:Null<Binding>;
 
-	public function new(courseID:Int, ?onReturn:Void->Void, ?onClose:FinishedPage->Void, physicsFrames:Int = 0) {
+	public function new(courseID:Int, ?onReturn:Void->Void, ?onClose:FinishedPage->Void, physicsFrames:Int = 0,
+			?preparedAssets:FinishedPageAssets) {
 		super();
 		this.onReturn = onReturn;
 		this.onClose = onClose;
 
-		art = new FinishedPageView();
+		var assets = preparedAssets == null ? new FinishedPageAssets(courseID) : preparedAssets;
+		assets.prepareAll();
+		art = assets.art;
 		var physicsFrameField = LobbyArt.directText(art, "physicsFrames");
 		if (physicsFrameField != null) {
 			physicsFrameField.text = "Physics frames: " + physicsFrames;
@@ -45,12 +48,12 @@ class FinishedPage extends Popup {
 		closeBinding = LobbyArt.bind(DisplayUtil.directChildByName(art, "close_bt"), function():Void startFadeOut());
 		addChild(art);
 
-		stars = new RatingSelect(courseID);
+		stars = assets.stars;
 		stars.x = 6;
 		stars.y = 87;
 		addChild(stars);
 
-		expGain = new ExpGain();
+		expGain = assets.expGain;
 		expGain.x = 0;
 		expGain.y = 47;
 		addChild(expGain);
