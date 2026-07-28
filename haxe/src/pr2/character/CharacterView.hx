@@ -76,6 +76,7 @@ class CharacterView extends Sprite {
 
 	private final rig:CharacterRigDefinition;
 	private final rigRoot:Sprite;
+	private var rigRootBaseMatrix:Matrix = new Matrix();
 	private var animation:RigAnimation;
 	private var completeDispatched:Bool = false;
 	private final slots:StringMap<Sprite> = new StringMap();
@@ -407,7 +408,11 @@ class CharacterView extends Sprite {
 		itemActionFrame = 1;
 		itemActionPlaying = false;
 		renderHeldItem();
-		if (currentState == "superJump" && state != "superJump") scaleY = 1;
+		// Keep the authored random squash inside the character artwork. Mutating
+		// CharacterView.scaleY here used the same public transform as placement, so
+		// a final super-jump tick could leave the whole display permanently
+		// soft/squashed after the state changed.
+		applySuperJumpWobbleScale(1);
 		animation = CharacterRig.animation(rig, state);
 		currentState = state;
 		currentFrame = 1;
@@ -416,7 +421,8 @@ class CharacterView extends Sprite {
 		endSignal = null;
 		completeDispatched = false;
 		var root = animation.root;
-		rigRoot.transform.matrix = new Matrix(root.a, root.b, root.c, root.d, root.tx, root.ty);
+		rigRootBaseMatrix = new Matrix(root.a, root.b, root.c, root.d, root.tx, root.ty);
+		applySuperJumpWobbleScale(1);
 		for (target in slots) target.visible = false;
 		var ordered = animation.slots.copy();
 		ordered.sort(function(left:RigSlot, right:RigSlot):Int return left.drawOrder - right.drawOrder);
@@ -536,8 +542,21 @@ class CharacterView extends Sprite {
 		advanceHatAnimations();
 		if (currentState == "superJump") {
 			var amount = currentFrame / 2;
-			scaleY = (superJumpWobbleRandom() * amount + (100 - amount / 2)) / 100;
+			applySuperJumpWobbleScale((superJumpWobbleRandom() * amount + (100 - amount / 2)) / 100);
 		}
+	}
+
+	private function applySuperJumpWobbleScale(scale:Float):Void {
+		// Compose an outer Y scale into the authored rig matrix. This matches the
+		// Flash visual without borrowing CharacterView.scaleY from its caller.
+		rigRoot.transform.matrix = new Matrix(
+			rigRootBaseMatrix.a,
+			rigRootBaseMatrix.b * scale,
+			rigRootBaseMatrix.c,
+			rigRootBaseMatrix.d * scale,
+			rigRootBaseMatrix.tx,
+			rigRootBaseMatrix.ty * scale
+		);
 	}
 
 	private function advancePartChannelAnimations():Void {

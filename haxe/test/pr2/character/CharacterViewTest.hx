@@ -24,6 +24,7 @@ class CharacterViewTest {
 		testDeterministicStandingLoop();
 		testAllStateTimingAndEndBehavior();
 		testSuperJumpChargeGlow();
+		testSuperJumpWobbleDoesNotLeakIntoDisplayScale();
 		testExhaustiveStateTransitionMatrix();
 		testFrozenOverlayAndCompletion();
 		testMaintainableParityMatrices();
@@ -591,6 +592,27 @@ class CharacterViewTest {
 		view.setState("stand");
 		assertEquals(0, head.filters.length, "leaving super-jump clears its charge filter");
 		assertClose(1, head.transform.colorTransform.redMultiplier, "leaving super-jump restores the normal character color transform");
+	}
+
+	private static function testSuperJumpWobbleDoesNotLeakIntoDisplayScale():Void {
+		var view = new CharacterView();
+		view.scaleY = 0.5;
+		view.setSuperJumpWobbleRandomForTest(function():Float return 0);
+		view.setState("superJump");
+		var rigRoot = view.getChildByName("rigRoot");
+		var stableRootD = rigRoot.transform.matrix.d;
+		view.gotoFrame(50);
+		view.advanceOneFrame();
+		assertClose(0.8725, rigRoot.transform.matrix.d / stableRootD, "super-jump final-frame wobble keeps the authored random squash");
+		assertClose(0.5, view.scaleY, "super-jump wobble does not overwrite the caller-owned display scale");
+
+		view.setState("superJump");
+		assertClose(1, rigRoot.transform.matrix.d / stableRootD, "restarting super-jump clears the prior random wobble scale");
+		view.setState("stand");
+		var stableStandD = rigRoot.transform.matrix.d;
+		view.advanceOneFrame();
+		assertClose(stableStandD, rigRoot.transform.matrix.d, "leaving super-jump restores a stable artwork scale");
+		assertClose(0.5, view.scaleY, "leaving super-jump preserves the caller-owned display scale");
 	}
 
 	private static function testExhaustiveStateTransitionMatrix():Void {
