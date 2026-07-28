@@ -6,6 +6,7 @@ import pr2.level.LevelArtRasterizer.ArtRasterTiles;
 import pr2.level.LevelArtCursor.ArtStrokeState;
 
 import haxe.Timer;
+import haxe.ds.ObjectMap;
 import openfl.display.Bitmap;
 import openfl.display.BitmapData;
 import openfl.display.DisplayObject;
@@ -35,6 +36,11 @@ typedef ArtRenderOptions = {
 	@:optional var artDrawFaultInjector:Int->Void;
 	@:optional var rasterTileLimit:Int;
 	@:optional var editorWarning:Bool;
+}
+
+private typedef StackedBlockDisplay = {
+	var block:LevelBlock;
+	var display:Sprite;
 }
 
 /**
@@ -129,7 +135,13 @@ class LevelRenderer extends Sprite {
 	private var artBackgroundTintScale:Float = 1;
 	private final artBackgroundChildren:Array<DisplayObject> = [];
 	private var artCachingEnabled:Bool = true;
+	// The latest decoded block is the one addressable through Flash's
+	// blockArray[x][y]. Older same-tile displays remain mounted as non-colliding
+	// ghosts, so retain both an active coordinate lookup and identity-aware stack.
 	private final blockDisplays:Map<String, Sprite> = new Map();
+	private final blockDisplaysByBlock:ObjectMap<LevelBlock, Sprite> = new ObjectMap();
+	private final blockDisplayStacks:Map<String, Array<StackedBlockDisplay>> = new Map();
+	private final blockDisplayRoots:Map<String, Sprite> = new Map();
 	// Block sprites keyed by segment (column -> row -> sprite), mirroring Flash's
 	// blockArray[segX][segY]. Used to attach/detach only the on-screen window
 	// without scanning every block. Every block lives here whether attached or not.
@@ -669,30 +681,95 @@ class LevelRenderer extends Sprite {
 		return display == null ? null : display.alpha;
 	}
 
+	private function addBlockDisplayToStack(block:LevelBlock, display:Sprite, worldX:Int, worldY:Int):Void {
+		var key = blockKey(worldX, worldY);
+		var stack = blockDisplayStacks.get(key);
+		if (stack == null) {
+			stack = [];
+			blockDisplayStacks.set(key, stack);
+			blockDisplayRoots.set(key, display);
+			addToBlockGrid(worldX, worldY, display);
+			if (isInView(segmentOf(worldX), segmentOf(worldY))) {
+				blockLayer.addChild(display);
+			}
+		} else {
+			var root = blockDisplayRoots.get(key);
+			if (stack.length == 1) {
+				var wasAttached = root.parent == blockLayer;
+				var container = new Sprite();
+				container.addChild(root);
+				root = container;
+				blockDisplayRoots.set(key, root);
+				addToBlockGrid(worldX, worldY, root);
+				if (wasAttached || isInView(segmentOf(worldX), segmentOf(worldY))) {
+					blockLayer.addChild(root);
+				}
+			}
+			root.addChild(display);
+		}
+		stack.push({block: block, display: display});
+		blockDisplaysByBlock.set(block, display);
+		blockDisplays.set(key, display);
+	}
+
 	public function removeBlockDisplay(worldX:Int, worldY:Int):Bool {
 		var key = blockKey(worldX, worldY);
 		var display = blockDisplays.get(key);
 		if (display == null) {
 			return false;
 		}
-		blockDisplays.remove(key);
-		removeFromBlockGrid(worldX, worldY);
+		return detachBlockDisplay(key, worldX, worldY, display, true);
+	}
+
+	private function detachBlockDisplay(key:String, worldX:Int, worldY:Int, display:Sprite, dispose:Bool):Bool {
+		var stack = blockDisplayStacks.get(key);
+		if (stack == null) {
+			return false;
+		}
+		var entryIndex = -1;
+		for (index in 0...stack.length) {
+			if (stack[index].display == display) {
+				entryIndex = index;
+				break;
+			}
+		}
+		if (entryIndex < 0) {
+			return false;
+		}
+		var entry = stack[entryIndex];
+		stack.splice(entryIndex, 1);
+		blockDisplaysByBlock.remove(entry.block);
+		if (blockDisplays.get(key) == display) {
+			blockDisplays.remove(key);
+		}
 		arrowDisplays.remove(key);
 		moveArrowDisplays.remove(key);
 		blockBounceVelocities.remove(key);
-		disposeAnimatedChildren(display);
+		if (dispose) {
+			disposeAnimatedChildren(display);
+		}
 		if (display.parent != null) {
 			display.parent.removeChild(display);
+		}
+		if (stack.length == 0) {
+			var root = blockDisplayRoots.get(key);
+			if (root != null && root.parent != null) {
+				root.parent.removeChild(root);
+			}
+			blockDisplayStacks.remove(key);
+			blockDisplayRoots.remove(key);
+			removeFromBlockGrid(worldX, worldY);
 		}
 		return true;
 	}
 
 	/** Keep incremental decoding aligned when the live map splices its source array. */
-	public function removeRuntimeBlockDisplay(worldX:Int, worldY:Int, decodedIndex:Int):Bool {
+	public function removeRuntimeBlockDisplay(block:LevelBlock, decodedIndex:Int):Bool {
 		if (decodedIndex >= 0 && decodedIndex < nextBlockToDraw) {
 			nextBlockToDraw--;
 		}
-		return removeBlockDisplay(worldX, worldY);
+		var display = blockDisplaysByBlock.get(block);
+		return display != null && detachBlockDisplay(blockKey(block.worldX, block.worldY), block.worldX, block.worldY, display, true);
 	}
 
 	/** Mount a block introduced or restored by the live gameplay map. */
@@ -704,7 +781,7 @@ class LevelRenderer extends Sprite {
 		if (nextBlockToDraw == level.blocks.length - 1 && level.blocks[level.blocks.length - 1] == block) {
 			nextBlockToDraw++;
 		}
-		if (!blockDisplays.exists(blockKey(block.worldX, block.worldY))) {
+		if (!blockDisplaysByBlock.exists(block)) {
 			addBlockDisplay(block);
 		}
 	}
@@ -718,33 +795,32 @@ class LevelRenderer extends Sprite {
 		if (display == null) {
 			return;
 		}
-
-		blockDisplays.remove(fromKey);
-		removeFromBlockGrid(fromWorldX, fromWorldY);
+		var stack = blockDisplayStacks.get(fromKey);
+		var entry:Null<StackedBlockDisplay> = null;
+		if (stack != null) {
+			for (candidate in stack) {
+				if (candidate.display == display) {
+					entry = candidate;
+					break;
+				}
+			}
+		}
+		var bounceVelocity = blockBounceVelocities.get(fromKey);
+		var moveArrow = moveArrowDisplays.get(fromKey);
+		if (entry == null || !detachBlockDisplay(fromKey, fromWorldX, fromWorldY, display, false)) {
+			return;
+		}
 
 		display.x = toWorldX;
 		display.y = toWorldY;
 		var toKey = blockKey(toWorldX, toWorldY);
-		blockDisplays.set(toKey, display);
-		var bounceVelocity = blockBounceVelocities.get(fromKey);
 		if (bounceVelocity != null) {
-			blockBounceVelocities.remove(fromKey);
 			blockBounceVelocities.set(toKey, bounceVelocity);
 		}
-		var moveArrow = moveArrowDisplays.get(fromKey);
 		if (moveArrow != null) {
-			moveArrowDisplays.remove(fromKey);
 			moveArrowDisplays.set(toKey, moveArrow);
 		}
-		addToBlockGrid(toWorldX, toWorldY, display);
-
-		if (isInView(segmentOf(toWorldX), segmentOf(toWorldY))) {
-			if (display.parent != blockLayer) {
-				blockLayer.addChild(display);
-			}
-		} else if (display.parent == blockLayer) {
-			blockLayer.removeChild(display);
-		}
+		addBlockDisplayToStack(entry.block, display, toWorldX, toWorldY);
 	}
 
 	public function showMoveBlockArrow(worldX:Int, worldY:Int, direction:Int):Void {

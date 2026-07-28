@@ -75,11 +75,13 @@ class LevelTest {
 	}
 
 	private static function testOverlappingRuntimeBlocksUseLastLoadedBlock():Void {
-		var world = decoded([
-			block(ObjectCodes.BLOCK_BASIC1, 10050, 10050),
-			block(ObjectCodes.BLOCK_MINE, 10050, 10050)
-		]);
+		var underlying = block(ObjectCodes.BLOCK_BASIC1, 10050, 10050);
+		var active = block(ObjectCodes.BLOCK_MINE, 10050, 10050);
+		var world = decoded([underlying, active]);
 		assertEquals(BlockType.Mine, world.blockAt(335, 335).type, "later runtime block wins collision lookup");
+		world.blocks.splice(world.blocks.indexOf(active), 1);
+		assertEquals(null, world.blockAt(335, 335), "removing the active overlap clears Flash's collision slot");
+		assertEquals(underlying, world.blockAtAny(335, 335), "older overlap remains available as display-only ghost data");
 	}
 
 	private static function testBlockTypeMapping():Void {

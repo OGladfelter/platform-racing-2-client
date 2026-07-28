@@ -25,12 +25,8 @@ class BlockDisplayCulling {
 
 	public function add(block:LevelBlock):Void {
 		if (LevelAssetCatalog.isSpawnMarkerBlockCode(block.code)) return;
-		var key = keyFor(block.worldX, block.worldY);
-		if (owner.blockDisplays.exists(key)) return;
 		var display = owner.createBlockDisplay(block);
-		owner.blockDisplays.set(key, display);
-		addToGrid(block.worldX, block.worldY, display);
-		if (isInView(segmentOf(block.worldX), segmentOf(block.worldY))) owner.blockLayer.addChild(display);
+		owner.addBlockDisplayToStack(block, display, block.worldX, block.worldY);
 	}
 
 	public function addToGrid(worldX:Int, worldY:Int, display:Sprite):Void {
@@ -103,5 +99,4 @@ class BlockDisplayCulling {
 	}
 
 	private static inline function abs(value:Int):Int return value < 0 ? -value : value;
-	private static inline function keyFor(x:Int, y:Int):String return x + "," + y;
 }

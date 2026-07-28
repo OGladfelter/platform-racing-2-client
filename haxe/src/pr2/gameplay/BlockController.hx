@@ -271,6 +271,7 @@ class BlockController {
 			return false;
 		}
 		blockStates.remove(owner.blockKey(block.x, block.y));
+		block.collisionActive = false;
 		level.blocks.splice(index, 1);
 		if (onBlockRemoved != null) {
 			onBlockRemoved(block, index);
@@ -284,6 +285,7 @@ class BlockController {
 			return false;
 		}
 		blockStates.remove(owner.blockKey(block.x, block.y));
+		block.collisionActive = true;
 		level.blocks.push(block);
 		if (onBlockAdded != null) {
 			onBlockAdded(block);

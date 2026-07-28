@@ -606,7 +606,7 @@ class Course extends Sprite {
 
 	private function removeRuntimeBlock(block:LevelBlock, removedIndex:Int):Void {
 		if (levelRenderer != null) {
-			levelRenderer.removeRuntimeBlockDisplay(block.worldX, block.worldY, removedIndex);
+			levelRenderer.removeRuntimeBlockDisplay(block, removedIndex);
 		}
 	}
 

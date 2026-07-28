@@ -55,6 +55,7 @@ class Level {
 		this.playerStart = playerStart;
 		this.finish = finish;
 		this.blocks = blocks;
+		initializeCollisionSlots();
 		this.bgColor = bgColor;
 		this.artBackgroundCode = artBackgroundCode;
 		this.artLayers = artLayers == null ? [] : artLayers;
@@ -126,11 +127,28 @@ class Level {
 		while (index > 0) {
 			index--;
 			var block = blocks[index];
-			if (!block.isMarker() && block.x == x && block.y == y) {
+			if (block.collisionActive && !block.isMarker() && block.x == x && block.y == y) {
 				return block;
 			}
 		}
 		return null;
+	}
+
+	private function initializeCollisionSlots():Void {
+		var activeByTile:Map<String, LevelBlock> = new Map();
+		for (block in blocks) {
+			block.collisionActive = false;
+			if (block.isMarker()) {
+				continue;
+			}
+			var key = block.x + "," + block.y;
+			var previous = activeByTile.get(key);
+			if (previous != null) {
+				previous.collisionActive = false;
+			}
+			block.collisionActive = true;
+			activeByTile.set(key, block);
+		}
 	}
 
 	/** Document lookup that includes non-colliding start and minion-egg markers. */
@@ -194,6 +212,12 @@ class LevelBlock {
 	public final type:BlockType;
 	public final options:String;
 	public final code:Int;
+	/**
+		Flash keeps one `blockArray[x][y]` collision pointer even when several
+		decoded block sprites overlap that tile. Older entries remain display-only
+		and are not promoted when the current block is removed.
+	**/
+	public var collisionActive:Bool = true;
 
 	public function new(x:Int, y:Int, type:BlockType, options:String = "", ?code:Int) {
 		this.worldX = x * Level.DEFAULT_TILE_SIZE;

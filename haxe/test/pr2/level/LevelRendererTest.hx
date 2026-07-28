@@ -35,6 +35,7 @@ class LevelRendererTest {
 		testBackgroundColorTransforms();
 		testArtObjectAndTextLayerScale();
 		testBlockAlphaUpdate();
+		testOverlappingBlockGhostDisplay();
 		testBlockColorMultiplierUpdate();
 		testBlockIceOverlayUpdate();
 		testTeleportBlockColorBackground();
@@ -219,6 +220,33 @@ class LevelRendererTest {
 		assertEquals(0.0, blockLayer.getChildAt(1).alpha, "level renderer hides removed mine");
 		assertEquals(0.0, blockLayer.getChildAt(2).alpha, "level renderer hides removed crumble");
 		assertEquals(0.0, blockLayer.getChildAt(3).alpha, "level renderer hides vanished block");
+	}
+
+	private static function testOverlappingBlockGhostDisplay():Void {
+		var underlying = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 10020, 10050);
+		var active = new DecodedBlock(ObjectCodes.BLOCK_BRICK, 10020, 10050);
+		var level = new TestLevel(0xFFFFFF, [underlying, active]);
+		var renderer = new LevelRenderer(level, underlying);
+		var blockLayer = worldLayer(renderer, 1);
+		var stack = Std.downcast(blockLayer.getChildAt(0), Sprite);
+		var underlyingDisplay = Std.downcast(stack.getChildAt(0), Sprite);
+		var activeDisplay = Std.downcast(stack.getChildAt(1), Sprite);
+
+		assertEquals(1, blockLayer.numChildren, "same-tile blocks share one culling root");
+		assertEquals(2, stack.numChildren, "Flash keeps every overlapping block sprite");
+		renderer.setBlockAlpha(active.worldX, active.worldY, 0.5);
+		assertEquals(1.0, underlyingDisplay.alpha, "active styling does not alter the display-only ghost");
+		assertEquals(0.5, activeDisplay.alpha, "active styling targets the latest overlapping block");
+
+		var removedIndex = level.blocks.indexOf(active);
+		level.blocks.splice(removedIndex, 1);
+		renderer.removeRuntimeBlockDisplay(active, removedIndex);
+
+		assertEquals(1, blockLayer.numChildren, "removing the active overlap retains the tile culling root");
+		assertEquals(1, stack.numChildren, "removing the active overlap reveals one ghost sprite");
+		assertEquals(underlyingDisplay, stack.getChildAt(0), "older overlapping artwork remains visible");
+		assertEquals(null, renderer.blockAlphaAt(active.worldX, active.worldY), "revealed ghost is not addressable as an active block");
+		renderer.remove();
 	}
 
 	private static function testBlockColorMultiplierUpdate():Void {
