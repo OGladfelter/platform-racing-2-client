@@ -5,6 +5,7 @@ import openfl.display.Sprite;
 import openfl.utils.Assets;
 import pr2.display.Removable;
 import pr2.audio.SoundEffects;
+import pr2.effects.MineAppear;
 import pr2.level.LevelRenderer;
 import pr2.net.CommandHandler;
 import pr2.character.PhysicsParticle;
@@ -93,6 +94,11 @@ class EffectBackground extends Sprite {
 			var physicsParticle = Std.downcast(child, PhysicsParticle);
 			if (physicsParticle != null) {
 				physicsParticle.remove();
+				continue;
+			}
+			var mineAppear = Std.downcast(child, MineAppear);
+			if (mineAppear != null) {
+				mineAppear.remove();
 				continue;
 			}
 			var removable = Std.downcast(child, Removable);

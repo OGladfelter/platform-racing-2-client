@@ -604,7 +604,7 @@ class CharacterLifecycleTest {
 		ice.remove();
 
 		var mine = collectAndUseLocalItem(2);
-		var mineEffect = Std.downcast(mine.levelRenderer.blockLayer.getChildAt(mine.levelRenderer.blockLayer.numChildren - 1), MineAppear);
+		var mineEffect = Std.downcast(mine.effectBackground.getChildAt(mine.effectBackground.numChildren - 1), MineAppear);
 		assertTrue(mineEffect != null, "local mine mounts its placement animation");
 		var mineParts = mine.localCharacter.stateSnapshot().lastItemEffect.split(":");
 		var mineWorldCoords = mineParts[1].split(",");
@@ -855,26 +855,32 @@ class CharacterLifecycleTest {
 		course.effectBackground = new EffectBackground(course, handler, function(x:Int, y:Int):Void {
 			iceWaveSounds.push('$x,$y');
 		});
+		course.levelRenderer.attachEffectLayer(course.effectBackground);
 		handler.dispatch("addEffect", ["IceWave", "120", "80", "180", "0", "7"]);
 		assertEquals(4, course.eggRound.activeAttackVisualCount(), "remote ice wave fans out three shot visuals");
 		assertEquals("120,80", iceWaveSounds[0], "remote ice wave plays its world-position sound");
 
-		var blockChildren = course.levelRenderer.blockLayer.numChildren;
-		handler.dispatch("addEffect", ["Mine", "975", "975", "90"]);
-		assertEquals(blockChildren + 1, course.levelRenderer.blockLayer.numChildren, "remote mine mounts MineAppear on the block layer");
-		var mineAppear = Std.downcast(course.levelRenderer.blockLayer.getChildAt(blockChildren), MineAppear);
+		var effectChildrenBeforeMine = course.effectBackground.numChildren;
+		handler.dispatch("addEffect", ["Mine", "975", "945", "90"]);
+		assertEquals(effectChildrenBeforeMine + 1, course.effectBackground.numChildren,
+			"remote mine mounts MineAppear on the unrotated effect layer");
+		var mineAppear = Std.downcast(course.effectBackground.getChildAt(effectChildrenBeforeMine), MineAppear);
 		assertTrue(mineAppear != null, "remote mine uses MineAppear");
+		assertEquals(-945.0, mineAppear.x, "rotated MineAppear inverse-rotates its network x coordinate");
+		assertEquals(975.0, mineAppear.y, "rotated MineAppear inverse-rotates its network y coordinate");
+		assertEquals(90.0, mineAppear.rotation, "rotated MineAppear keeps the artwork aligned with the course");
 		for (_ in 0...33) {
 			mineAppear.dispatchEvent(new Event(Event.ENTER_FRAME));
 		}
-		assertEquals(BlockType.Mine, @:privateAccess course.level.blockAt(32, 32).type,
+		assertEquals(BlockType.Mine, @:privateAccess course.level.blockAt(32, 31).type,
 			"remote MineAppear completion adds the mine to the live gameplay map");
-		assertEquals(ObjectCodes.BLOCK_MINE, BlockCollision.blockFromPos(@:privateAccess course.level, 960, 960, 0).code,
+		assertEquals(ObjectCodes.BLOCK_MINE, BlockCollision.blockFromPos(@:privateAccess course.level, 960, 930, 0).code,
 			"remote MineAppear completion adds the mine to the effect collision map");
 
 		handler.dispatch("addEffect", ["Teleport", "90", "60", "0"]);
-		assertEquals(blockChildren + 1, course.levelRenderer.blockLayer.numChildren, "remote teleport mounts TeleportPop on the block layer");
-		assertTrue(Std.downcast(course.levelRenderer.blockLayer.getChildAt(blockChildren), TeleportPop) != null,
+		var teleportIndex = course.levelRenderer.blockLayer.numChildren;
+		assertTrue(teleportIndex > 0, "block layer remains available for block-plane effects");
+		assertTrue(Std.downcast(course.levelRenderer.blockLayer.getChildAt(teleportIndex - 1), TeleportPop) != null,
 			"remote teleport uses TeleportPop");
 
 		handler.dispatch("addEffect", ["Hat", "40", "50", "90", "5", "1193046", "-1", "3"]);

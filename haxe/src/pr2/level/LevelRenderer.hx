@@ -26,6 +26,7 @@ import pr2.level.Level.LevelBlock;
 import pr2.effects.BlockPiece;
 import pr2.effects.MineAppear;
 import pr2.effects.MineExplosion;
+import pr2.gameplay.RotationMath;
 import pr2.effects.TeleportPop;
 
 typedef ArtRenderOptions = {
@@ -809,14 +810,19 @@ class LevelRenderer extends Sprite {
 
 	public function showMineAppear(worldX:Float, worldY:Float, tileWorldX:Int, tileWorldY:Int, rotationDegrees:Float = 0, playSound:Bool = true,
 			?placeRuntimeMine:Void->Void):MineAppear {
-		var effect = new MineAppear(worldX, worldY, rotationDegrees, offsetX, offsetY, function():Void {
+		// Flash's MineAppear lives on the unrotated EffectBackground. The item
+		// payload is in the rotated map frame, so undo that rotation before
+		// mounting the animation; its own rotation keeps the authored artwork
+		// aligned with the course.
+		var effectPosition = RotationMath.rotatePoint(worldX, worldY, -rotationDegrees);
+		var effect = new MineAppear(effectPosition.x, effectPosition.y, rotationDegrees, offsetX, offsetY, function():Void {
 			if (placeRuntimeMine != null) {
 				placeRuntimeMine();
 			} else if (!blockDisplays.exists(blockKey(tileWorldX, tileWorldY))) {
 				addBlockDisplay(LevelBlock.fromWorldPixels(ObjectCodes.BLOCK_MINE, tileWorldX, tileWorldY));
 			}
 		}, playSound);
-		blockLayer.addChild(effect);
+		(effectLayer == null ? blockLayer : effectLayer).addChild(effect);
 		return effect;
 	}
 
