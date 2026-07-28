@@ -2,6 +2,7 @@ package pr2.levelEditor;
 
 import openfl.display.Sprite;
 import pr2.runtime.SvgAsset;
+import pr2.ui.AuthoredScale9;
 import pr2.ui.view.NativeView;
 
 /** Native sidebar brush-size preview. */
@@ -10,7 +11,7 @@ class BrushSizeButtonView extends NativeView {
 
 	public function new() {
 		super();
-		var background = SvgAsset.create("assets/svg/editor/size_picker_background.svg");
+		var background = AuthoredScale9.colorPickerSkin(SvgAsset.create("assets/svg/editor/size_picker_background.svg"));
 		background.name = "background";
 		background.scaleX = 1.36363220214844;
 		background.scaleY = 1.36363220214844;

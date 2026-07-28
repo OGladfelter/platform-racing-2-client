@@ -260,6 +260,8 @@ class EditorBlockOptionsTest {
 		var controls = new TestCourseView();
 		var background = controls.getChildByName("background");
 		assertPoint(background, 0, 0, 1, 1, "test-course background keeps the composed XFL coordinate space");
+		var backgroundHolder = Std.downcast(background, DisplayObjectContainer);
+		assertTrue(backgroundHolder.getChildAt(0).scale9Grid != null, "test-course panel preserves its authored scale grid");
 		var restart = Std.downcast(controls.getChildByName("restart_bt"), GameButton);
 		assertEquals("Restart", restart.label, "test-course restart label");
 		assertNear(94, restart.x, "test-course restart x");

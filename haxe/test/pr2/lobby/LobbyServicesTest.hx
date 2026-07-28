@@ -465,6 +465,7 @@ class LobbyServicesTest {
 		var deleteSideBarEntry = Std.downcast(deleteEntry, EditorSideBarEntry);
 		var brickSideBarEntry = Std.downcast(brickEntry, EditorSideBarEntry);
 		assertEquals(true, brickSideBarEntry.hasAuthoredChromeForTests(), "block sidebar entries use authored SquareBG chrome");
+		assertEquals(true, brickSideBarEntry.chromeUsesScale9ForTests(), "block sidebar SquareBG preserves its authored nine-slice corners");
 		assertEquals("ObjectDeleterButtonGraphic", deleteSideBarEntry.iconNameForTests(), "delete entry uses authored deleter graphic");
 		assertEquals("BrickBlock", brickSideBarEntry.iconNameForTests(), "block entry uses authored block preview");
 		brickEntry.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_OVER, true));
@@ -2776,12 +2777,18 @@ class LobbyServicesTest {
 		var leftBg = left.getChildAt(0);
 		assertEquals(194, Math.round(leftBg.width), "left lobby panel renders background width");
 		assertEquals(379, Math.round(leftBg.height), "left lobby panel renders background height");
+		var leftPanel = Std.downcast(leftBg, DisplayObjectContainer);
+		assertEquals(null, leftBg.scale9Grid, "left lobby panel wrapper is not scaled as one stretched surface");
+		assertNotNull(leftPanel.getChildAt(0).scale9Grid, "left lobby panel nine-slices the authored vector");
 		left.remove();
 
 		var right = new LobbyRight();
 		var rightBg = right.getChildAt(0);
 		assertEquals(347, Math.round(rightBg.width), "right lobby panel renders background width");
 		assertEquals(341, Math.round(rightBg.height), "right lobby panel renders background height");
+		var rightPanel = Std.downcast(rightBg, DisplayObjectContainer);
+		assertEquals(null, rightBg.scale9Grid, "right lobby panel wrapper is not scaled as one stretched surface");
+		assertNotNull(rightPanel.getChildAt(0).scale9Grid, "right lobby panel nine-slices the authored vector");
 		right.remove();
 		LobbySession.clear();
 	}

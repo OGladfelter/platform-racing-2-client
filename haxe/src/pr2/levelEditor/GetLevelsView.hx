@@ -9,6 +9,7 @@ import openfl.text.TextFormatAlign;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssets;
 import pr2.runtime.SvgAsset;
+import pr2.ui.AuthoredScale9;
 import pr2.ui.controls.GameButton;
 import pr2.ui.view.LoadingView;
 import pr2.ui.view.NativeView;
@@ -20,7 +21,7 @@ class GetLevelsView extends NativeView {
 	private var loading:Null<LoadingView>;
 	public function new() {
 		super();
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = -147;
 		background.y = -129;

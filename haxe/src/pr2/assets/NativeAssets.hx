@@ -3,6 +3,7 @@ package pr2.assets;
 import openfl.display.Bitmap;
 import openfl.display.BitmapData;
 import openfl.display.Shape;
+import openfl.geom.Rectangle;
 import openfl.media.Sound;
 import openfl.utils.Assets;
 import pr2.assets.NativeAssetIds.BitmapAsset;
@@ -15,7 +16,13 @@ import pr2.runtime.SvgAsset;
 /** Typed entry point for assets used by native PR2 presentation code. */
 final class NativeAssets {
 	public static function svg(id:StaticSvg):Shape {
-		return SvgAsset.create(id);
+		var art = SvgAsset.create(id);
+		if (id == StaticSvg.HalfSquarePanel) {
+			art.scale9Grid = new Rectangle(4.55, 3.9, 90.85, 91.4);
+		} else if (id == StaticSvg.QuantityPanel) {
+			art.scale9Grid = new Rectangle(4.65, 6.65, 262.95, 180.05);
+		}
+		return art;
 	}
 
 	public static function bitmap(id:BitmapAsset):Bitmap {

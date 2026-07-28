@@ -5,7 +5,7 @@ import openfl.text.TextFormat;
 import openfl.text.TextFormatAlign;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssets;
-import pr2.runtime.SvgAsset;
+import pr2.ui.AuthoredScale9;
 import pr2.ui.controls.GameButton;
 import pr2.ui.view.NativeView;
 
@@ -13,14 +13,12 @@ import pr2.ui.view.NativeView;
 class ChooseLevelsModeView extends NativeView {
 	public function new() {
 		super();
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = -122.5;
 		background.y = -68.75;
 		background.scaleX = 0.900802612304688;
 		background.scaleY = 0.719802856445312;
-		background.mouseEnabled = false;
-		background.mouseChildren = false;
 		addChild(background);
 
 		label("title", "-- Choose Mode --", -107.95, -58.2, 216.95, 17.05, 14, true);

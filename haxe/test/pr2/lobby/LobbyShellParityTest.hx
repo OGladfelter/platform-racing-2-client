@@ -32,6 +32,9 @@ class LobbyShellParityTest {
 			"sponsored logout and options buttons do not overlap");
 		assertNear(421, footer.vaultButton.y, "sponsored vault remains authored below the stage clip");
 		assertNear(421, footer.moreGamesButton.y, "sponsored Kong button remains authored below the stage clip");
+		var footerButtonBackground = @:privateAccess footer.levelEditorButton.authoredBackground;
+		assertEquals(null, footerButtonBackground.scale9Grid, "footer button wrapper remains unscaled");
+		assertTrue(footerButtonBackground.getChildAt(0).scale9Grid != null, "footer button nine-slices its authored background");
 
 		footer.setMemberVariant(true);
 		assertEquals(true, footer.member, "member variant selects kongregateSite frame");

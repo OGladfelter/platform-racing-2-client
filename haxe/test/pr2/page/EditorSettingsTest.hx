@@ -106,7 +106,13 @@ class EditorSettingsTest {
 
 	private static function testLevelEditorMenuAuthoredLayout():Void {
 		var view = new LevelEditorMenuView();
-		assertNotNull(directChild(view, "background"), "editor menu mounts exact XFL background panels");
+		var background = Std.downcast(directChild(view, "background"), Sprite);
+		assertNotNull(background, "editor menu mounts exact XFL background panels");
+		assertEquals(4, background.numChildren, "editor menu keeps all four authored background panels separate");
+		assertNotNull(background.getChildAt(0).scale9Grid, "editor menu bottom-left panel preserves its scale grid");
+		assertNotNull(background.getChildAt(1).scale9Grid, "editor menu right panel preserves its scale grid");
+		assertNotNull(background.getChildAt(2).scale9Grid, "editor menu bottom-right panel preserves its scale grid");
+		assertNotNull(background.getChildAt(3).scale9Grid, "editor menu top panel preserves its scale grid");
 		var glow = directChild(view, "selectedGlow");
 		assertNotNull(glow, "editor menu mounts exact XFL selected glow");
 		assertClose(-198.9, glow.x, "editor menu glow x follows XFL matrix");
@@ -227,6 +233,7 @@ class EditorSettingsTest {
 		assertClose(-68.75, background.y, "choose-level ShadowBG y follows XFL matrix");
 		assertClose(0.900802612304688, background.scaleX, "choose-level ShadowBG x scale follows XFL matrix");
 		assertClose(0.719802856445312, background.scaleY, "choose-level ShadowBG y scale follows XFL matrix");
+		assertNotNull(background.scale9Grid, "choose-level ShadowBG preserves its authored scale grid");
 
 		var title = Std.downcast(directChild(view, "title"), TextField);
 		var prompt = Std.downcast(directChild(view, "prompt"), TextField);
@@ -339,6 +346,7 @@ class EditorSettingsTest {
 		var menuBackground = directChild(menu, "background");
 		var title = Std.downcast(directChild(menu, "title"), TextField);
 		assertNotNull(menuBackground, "size picker menu mounts authored ShadowBG");
+		assertNotNull(menuBackground.scale9Grid, "size picker ShadowBG preserves its authored scale grid");
 		assertClose(-96.9, menuBackground.x, "size picker menu background x follows XFL matrix");
 		assertClose(-61.4, menuBackground.y, "size picker menu background y follows XFL matrix");
 		assertEquals("-- Brush Size --", title.text, "size picker menu preserves authored title");

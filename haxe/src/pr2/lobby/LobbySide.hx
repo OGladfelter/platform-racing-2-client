@@ -5,14 +5,12 @@ import js.Browser;
 #end
 import openfl.display.DisplayObject;
 import openfl.display.Sprite;
-import openfl.geom.Rectangle;
 import pr2.app.QueryParams;
-import pr2.assets.NativeAssetIds.StaticSvg;
-import pr2.assets.NativeAssets;
 import pr2.page.Page;
 import pr2.page.PageHolder;
 import pr2.ui.LobbyTab;
 import pr2.ui.TabsHolder;
+import pr2.ui.AuthoredScale9;
 
 /**
 	Port of Flash `lobby.LobbySide`: a `PageHolder` that pairs a tab strip
@@ -49,8 +47,9 @@ class LobbySide extends PageHolder {
 
 	private function makeBackground():Sprite {
 		var panel = new Sprite();
-		panel.addChild(NativeAssets.svg(StaticSvg.HalfSquarePanel));
-		panel.scale9Grid = new Rectangle(4.55, 3.9, 90.85, 91.4);
+		var art = AuthoredScale9.halfSquarePanel();
+		art.name = "panelArt";
+		panel.addChild(art);
 		return panel;
 	}
 

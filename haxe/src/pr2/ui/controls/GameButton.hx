@@ -3,7 +3,6 @@ package pr2.ui.controls;
 import openfl.events.Event;
 import openfl.display.Shape;
 import openfl.display.Sprite;
-import openfl.geom.Rectangle;
 import openfl.events.MouseEvent;
 import openfl.text.TextField;
 import openfl.text.TextFormat;
@@ -11,6 +10,7 @@ import openfl.text.TextFormatAlign;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssetIds.StaticSvg;
 import pr2.assets.NativeAssets;
+import pr2.ui.AuthoredScale9;
 
 class GameButton extends NativeControl {
 	public var label(get, set):String;
@@ -66,8 +66,7 @@ class GameButton extends NativeControl {
 		graphics.endFill();
 		while (authoredBackground.numChildren > 0) authoredBackground.removeChildAt(0);
 		var asset = authoredAsset();
-		var art = NativeAssets.svg(asset);
-		art.scale9Grid = new Rectangle(7, 5, 68, 11);
+		var art = AuthoredScale9.buttonSkin(NativeAssets.svg(asset));
 		art.width = controlWidth;
 		art.height = controlHeight;
 		authoredBackground.addChild(art);

@@ -7,7 +7,7 @@ import openfl.text.TextFormatAlign;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssets;
 import pr2.gameplay.Items;
-import pr2.runtime.SvgAsset;
+import pr2.ui.AuthoredScale9;
 import pr2.ui.controls.GameCheckBox;
 import pr2.ui.controls.GameSlider;
 import pr2.ui.view.NativeView;
@@ -107,7 +107,7 @@ class EditorBlockOptionsView extends NativeView {
 	}
 
 	private function background(x:Float, y:Float, scaleX:Float, scaleY:Float):Void {
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = x;
 		background.y = y;

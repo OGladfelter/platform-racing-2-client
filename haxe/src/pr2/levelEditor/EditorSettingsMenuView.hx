@@ -6,7 +6,7 @@ import openfl.text.TextFormatAlign;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssets;
 import pr2.gameplay.Modes;
-import pr2.runtime.SvgAsset;
+import pr2.ui.AuthoredScale9;
 import pr2.ui.controls.GameSelect;
 import pr2.ui.controls.GameTextInput;
 import pr2.ui.view.NativeView;
@@ -26,7 +26,7 @@ class EditorSettingsMenuView extends NativeView {
 	}
 
 	private function makeMode():Void {
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = -116.5;
 		background.y = -59.3;
@@ -57,7 +57,7 @@ class EditorSettingsMenuView extends NativeView {
 	}
 
 	private function makeValue():Void {
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = -114.95;
 		background.y = -72.75;
@@ -81,7 +81,7 @@ class EditorSettingsMenuView extends NativeView {
 	}
 
 	private function makeMusic():Void {
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = -120;
 		background.y = -50;

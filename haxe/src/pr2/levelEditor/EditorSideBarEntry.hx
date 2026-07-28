@@ -7,9 +7,8 @@ import openfl.display.Shape;
 import openfl.events.MouseEvent;
 import openfl.geom.Rectangle;
 import openfl.geom.ColorTransform;
-import pr2.assets.NativeAssetIds.StaticSvg;
-import pr2.assets.NativeAssets;
 import pr2.lobby.dialogs.HoverDelayPopup;
+import pr2.ui.AuthoredScale9;
 
 class EditorSideBarEntry extends HoverDelayPopup {
 	public final id:String;
@@ -24,7 +23,7 @@ class EditorSideBarEntry extends HoverDelayPopup {
 		name = id + "Entry";
 		buttonMode = true;
 		useHandCursor = true;
-		chrome = NativeAssets.svg(StaticSvg.TimerPanel);
+		chrome = AuthoredScale9.squarePanel();
 		chrome.name = "SquareBG";
 		chrome.width = 28;
 		chrome.height = 28;
@@ -84,6 +83,10 @@ class EditorSideBarEntry extends HoverDelayPopup {
 
 	public function usesNativeChromeForTests():Bool {
 		return chrome != null;
+	}
+
+	public function chromeUsesScale9ForTests():Bool {
+		return chrome != null && chrome.scale9Grid != null;
 	}
 
 	public function iconColorTransformForTests():ColorTransform {

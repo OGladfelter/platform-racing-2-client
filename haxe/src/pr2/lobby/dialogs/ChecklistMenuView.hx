@@ -5,7 +5,7 @@ import openfl.text.TextFormat;
 import openfl.text.TextFormatAlign;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssets;
-import pr2.runtime.SvgAsset;
+import pr2.ui.AuthoredScale9;
 import pr2.ui.controls.GameCheckBox;
 import pr2.ui.view.NativeView;
 
@@ -22,7 +22,7 @@ class ChecklistMenuView extends NativeView {
 	}
 
 	private function buildHats():Void {
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = -145;
 		background.y = -85;
@@ -64,7 +64,7 @@ class ChecklistMenuView extends NativeView {
 	}
 
 	private function buildItems():Void {
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = -118.9;
 		background.y = -61.4;

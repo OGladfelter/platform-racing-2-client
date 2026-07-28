@@ -2,6 +2,7 @@ package pr2.levelEditor;
 
 import openfl.display.Sprite;
 import pr2.runtime.SvgAsset;
+import pr2.ui.AuthoredScale9;
 import pr2.ui.controls.GameButton;
 import pr2.ui.controls.GameSelect;
 import pr2.ui.view.NativeView;
@@ -12,8 +13,12 @@ class LevelEditorMenuView extends NativeView {
 
 	public function new() {
 		super();
-		var background = SvgAsset.create("assets/svg/editor/level_editor_menu_background.svg");
+		var background = new Sprite();
 		background.name = "background";
+		panel(background, "bottomLeftPanel", -265, 162, 2.72998046875, 0.350006103515625);
+		panel(background, "rightPanel", 216, -198, 0.560043334960938, 3.56997680664063);
+		panel(background, "bottomRightPanel", 21, 162, 1.7998046875, 0.350006103515625);
+		panel(background, "topPanel", -265, -198, 4.66026306152344, 0.349945068359375);
 		addChild(background);
 		var glow = SvgAsset.create("assets/svg/editor/level_editor_menu_glow.svg");
 		glow.name = "selectedGlow";
@@ -45,6 +50,16 @@ class LevelEditorMenuView extends NativeView {
 		addChild(zoomSelect);
 		button("undoButton", "Undo", 94.65, 169, 46.09375);
 		button("redoButton", "Redo", 146.15, 169, 46.09375);
+	}
+
+	private function panel(parent:Sprite, name:String, x:Float, y:Float, scaleX:Float, scaleY:Float):Void {
+		var art = AuthoredScale9.squarePanel();
+		art.name = name;
+		art.x = x;
+		art.y = y;
+		art.scaleX = scaleX;
+		art.scaleY = scaleY;
+		parent.addChild(art);
 	}
 
 	private function button(name:String, label:String, x:Float, y:Float, width:Float):Void {

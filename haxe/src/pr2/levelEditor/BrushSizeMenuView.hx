@@ -4,7 +4,7 @@ import openfl.text.TextField;
 import openfl.text.TextFormat;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssets;
-import pr2.runtime.SvgAsset;
+import pr2.ui.AuthoredScale9;
 import pr2.ui.controls.GameSlider;
 import pr2.ui.controls.GameTextInput;
 import pr2.ui.view.NativeView;
@@ -16,7 +16,7 @@ class BrushSizeMenuView extends NativeView {
 
 	public function new() {
 		super();
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = -96.9;
 		background.y = -61.4;

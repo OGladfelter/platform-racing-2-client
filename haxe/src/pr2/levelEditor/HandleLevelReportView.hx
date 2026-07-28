@@ -5,7 +5,7 @@ import openfl.text.TextFormat;
 import openfl.text.TextFormatAlign;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssets;
-import pr2.runtime.SvgAsset;
+import pr2.ui.AuthoredScale9;
 import pr2.ui.controls.GameButton;
 import pr2.ui.controls.GameSelect;
 import pr2.ui.controls.GameTextInput;
@@ -15,7 +15,7 @@ import pr2.ui.view.NativeView;
 class HandleLevelReportView extends NativeView {
 	public function new() {
 		super();
-		var background = SvgAsset.createNormalized("assets/svg/ui/shadow_bg.svg");
+		var background = AuthoredScale9.shadowPanel();
 		background.name = "background";
 		background.x = -150;
 		background.y = -135;
