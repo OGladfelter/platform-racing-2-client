@@ -2,7 +2,6 @@ package pr2.lobby.players;
 
 import openfl.display.Sprite;
 import openfl.events.MouseEvent;
-import openfl.geom.Rectangle;
 import openfl.text.TextField;
 import openfl.text.TextFormat;
 import pr2.assets.NativeAssetIds.FontAsset;
@@ -32,9 +31,19 @@ class PlayersTabListView extends NativeView {
 		listHolder = new Sprite();
 		listHolder.name = "listHolder";
 		listHolder.y = 17;
-		// Graphics/Symbol 26 scaled by the authored 1.74 x 3.33 mask.
-		listHolder.scrollRect = new Rectangle(0, 0, 174, 333);
 		addChild(listHolder);
+
+		// XFL layer 5 is a fixed mask over the scrolling listHolder layer.
+		// Keep it as a sibling: CustomScrollBar changes listHolder.y, and a
+		// scrollRect on listHolder would move the clipping region with the rows.
+		var scrollMask = new Sprite();
+		scrollMask.name = "playersListMask";
+		scrollMask.y = 17;
+		scrollMask.graphics.beginFill(0x000000);
+		scrollMask.graphics.drawRect(0, 0, 174, 333);
+		scrollMask.graphics.endFill();
+		addChild(scrollMask);
+		listHolder.mask = scrollMask;
 	}
 
 	private function button(name:String, label:String, x:Float, width:Float):Void {

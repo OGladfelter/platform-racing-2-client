@@ -116,6 +116,7 @@ class StorePopupTest {
 		assertEquals(-115.0, scroll.y, "store scrollbar y matches Flash placement");
 		scroll.position(scroll.thumbMaxYForTests());
 		assertEquals(true, popup.holderForTests().y < 0, "store scrollbar moves the listings holder");
+		assertClose(-135, holder.mask.y, "store items mask stays fixed while content scrolls");
 		popup.remove();
 		assertEquals(true, scroll.removedForTests(), "store cleanup removes authored scrollbar listeners");
 		assertEquals(0, StorePopup.userCoins, "cleanup clears coin balance");

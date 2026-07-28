@@ -211,6 +211,8 @@ class EditorBlockOptionsTest {
 		assertNotNull(holder.mask, "get-levels list uses the authored fixed mask");
 		assertNear(248, holder.mask.width, "get-levels mask width");
 		assertNear(158, holder.mask.height, "get-levels mask height");
+		holder.y = -120;
+		assertNear(0, holder.mask.y, "get-levels mask stays fixed while content scrolls");
 		assertPoint(view.getChildByName("loadingGraphic"), 0, 0.05, 1, 1, "get-levels loading graphic");
 		var load = Std.downcast(view.getChildByName("load_bt"), GameButton);
 		assertEquals("Load", load.label, "get-levels load label");

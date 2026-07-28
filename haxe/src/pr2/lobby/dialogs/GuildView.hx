@@ -53,6 +53,18 @@ class GuildView extends NativeView {
 		holder.x = -140;
 		holder.y = -26;
 		addChild(holder);
+		// XFL MemberList is a fixed mask layer above the scrolling
+		// membersHolder layer. It must remain a sibling because CustomScrollBar
+		// scrolls by changing membersHolder.y.
+		var membersMask = new Sprite();
+		membersMask.name = "membersMask";
+		membersMask.x = -140;
+		membersMask.y = -28;
+		membersMask.graphics.beginFill(0x000000);
+		membersMask.graphics.drawRect(0, 0, 265, 100);
+		membersMask.graphics.endFill();
+		addChild(membersMask);
+		holder.mask = membersMask;
 
 		link("edit_bt", "edit", -140, 125.85, 27);
 		link("delete_bt", "delete", 103.1, 125.85, 34.85);

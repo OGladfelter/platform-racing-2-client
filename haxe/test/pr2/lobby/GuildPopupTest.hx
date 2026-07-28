@@ -158,6 +158,13 @@ class GuildPopupTest {
 		assertClose(273.95, prose.width, "guild prose keeps authored width");
 		assertClose(-140, holder.x, "member holder keeps XFL X");
 		assertClose(-26, holder.y, "member holder keeps XFL Y");
+		assertNotNull(holder.mask, "guild member list uses the authored fixed mask");
+		assertClose(-140, holder.mask.x, "guild member mask keeps XFL X");
+		assertClose(-28, holder.mask.y, "guild member mask keeps XFL Y");
+		assertClose(265, holder.mask.width, "guild member mask keeps XFL width");
+		assertClose(100, holder.mask.height, "guild member mask keeps XFL height");
+		holder.y = -60;
+		assertClose(-28, holder.mask.y, "guild member mask stays fixed while content scrolls");
 		assertClose(-140, backing.x, "emblem backing keeps XFL X");
 		assertClose(-109, backing.y, "emblem backing keeps XFL Y");
 		assertClose(-49, close.x, "non-member Close keeps XFL X");

@@ -450,6 +450,8 @@ class LobbyServicesTest {
 		assertEquals(30, Std.int(editor.menu.sideBar.maskWidthForTests()), "editor sidebar mask width");
 		assertEquals(348, Std.int(editor.menu.sideBar.maskHeightForTests()), "editor sidebar mask height");
 		assertEquals(true, editor.menu.sideBar.scrollHolderForTests().mask == editor.menu.sideBar.scrollMaskForTests(), "editor sidebar masks scroll holder");
+		editor.menu.sideBar.scrollHolderForTests().y = -20;
+		assertEquals(0, Std.int(editor.menu.sideBar.scrollMaskForTests().y), "editor sidebar mask stays fixed while content scrolls");
 		var deleteEntry = editor.menu.sideBar.getChildByName("deleteEntry");
 		var basic1Entry = editor.menu.sideBar.getChildByName("basic1Entry");
 		var brickEntry = editor.menu.sideBar.getChildByName("brickEntry");
@@ -2064,7 +2066,12 @@ class LobbyServicesTest {
 		assertEquals(174, players.width, "players list authored width");
 		assertEquals(350, players.height, "players list authored height");
 		assertEquals(17, players.listHolder.y, "players list holder registration");
-		assertEquals(333, Std.int(players.listHolder.scrollRect.height), "players list authored mask height");
+		var playersMask = players.listHolder.mask;
+		assertNotNull(playersMask, "players list uses the authored fixed mask");
+		assertEquals(333, Std.int(playersMask.height), "players list authored mask height");
+		assertEquals(17, Std.int(playersMask.y), "players list mask registration");
+		players.listHolder.y = -20;
+		assertEquals(17, Std.int(playersMask.y), "players list mask stays fixed while content scrolls");
 		assertNotNull(players.getChildByName("name_bt"), "players list has Name header");
 		assertNotNull(players.getChildByName("rank_bt"), "players list has Rank header");
 		assertNotNull(players.getChildByName("hats_bt"), "players list has Hats header");
