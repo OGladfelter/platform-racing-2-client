@@ -31,12 +31,16 @@ class FinishedPage extends Popup {
 	private var returnBinding:Null<Binding>;
 	private var closeBinding:Null<Binding>;
 
-	public function new(courseID:Int, ?onReturn:Void->Void, ?onClose:FinishedPage->Void) {
+	public function new(courseID:Int, ?onReturn:Void->Void, ?onClose:FinishedPage->Void, physicsFrames:Int = 0) {
 		super();
 		this.onReturn = onReturn;
 		this.onClose = onClose;
 
 		art = new FinishedPageView();
+		var physicsFrameField = LobbyArt.directText(art, "physicsFrames");
+		if (physicsFrameField != null) {
+			physicsFrameField.text = "Physics frames: " + physicsFrames;
+		}
 		returnBinding = LobbyArt.bind(DisplayUtil.directChildByName(art, "return_bt"), clickReturn);
 		closeBinding = LobbyArt.bind(DisplayUtil.directChildByName(art, "close_bt"), function():Void startFadeOut());
 		addChild(art);

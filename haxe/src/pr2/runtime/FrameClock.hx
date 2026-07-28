@@ -111,6 +111,7 @@ class FrameClock {
 	}
 
 	@:allow(pr2.gameplay.GameShellMountTest)
+	@:allow(pr2.gameplay.RaceSessionTranscriptTest)
 	@:allow(pr2.character.RemoteCharacterConsumeTest)
 	@:allow(pr2.character.CharacterBaseTest)
 	@:allow(pr2.character.ParticleEmitterTest)

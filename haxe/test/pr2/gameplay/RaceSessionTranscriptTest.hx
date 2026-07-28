@@ -17,6 +17,8 @@ import pr2.net.ServerLevelData;
 import pr2.page.GamePage;
 import pr2.page.LobbyPage;
 import pr2.page.PageHolder;
+import pr2.runtime.FrameClock;
+import pr2.runtime.FrameRateSettings;
 import pr2.util.TestDisplayUtil as DisplayUtil;
 
 /**
@@ -68,9 +70,13 @@ class RaceSessionTranscriptTest {
 
 		// The server pushes the local character and the race start before the
 		// HTTP payload lands; GamePage must buffer them until the course exists.
+		var physicsClock = new FrameClock(FrameRateSettings.fromQuery(null, true));
+		FrameClock.setCurrentForTests(physicsClock);
 		handler.dispatch("createLocalCharacter",
 			["7", "80", "70", "60", "101", "102", "103", "104", "2", "3", "4", "5", "201", "202", "203", "204", "g"]);
 		handler.dispatch("beginRace", []);
+		physicsClock.advanceFrame();
+		physicsClock.advanceFrame();
 		assertEquals(true, game.course == null, "course not built until the payload arrives");
 		assertTrue(game.pendingLocalInit != null, "local character frame buffered while loading");
 		assertEquals(true, game.pendingBeginRace, "begin-race frame buffered while loading");
@@ -90,6 +96,7 @@ class RaceSessionTranscriptTest {
 		assertTrue(course.localCharacter.stateSnapshot().speedStat >= 100, "replayed cowboy hat activates its stat boost");
 		assertEquals(false, course.raceStarted, "race waits for the countdown");
 		assertTrue(course.countdown != null, "begin-race mounts the countdown");
+		physicsClock.advanceFrame();
 		var startPos = course.localCharacter.getPos();
 		var startPositionCommand = 'exact_pos`${Math.round(startPos.x)}`${Math.round(startPos.y)}';
 		assertEquals(startPositionCommand, LobbySocket.lastSent(), "begin-race emits the starting position");
@@ -98,6 +105,7 @@ class RaceSessionTranscriptTest {
 		while (course.countdown != null && course.countdown.parent != null) {
 			course.countdown.advance();
 		}
+		physicsClock.advanceFrame();
 		assertEquals(true, course.raceStarted, "countdown finish starts the race");
 		assertEquals("p`0`0", LobbySocket.lastSent(), "race start initializes network position emission");
 
@@ -115,6 +123,8 @@ class RaceSessionTranscriptTest {
 		assertEquals(true, course.raceEnded, "quit tells the course the race is over");
 		var finish = Std.downcast(Popup.getOpen()[0], FinishedPage);
 		assertTrue(finish != null, "quitting opens the finish overlay");
+		assertEquals("Physics frames: 4", LobbyArt.text(finish, "physicsFrames").text,
+			"finish overlay counts physics frames from the buffered server begin-race message");
 
 		// ---- 6. Return to lobby without a reload ----------------------------
 		LobbySocket.simulateOpenForTests();
@@ -137,6 +147,7 @@ class RaceSessionTranscriptTest {
 		];
 		assertEquals(expected.join(" | "), sessionTranscriptCommands().join(" | "),
 			"full session emits the join -> race -> quit -> return transcript in order");
+		FrameClock.setCurrentForTests(null);
 
 		holder.getCurrentPage().remove();
 		for (popup in Popup.getOpen().copy()) {

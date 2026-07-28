@@ -31,6 +31,7 @@ import pr2.net.LobbySocket;
 import pr2.net.LevelDataClient;
 import pr2.net.ServerLevelData;
 import pr2.runtime.FontResolver;
+import pr2.runtime.FrameClock;
 import pr2.level.LevelDecoder;
 
 /**
@@ -61,6 +62,9 @@ class GamePage extends Page implements GameCommandDelegate {
 	private var pendingEggAdds:Array<Int> = [];
 	private var pendingLife:Null<Int>;
 	private var pendingAwards:Array<Array<String>> = [];
+	private var raceStartReceived:Bool = false;
+	private var raceStartPhysicsFrame:Null<Int>;
+	private var finishedPhysicsFrames:Null<Int>;
 	private var expOld:Int = 0;
 	private var expNew:Int = 0;
 	private var expToRank:Int = 0;
@@ -313,6 +317,13 @@ class GamePage extends Page implements GameCommandDelegate {
 
 	public function beginRace():Void {
 		closePrizePopup();
+		if (!raceStartReceived) {
+			raceStartReceived = true;
+			var clock = FrameClock.current;
+			if (clock != null) {
+				raceStartPhysicsFrame = clock.simulationFrameNumber;
+			}
+		}
 		if (course == null) {
 			pendingBeginRace = true;
 			return;
@@ -478,6 +489,7 @@ class GamePage extends Page implements GameCommandDelegate {
 		if (!playerDone) {
 			LobbySocket.write("quit_race`");
 		}
+		captureFinishedPhysicsFrames();
 		markPlayerDone();
 		maybeShowFinishedPage();
 		// The course keeps ticking under the finished overlay; tell it the race is
@@ -496,6 +508,9 @@ class GamePage extends Page implements GameCommandDelegate {
 		if (playerDone) {
 			return;
 		}
+		// Course calls us immediately after emitting finish_race, while the
+		// authoritative physics-frame number is still the one that finished.
+		captureFinishedPhysicsFrames();
 		markPlayerDone();
 		if (quitButton != null) {
 			quitButton.startGlow();
@@ -526,7 +541,9 @@ class GamePage extends Page implements GameCommandDelegate {
 		if (quitButton != null) {
 			quitButton.stopGlow();
 		}
-		finishedPage = new FinishedPage(levelId, returnToLobby, clearFinishedPage);
+		captureFinishedPhysicsFrames();
+		var physicsFrames = finishedPhysicsFrames == null ? 0 : finishedPhysicsFrames;
+		finishedPage = new FinishedPage(levelId, returnToLobby, clearFinishedPage, physicsFrames);
 		for (awardArgs in pendingAwards) {
 			applyAwardToFinishedPage(awardArgs);
 		}
@@ -546,6 +563,21 @@ class GamePage extends Page implements GameCommandDelegate {
 		if (finishedPage == page) {
 			finishedPage = null;
 		}
+	}
+
+	private function captureFinishedPhysicsFrames():Void {
+		if (finishedPhysicsFrames != null) {
+			return;
+		}
+		var clock = FrameClock.current;
+		if (raceStartPhysicsFrame != null && clock != null) {
+			var elapsed = clock.simulationFrameNumber - raceStartPhysicsFrame;
+			finishedPhysicsFrames = elapsed < 0 ? 0 : elapsed;
+			return;
+		}
+		// Deterministic/unit contexts may not install the application clock.
+		// Course's counter has the same beginRace-to-finish boundaries there.
+		finishedPhysicsFrames = course == null ? 0 : course.framesPlaying;
 	}
 
 	private static function arg(args:Array<String>, index:Int):String {

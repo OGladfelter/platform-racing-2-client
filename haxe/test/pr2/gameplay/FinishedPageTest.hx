@@ -27,7 +27,7 @@ class FinishedPageTest {
 	}
 
 	private static function testAwardsAndExpTotal():Void {
-		var page = new FinishedPage(12345);
+		var page = new FinishedPage(12345, null, null, 1842);
 		assertEquals("assets/svg/effects/finished_page_01.svg", FinishedPageView.SHELL_ASSET,
 			"finished page uses the exact authored XFL shell and static copy");
 		assertEquals(true, DisplayUtil.findByName(page, "exactShell").width > 280,
@@ -37,6 +37,11 @@ class FinishedPageTest {
 		assertNear(50.25, LobbyArt.text(page, "exp1").x, 0.001, "experience column preserves authored x");
 		assertNear(-111, DisplayUtil.findByName(page, "close_bt").x, 0.001, "close button preserves authored x");
 		assertNear(8, DisplayUtil.findByName(page, "return_bt").x, 0.001, "return button preserves authored x");
+		assertEquals("Physics frames: 1842", LobbyArt.text(page, "physicsFrames").text,
+			"finish popup shows the measured physics-frame count");
+		assertNear(-136, LobbyArt.text(page, "physicsFrames").x, 0.001, "physics-frame count sits at the popup's left edge");
+		assertNear(-132, LobbyArt.text(page, "physicsFrames").y, 0.001, "physics-frame count sits along the popup's top edge");
+		assertEquals(8, LobbyArt.text(page, "physicsFrames").defaultTextFormat.size, "physics-frame count uses compact text");
 
 		page.award("First Place", "+50");
 		page.award("Speed Bonus", "+20");

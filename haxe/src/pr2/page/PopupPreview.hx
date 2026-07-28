@@ -41,7 +41,7 @@ class PopupPreview extends Sprite {
 				new ConfirmPopup(function() {}, "This parent must remain dimmed behind its child.");
 				new MessagePopup("Nested popup focus and stacking check.");
 			case "finished":
-				var finished = new FinishedPage(6497936);
+				var finished = new FinishedPage(6497936, null, null, 1842);
 				finished.award("Level Completed", "+ 26");
 				finished.setExpGain(520, 546, 546);
 			case "prize": new PrizePopup("hat", 4, "Propeller Hat", "Hold up while wearing this hat to float!", true, false);

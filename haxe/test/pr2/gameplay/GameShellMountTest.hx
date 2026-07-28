@@ -1230,12 +1230,18 @@ class GameShellMountTest {
 		var course = buildCourse("race");
 		course.beginRace();
 		assertEquals(false, course.timer.debugPaused(), "race timer runs once beginRace arrives");
+		course.dispatchEvent(new Event(Event.ENTER_FRAME));
+		course.dispatchEvent(new Event(Event.ENTER_FRAME));
+		course.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(3, course.framesPlaying, "physics-frame measurement advances from the begin-race message");
 		LobbySocket.resetSent();
 		var finish = new LocalPlayerState(0, 0, 0, 0, false, false, CharacterState.Stand, null, "land", null, null, null, 50, 50,
 			50, 0, true, 1, 9945, 9945);
 		@:privateAccess course.maybeHandleLocalFinish(finish);
 		assertEquals("finish_race`1`9945`9945|set_var`beginRemove`1", LobbySocket.sentCommands.join("|"),
 			"race finish reports world coordinates and starts local removal");
+		course.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(3, course.framesPlaying, "physics-frame measurement stops when finish_race is emitted");
 		assertEquals(true, course.timer.debugPaused(), "race finish freezes the HUD timer");
 		assertEquals(false, course.localCharacter.removed, "finish starts fade-out instead of immediate removal");
 		assertEquals(CharacterState.Stand, course.localCharacter.state, "finish preserves the character animation instead of showing the ice-blast pose");

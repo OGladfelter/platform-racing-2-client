@@ -24,6 +24,7 @@ class FinishedPageView extends NativeView {
 		field("expTotal", 50.25, 19.5, 76, 14.55, TextFormatAlign.LEFT);
 		button("close_bt", "Close", -111, 121);
 		button("return_bt", "Return to Lobby", 8, 121);
+		field("physicsFrames", -136, -132, 130, 11, TextFormatAlign.LEFT, 8);
 	}
 
 	private function button(name:String, label:String, x:Float, y:Float):Void {
@@ -35,7 +36,7 @@ class FinishedPageView extends NativeView {
 		addChild(control);
 	}
 
-	private function field(name:String, x:Float, y:Float, width:Float, height:Float, align:TextFormatAlign):Void {
+	private function field(name:String, x:Float, y:Float, width:Float, height:Float, align:TextFormatAlign, size:Int = 12):Void {
 		var text = new TextField();
 		text.name = name;
 		text.x = x;
@@ -43,7 +44,8 @@ class FinishedPageView extends NativeView {
 		text.width = width;
 		text.height = height;
 		text.selectable = false;
-		text.defaultTextFormat = new TextFormat("Verdana", 12, 0x000000, false, null, null, null, null, align);
+		text.mouseEnabled = false;
+		text.defaultTextFormat = new TextFormat("Verdana", size, 0x000000, false, null, null, null, null, align);
 		text.text = "--";
 		addChild(text);
 	}
