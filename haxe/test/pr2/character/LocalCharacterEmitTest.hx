@@ -15,6 +15,7 @@ class LocalCharacterEmitTest {
 		testInitAndCadenceGatedPositionEmission();
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LocalCharacterEmitTest")) return;
 		testFallbackCadenceWithoutRemotePlayers();
+		testPeriodicExactPositionResync();
 		testTrackedVarAndEventEmission();
 		testHeartBlockGainEmitsLocalHeartProtocol();
 		trace('LocalCharacterEmitTest passed $assertions assertions');
@@ -42,6 +43,7 @@ class LocalCharacterEmitTest {
 			"set_var`state`stand",
 			"set_var`parent`backBackground"
 		], "fifth-frame position and vars");
+		character.remove();
 	}
 
 	private static function testFallbackCadenceWithoutRemotePlayers():Void {
@@ -58,6 +60,29 @@ class LocalCharacterEmitTest {
 		character.emitNetworkUpdate();
 		assertEquals("p`150`120", commandWithPrefix("p`", 1), "solo fallback delta");
 		assertEquals("exact_pos`150`120", commandWithPrefix("exact_pos`"), "solo fallback exact position");
+		character.remove();
+	}
+
+	private static function testPeriodicExactPositionResync():Void {
+		assertEquals(5000, LocalCharacter.EXACT_POSITION_RESYNC_INTERVAL_MS, "Flash exact-position resync interval");
+		var character = new LocalCharacter(flatLevel());
+		character.networkPlayerCount = 2;
+		LobbySocket.resetSent();
+		character.initNetworkEmission();
+		character.setControllerPosition(80, 100);
+		for (_ in 0...5) {
+			character.emitNetworkUpdate();
+		}
+		LobbySocket.resetSent();
+
+		character.onExactPositionResyncTimer(null);
+		for (_ in 0...4) {
+			character.emitNetworkUpdate();
+		}
+		assertEquals(false, hasCommandPrefix("exact_pos`"), "periodic resync waits for normal emission cadence");
+		character.emitNetworkUpdate();
+		assertEquals("exact_pos`80`100", commandWithPrefix("exact_pos`"), "periodic resync emits unchanged full position");
+		character.remove();
 	}
 
 	private static function testTrackedVarAndEventEmission():Void {
@@ -123,6 +148,7 @@ class LocalCharacterEmitTest {
 			"check_hat_countdown`",
 			"set_var`beginRemove`1"
 		], "event command emission");
+		character.remove();
 	}
 
 	private static function testHeartBlockGainEmitsLocalHeartProtocol():Void {

@@ -1,6 +1,8 @@
 package pr2.character;
 
+import openfl.events.TimerEvent;
 import openfl.geom.Point;
+import openfl.utils.Timer;
 import pr2.gameplay.player.LocalPlayerController;
 import pr2.gameplay.player.LocalPlayerControllerTypes.PixelPoint;
 import pr2.gameplay.player.LocalPlayerState;
@@ -17,6 +19,9 @@ import pr2.net.LobbySocket;
 	that owns that controller and mirrors its authoritative motion state.
 **/
 class LocalCharacter extends Character {
+	@:allow(pr2.character.LocalCharacterEmitTest)
+	private static inline var EXACT_POSITION_RESYNC_INTERVAL_MS:Int = 5000;
+
 	public final controller:LocalPlayerController;
 
 	public var grounded(get, never):Bool;
@@ -41,6 +46,7 @@ class LocalCharacter extends Character {
 	private var lastNetParent:Null<String>;
 	private var lastNetItem:Int = 0;
 	private var exactPosNextUpdate:Bool = false;
+	private var exactPositionResyncTimer:Null<Timer>;
 	private final baseGravityMultiplier:Float;
 	private var lastJetPackActive:Bool = false;
 	private var lastSpeedBurstActive:Bool = false;
@@ -207,6 +213,7 @@ class LocalCharacter extends Character {
 	}
 
 	public function initNetworkEmission():Void {
+		startExactPositionResyncTimer();
 		framesSinceUpdate = 0;
 		exactX = 0;
 		exactY = 0;
@@ -242,6 +249,32 @@ class LocalCharacter extends Character {
 
 	public function forceExactPositionOnNextUpdate():Void {
 		exactPosNextUpdate = true;
+	}
+
+	private function startExactPositionResyncTimer():Void {
+		stopExactPositionResyncTimer();
+		exactPositionResyncTimer = new Timer(EXACT_POSITION_RESYNC_INTERVAL_MS);
+		exactPositionResyncTimer.addEventListener(TimerEvent.TIMER, onExactPositionResyncTimer);
+		exactPositionResyncTimer.start();
+	}
+
+	private function stopExactPositionResyncTimer():Void {
+		if (exactPositionResyncTimer == null) {
+			return;
+		}
+		exactPositionResyncTimer.stop();
+		exactPositionResyncTimer.removeEventListener(TimerEvent.TIMER, onExactPositionResyncTimer);
+		exactPositionResyncTimer = null;
+	}
+
+	@:allow(pr2.character.LocalCharacterEmitTest)
+	private function onExactPositionResyncTimer(_:Null<TimerEvent>):Void {
+		forceExactPositionOnNextUpdate();
+	}
+
+	override public function remove():Void {
+		stopExactPositionResyncTimer();
+		super.remove();
 	}
 
 	public function setNetworkRotation(rotation:Int):Void {
