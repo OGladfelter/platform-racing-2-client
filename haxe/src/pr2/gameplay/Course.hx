@@ -64,7 +64,6 @@ import pr2.runtime.FrameClock;
 	roster controller owns their command registration and lifecycle.
 **/
 class Course extends Sprite {
-	private static inline var MAX_LOCAL_PRESENTATION_DELTA:Float = 60;
 	// Verified Course holder->stage offsets (holder is centred at +275,+200).
 	public static inline var ITEM_X:Float = 2;
 	public static inline var ITEM_Y:Float = 2;
@@ -111,11 +110,8 @@ class Course extends Sprite {
 	private final localPresentationPose:PresentationPose = new PresentationPose();
 	private final cameraPresentationPose:CameraPresentationPose = new CameraPresentationPose();
 	private var localPresentationBeforeCourseRotation:Int = 0;
-	private var localPresentationBeforeDiscontinuityVersion:Int = 0;
-	private var localPresentationBeforeCollisionVersion:Int = 0;
-	private var localPresentationBeforeVx:Float = 0;
-	private var localPresentationBeforeVy:Float = 0;
-	private var localPresentationBeforeGrounded:Bool = false;
+	private var localPresentationVelocityX:Float = 0;
+	private var localPresentationVelocityY:Float = 0;
 	private var localPresentationDiscontinuityPending:Bool = true;
 
 	public var miniMap(default, null):MiniMap;
@@ -971,11 +967,6 @@ class Course extends Sprite {
 	private function beginLocalPresentationPoseCapture(state:LocalPlayerState):Void {
 		localCharacter.clearPresentationWorldOffset();
 		localPresentationBeforeCourseRotation = state.courseRotation;
-		localPresentationBeforeDiscontinuityVersion = localCharacter.controller.movementDiscontinuityVersion;
-		localPresentationBeforeCollisionVersion = localCharacter.controller.collisionVersion;
-		localPresentationBeforeVx = state.vx;
-		localPresentationBeforeVy = state.vy;
-		localPresentationBeforeGrounded = state.grounded;
 		localPresentationPose.beginSimulationTick(
 			state.x,
 			state.y,
@@ -986,20 +977,17 @@ class Course extends Sprite {
 	}
 
 	private function finishLocalPresentationPoseCapture(state:LocalPlayerState):Void {
-		var deltaX = state.x - localPresentationPose.previousX;
-		var deltaY = state.y - localPresentationPose.previousY;
 		var layer = presentationLayerFor(state);
-		var discontinuous = PresentationPose.shouldSnap(
-			localPresentationDiscontinuityPending,
-			localCharacter.controller.movementDiscontinuityVersion != localPresentationBeforeDiscontinuityVersion,
-			localCharacter.controller.collisionVersion != localPresentationBeforeCollisionVersion,
-			state.courseRotation != localPresentationBeforeCourseRotation,
-			layer != localPresentationPose.previousLayer,
-			!localPresentationBeforeGrounded && state.grounded,
-			PresentationPose.velocityReversed(localPresentationBeforeVx, state.vx),
-			PresentationPose.velocityReversed(localPresentationBeforeVy, state.vy),
-			PresentationPose.movementTooLarge(deltaX, deltaY, MAX_LOCAL_PRESENTATION_DELTA)
-		);
+		// Local x/y prediction is anchored at this authoritative post-step pose
+		// and uses the post-step velocity. Contacts and teleports therefore do
+		// not carry the completed movement delta into the next half-step.
+		localPresentationVelocityX = state.vx;
+		localPresentationVelocityY = state.vy;
+		// Rotation still uses pose-delta extrapolation, so keep its lifecycle,
+		// layer, and committed-course-rotation guard independent of x/y.
+		var discontinuous = localPresentationDiscontinuityPending
+			|| state.courseRotation != localPresentationBeforeCourseRotation
+			|| layer != localPresentationPose.previousLayer;
 		localPresentationPose.finishSimulationTick(
 			state.x,
 			state.y,
@@ -1022,11 +1010,11 @@ class Course extends Sprite {
 		// Reuse the exact CharacterView pose selected on the last simulation tick.
 		// Presentation frames transform that bitmap/vector tree only: they never
 		// select a clip, advance its timeline, or synthesize body-art frames.
-		var factor = localPresentationPose.discontinuity ? 0.0 : 0.5;
+		var rotationFactor = localPresentationPose.discontinuity ? 0.0 : 0.5;
 		applyLocalPresentationPose(
-			localPresentationPose.extrapolatedX(factor),
-			localPresentationPose.extrapolatedY(factor),
-			localPresentationPose.extrapolatedRotation(factor),
+			localPresentationPose.currentX + localPresentationVelocityX * 0.5,
+			localPresentationPose.currentY + localPresentationVelocityY * 0.5,
+			localPresentationPose.extrapolatedRotation(rotationFactor),
 			localPresentationPose.currentFacing
 		);
 	}
@@ -1041,6 +1029,8 @@ class Course extends Sprite {
 
 	private function invalidateLocalPresentationPose():Void {
 		localPresentationDiscontinuityPending = true;
+		localPresentationVelocityX = 0;
+		localPresentationVelocityY = 0;
 		localPresentationPose.clear();
 		snapPresentationTransformsToAuthoritative();
 	}

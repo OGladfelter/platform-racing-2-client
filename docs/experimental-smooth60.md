@@ -28,10 +28,12 @@ present.
 With the alias active, HTML5 requests a nominal 60 FPS presentation rate and
 strictly alternates simulation and visual frames. Lime treats 60 as unlimited,
 so the client also applies its elapsed-time 60 Hz limiter. On the extra frame,
-disposable presentation poses predict half of the most recent authoritative
-movement delta. This covers the local character, guarded remote-character
-motion, camera/course transforms, course rotation, and supported moving
-effects.
+the local character predicts half of its authoritative post-step velocity from
+its current authoritative position. This lets resolved wall, ceiling, floor,
+and teleport motion continue in the direction physics selected without carrying
+a pre-contact or source-to-destination movement delta forward. Guarded
+previous/current pose extrapolation remains in use for remote characters,
+camera/course transforms, course rotation, and supported moving effects.
 
 There is deliberately no low-frame-rate physics safeguard in this strategy. A
 browser delivering fewer than 60 accepted frames per second runs fewer than 30
@@ -52,21 +54,20 @@ The deterministic twin replay compares every `LocalPlayerState` and the complete
 multiplayer command stream with the experiment off and on. Both must remain
 identical after every simulation tick.
 
-## Deliberate snaps
+## Presentation resets
 
-Prediction is intentionally suppressed when recent motion is not a safe estimate
-of the next half-step. A frame may therefore snap to the authoritative pose for:
+Local-character x/y prediction is not suppressed for collisions, landings,
+velocity reversals, teleports, or large coordinate changes. Its prediction is
+anchored at the current authoritative position, so a teleport continues from
+the destination and resolved collision velocity points along or away from the
+contact surface.
 
-- spawn, respawn, finish, removal, or course teardown;
-- teleports, warps, level loads, and unusually large position corrections;
-- landing, wall or ceiling contact, velocity reversal, or stopped motion;
-- character layer/water transitions and visibility changes;
-- spectate-target changes, committed course rotations, and editor scrolling;
-- discrete block changes, pickups, and other instantaneous state transitions.
-
-These snaps favor correct placement over carrying stale motion across a
-discontinuity. Minimap dots intentionally remain on authoritative 30 Hz
-positions.
+Presentation state is still reset when its owning display lifecycle changes,
+including local-character replacement, course teardown, visibility/removal
+changes, spectate-target changes, and editor scrolling. Character rotation also
+guards committed course-rotation and layer changes because it uses pose-delta
+rather than angular-velocity prediction. Minimap dots intentionally remain on
+authoritative 30 Hz positions.
 
 ## Diagnostics
 

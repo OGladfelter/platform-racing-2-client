@@ -187,17 +187,17 @@ identical with `smooth60` enabled and disabled.
 - [x] Capture the previous authoritative pose immediately before a simulation
   tick and the new authoritative pose immediately after it.
 - [x] Render the normal authoritative pose on simulation frames and, on the
-  intervening frame, extrapolate `current + 0.5 * (current - previous)`.
+  intervening frame, extrapolate local x/y as
+  `current + 0.5 * postStepVelocity`.
 - [x] Apply the extrapolated offset to the inner character presentation rather
   than overwriting the authoritative `Character.x/y` read by gameplay systems.
 - [x] Keep character pose/timeline advancement at 30 Hz; do not attempt optical
   blending or synthesized in-between body-art frames in this experiment.
-- [x] Mark spawn, teleport, removal, finish, respawn, layer change, spectate
-  change, committed course rotation, and unusually large movement as
-  discontinuities that snap instead of extrapolating.
-- [x] Suppress unsafe prediction when a landing, wall/ceiling collision,
-  velocity reversal, or other contact makes the previous movement delta an
-  invalid estimate of the next half-step.
+- [x] Predict local x/y from the current authoritative position through
+  teleports, landings, wall/ceiling collisions, and velocity reversals; the
+  post-step velocity already contains the resolved direction.
+- [x] Reset stale local presentation state when its display or course lifecycle
+  is rebuilt. Keep separate pose-delta guards for character rotation.
 - [x] Clear both pose samples whenever the course or local character is rebuilt
   so stale coordinates cannot produce a one-frame streak across the level.
 - [x] Add focused pose tests for constant motion, fractional/negative movement,

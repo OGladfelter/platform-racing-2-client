@@ -19,7 +19,7 @@ Policies:
 
 | Visible owner | Source owner | Policy | Boundary / rationale | Status |
 | --- | --- | --- | --- | --- |
-| Local character feet position and orientation | `Course`, `LocalCharacter`, `PresentationPose` | Extrapolate | Inner `CharacterView` only; collision, teleport, finish, layer, rotation, and lifecycle changes snap. | Implemented |
+| Local character feet position and orientation | `Course`, `LocalCharacter`, `PresentationPose` | Extrapolate | Inner `CharacterView` only; x/y predicts from the authoritative post-step position and velocity through contacts and teleports. Rotation retains pose-delta lifecycle guards. | Implemented |
 | Local character body/hat/item animation pose | `CharacterView` | Intentional snap/hold | Authored timeline remains exactly 30 Hz; transform the latest pose only. | Implemented |
 | Remote character position and orientation | `RemoteCharacter` | Extrapolate | Guarded extrapolation preserves queue/catch-up semantics; target/layer/exact-position discontinuities snap. | Implemented |
 | Remote character body/hat/item animation pose | `CharacterView` through `RemoteCharacter` | Intentional snap/hold | Never consume an additional queued update or animation frame. | Implemented |
