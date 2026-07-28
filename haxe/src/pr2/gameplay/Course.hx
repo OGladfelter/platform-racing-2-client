@@ -288,6 +288,20 @@ class Course extends Sprite {
 					return;
 				}
 				localCharacter.freezeBlock(block.x, block.y);
+			}, null, function(shooterId:Int, impulseX:Float, impulseY:Float):Void {
+				if (localCharacter != null && shooterId != localCharacter.tempID && !localCharacter.removed) {
+					localCharacter.receiveHit(impulseX, impulseY);
+				}
+			}, function(shooterId:Int, block:LevelBlock, damageForce:Float):Void {
+				if (localCharacter != null && shooterId == -1) {
+					localCharacter.controller.damageBlockFromEffect(block, damageForce);
+				}
+			}, function():Int {
+				return localCharacter == null ? -0x3fffffff : localCharacter.tempID;
+			}, function(payload:String):Void {
+				if (effectBackground != null) {
+					effectBackground.addEffect(payload.split("`"));
+				}
 			});
 		updatePlayerDisplay();
 	}
@@ -1388,7 +1402,9 @@ class Course extends Sprite {
 				hit: function(impulseX:Float, impulseY:Float):Void localCharacter.receiveHit(impulseX, impulseY)
 			},
 			onBlockDamage: function(block, reach):Void {
-				if (levelRenderer != null) {
+				if (shooterID == -1 && localCharacter != null) {
+					localCharacter.controller.damageBlockFromEffect(block, reach);
+				} else if (levelRenderer != null) {
 					levelRenderer.animateBlockBump(block.worldX, block.worldY, reach, 0);
 				}
 			},

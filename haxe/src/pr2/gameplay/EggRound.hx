@@ -86,13 +86,18 @@ class EggRound {
 	private final onIcePlayerHit:Int->Void;
 	private final onIceBlockHit:LevelBlock->Void;
 	private final playLaserHitSound:Int->Int->Void;
+	private final onAttackPlayerHit:Int->Float->Float->Void;
+	private final onAttackBlockHit:Int->LevelBlock->Float->Void;
+	private final localPlayerId:Void->Int;
+	private final dispatchAttackEffect:Null<String->Void>;
 	private var eggs:Map<Int, EggState> = new Map();
 	private var presentationEggs:Array<EggState> = [];
 	private var attackVisuals:Array<EggAttackVisual> = [];
 
 	public function new(commandHandler:CommandHandler, onCollect:Int->Void, ?displayLayer:Sprite, ?cameraOffset:Void->Point,
 			?playCollectSound:Int->Int->Void, ?visualRandom:Void->Float, ?onIcePlayerHit:Int->Void, ?onIceBlockHit:LevelBlock->Void,
-			?playLaserHitSound:Int->Int->Void) {
+			?playLaserHitSound:Int->Int->Void, ?onAttackPlayerHit:Int->Float->Float->Void,
+			?onAttackBlockHit:Int->LevelBlock->Float->Void, ?localPlayerId:Void->Int, ?dispatchAttackEffect:String->Void) {
 		this.commandHandler = commandHandler;
 		this.onCollect = onCollect;
 		this.displayLayer = displayLayer;
@@ -102,6 +107,10 @@ class EggRound {
 		this.onIcePlayerHit = onIcePlayerHit != null ? onIcePlayerHit : function(_:Int):Void {};
 		this.onIceBlockHit = onIceBlockHit != null ? onIceBlockHit : function(_:LevelBlock):Void {};
 		this.playLaserHitSound = playLaserHitSound != null ? playLaserHitSound : playDefaultLaserHitSound;
+		this.onAttackPlayerHit = onAttackPlayerHit != null ? onAttackPlayerHit : function(_, _, _):Void {};
+		this.onAttackBlockHit = onAttackBlockHit != null ? onAttackBlockHit : function(_, _, _):Void {};
+		this.localPlayerId = localPlayerId != null ? localPlayerId : function():Int return -0x3fffffff;
+		this.dispatchAttackEffect = dispatchAttackEffect;
 	}
 
 	public function initRound(seed:Int):Void {
@@ -417,7 +426,11 @@ class EggRound {
 			var attackY = Std.int(egg.posY - 10);
 			var payload = attackPayload(attackX, attackY, angle, dir, egg.rot);
 			if (payload != "") {
-				mountAttackVisual(payload);
+				if (dispatchAttackEffect != null) {
+					dispatchAttackEffect(payload);
+				} else {
+					mountAttackVisual(payload);
+				}
 				LobbySocket.write('add_effect`$payload');
 			}
 		} else {
@@ -552,14 +565,23 @@ class EggRound {
 					}
 				}
 			} else if (visual.effectType == "Laser" && !visual.hitBlock) {
+				var laserHit = false;
 				var block = PhysicsEffect.blockFromPos(level, Std.int(visual.posX), Std.int(visual.posY), courseRotation);
 				if (block != null && PhysicsEffect.isActiveBlock(block)) {
-					visual.hitBlock = true;
-					visual.velX = 0;
-					visual.velY = 0;
-					visual.life = 18;
-					Std.downcast(visual.display, LaserShotView).playHit();
-					playLaserHitSound(Std.int(visual.posX), Std.int(visual.posY));
+					onAttackBlockHit(visual.shooterId, block, visual.velX);
+					laserHit = true;
+				}
+				if (!visual.hitPlayer && visual.shooterId != localPlayerId() && playerX != null && playerY != null && !playerRemoved
+					&& playerY > visual.posY && playerY < visual.posY + 60
+					&& playerX > visual.posX - 60 && playerX < visual.posX) {
+					visual.hitPlayer = true;
+					onAttackPlayerHit(visual.shooterId, visual.velX, visual.velY);
+					visual.posX = playerX - visual.velX;
+					visual.display.x = visual.posX;
+					laserHit = true;
+				}
+				if (laserHit) {
+					finishLaserImpact(visual);
 				}
 			}
 			var presentationDiscontinuity = visual.presentationDiscontinuityPending
@@ -588,6 +610,15 @@ class EggRound {
 			}
 		}
 		attackVisuals = remaining.concat(spawned);
+	}
+
+	private function finishLaserImpact(visual:EggAttackVisual):Void {
+		visual.hitBlock = true;
+		visual.velX = 0;
+		visual.velY = 0;
+		visual.life = 18;
+		Std.downcast(visual.display, LaserShotView).playHit();
+		playLaserHitSound(Std.int(visual.posX), Std.int(visual.posY));
 	}
 
 	private function addIceWaveVisual(x:Float, y:Float, angle:Float, rot:Int, shooterId:Int, baseAngle:Float, life:Int):EggAttackVisual {

@@ -57,6 +57,7 @@ class CharacterLifecycleTest {
 		testLocalTeleportAndLightningItemEffects();
 		testEffectBackgroundAddEffectCommand();
 		testLaserStopsOnBlockAndPlaysHitSound();
+		testEggAttackEffectsHitLocalPlayer();
 		testSharedEffectLifecycle();
 		testEggVisualRandomization();
 		testServerActivateCommandLifecycle();
@@ -930,6 +931,38 @@ class CharacterLifecycleTest {
 		round.step(level);
 		assertEquals(0, round.activeAttackVisualCount(), "laser impact is removed after Flash's 18-frame timeout");
 		assertTrue(laser.parent == null, "removed laser impact leaves the effect layer");
+	}
+
+	private static function testEggAttackEffectsHitLocalPlayer():Void {
+		var slashCourse = buildCourse(new CommandHandler());
+		var slashPlayer = slashCourse.localCharacter.stateSnapshot();
+		slashCourse.effectBackground.addEffect([
+			"Slash",
+			Std.string(Std.int(slashPlayer.x)),
+			Std.string(Std.int(slashPlayer.y - 25)),
+			"right",
+			"-1"
+		]);
+		assertEquals("hurt", slashCourse.localCharacter.stateSnapshot().mode, "alien egg slash applies its hit to the local player");
+		assertTrue(slashCourse.localCharacter.stateSnapshot().vx > slashPlayer.vx, "alien egg slash applies Flash's horizontal knockback");
+		slashCourse.remove();
+
+		var laserCourse = buildCourse(new CommandHandler());
+		var laserPlayer = laserCourse.localCharacter.stateSnapshot();
+		laserCourse.effectBackground.addEffect([
+			"Laser",
+			Std.string(Std.int(laserPlayer.x)),
+			Std.string(Std.int(laserPlayer.y - 25)),
+			"right",
+			"0",
+			"-1"
+		]);
+		laserCourse.eggRound.step(laserCourse.level, 0, laserPlayer.x, laserPlayer.y, false, false, false);
+		assertEquals("hurt", laserCourse.localCharacter.stateSnapshot().mode, "alien egg laser applies its hit to the local player");
+		assertTrue(laserCourse.localCharacter.stateSnapshot().vx > laserPlayer.vx, "alien egg laser applies its projectile knockback");
+		var laser = Std.downcast(laserCourse.effectBackground.getChildAt(laserCourse.effectBackground.numChildren - 1), LaserShotView);
+		assertTrue(laser.currentFrame > 2, "alien egg laser begins its impact animation on player contact");
+		laserCourse.remove();
 	}
 
 	private static function testSharedEffectLifecycle():Void {

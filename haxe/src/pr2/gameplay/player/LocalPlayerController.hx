@@ -1586,6 +1586,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	public function performSwordItem():Void itemController.performSwordItem();
 	public function performIceWaveItem():Void itemController.performIceWaveItem();
 	public function performSnakeItem():Void itemController.performSnakeItem();
+	public function damageBlockFromEffect(block:LevelBlock, damageForce:Float):Void itemController.damageBlockFromItem(block, damageForce);
 
 	public function grantItemForDebug(itemCode:Int):Void itemController.grantItemForDebug(itemCode);
 	public function addSnakeTrail(tileX:Int, tileY:Int):Void itemController.addSnakeTrail(tileX, tileY);
