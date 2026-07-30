@@ -110,8 +110,8 @@ class Course extends Sprite {
 	private final localPresentationPose:PresentationPose = new PresentationPose();
 	private final cameraPresentationPose:CameraPresentationPose = new CameraPresentationPose();
 	private var localPresentationBeforeCourseRotation:Int = 0;
-	private var localPresentationVelocityX:Float = 0;
-	private var localPresentationVelocityY:Float = 0;
+	private var localPresentationDeltaX:Float = 0;
+	private var localPresentationDeltaY:Float = 0;
 	private var localPresentationDiscontinuityPending:Bool = true;
 
 	public var miniMap(default, null):MiniMap;
@@ -890,7 +890,7 @@ class Course extends Sprite {
 		beginLocalPresentationPoseCapture(player.stateSnapshot());
 		if (levelRenderer != null && !levelRenderer.isDrawingComplete()) {
 			toggleKeyScroll(true);
-			finishLocalPresentationPoseCapture(player.stateSnapshot());
+			finishLocalPresentationPoseCapture(player.stateSnapshot(), false);
 			updatePlayerDisplay();
 			pr2.app.DebugSignal.set("race-phase", "loading");
 			return;
@@ -907,6 +907,7 @@ class Course extends Sprite {
 			drawingInfoFinished = true;
 		}
 
+		var localPhysicsStepped = false;
 		if (raceStarted && !localFinishHandled) {
 			if (physicsTraceRuntimeEnabled() && physicsTraceFrame < physicsTraceFrameLimit()) {
 				player.controller.beginDetailedTraceFrame(physicsTraceFrame);
@@ -922,6 +923,7 @@ class Course extends Sprite {
 				playerInput.down = false;
 			}
 			player.step(playerInput);
+			localPhysicsStepped = true;
 			player.maybeSquash(playerArray);
 			player.tickJellyfishSting(playerArray, Std.random(35) + 1);
 			physicsTraceFrame++;
@@ -949,7 +951,7 @@ class Course extends Sprite {
 			player.y = state.y;
 			localCharacter.emitNetworkUpdate(state.touchedBlockType == "water" ? "backBackground" : "frontBackground");
 		}
-		finishLocalPresentationPoseCapture(state);
+		finishLocalPresentationPoseCapture(state, localPhysicsStepped && !state.finished);
 		updatePlayerDisplay();
 		emitLocalItemEffect(state);
 		maybeHandleLocalFinish(state);
@@ -976,13 +978,19 @@ class Course extends Sprite {
 		);
 	}
 
-	private function finishLocalPresentationPoseCapture(state:LocalPlayerState):Void {
+	private function finishLocalPresentationPoseCapture(state:LocalPlayerState, predictMovement:Bool = true):Void {
 		var layer = presentationLayerFor(state);
 		// Local x/y prediction is anchored at this authoritative post-step pose
-		// and uses the post-step velocity. Contacts and teleports therefore do
-		// not carry the completed movement delta into the next half-step.
-		localPresentationVelocityX = state.vx;
-		localPresentationVelocityY = state.vy;
+		// and uses half of the predicted next authoritative displacement.
+		// Contacts and teleports therefore do not carry the completed movement
+		// delta forward, and block impulses cannot predict into active surfaces.
+		if (predictMovement) {
+			localPresentationDeltaX = localCharacter.controller.presentationDeltaX();
+			localPresentationDeltaY = localCharacter.controller.presentationDeltaY();
+		} else {
+			localPresentationDeltaX = 0;
+			localPresentationDeltaY = 0;
+		}
 		// Rotation still uses pose-delta extrapolation, so keep its lifecycle,
 		// layer, and committed-course-rotation guard independent of x/y.
 		var discontinuous = localPresentationDiscontinuityPending
@@ -1012,8 +1020,8 @@ class Course extends Sprite {
 		// select a clip, advance its timeline, or synthesize body-art frames.
 		var rotationFactor = localPresentationPose.discontinuity ? 0.0 : 0.5;
 		applyLocalPresentationPose(
-			localPresentationPose.currentX + localPresentationVelocityX * 0.5,
-			localPresentationPose.currentY + localPresentationVelocityY * 0.5,
+			localPresentationPose.currentX + localPresentationDeltaX * 0.5,
+			localPresentationPose.currentY + localPresentationDeltaY * 0.5,
 			localPresentationPose.extrapolatedRotation(rotationFactor),
 			localPresentationPose.currentFacing
 		);
@@ -1029,8 +1037,8 @@ class Course extends Sprite {
 
 	private function invalidateLocalPresentationPose():Void {
 		localPresentationDiscontinuityPending = true;
-		localPresentationVelocityX = 0;
-		localPresentationVelocityY = 0;
+		localPresentationDeltaX = 0;
+		localPresentationDeltaY = 0;
 		localPresentationPose.clear();
 		snapPresentationTransformsToAuthoritative();
 	}

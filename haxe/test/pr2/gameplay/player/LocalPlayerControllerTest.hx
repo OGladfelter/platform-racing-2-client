@@ -39,6 +39,8 @@ class LocalPlayerControllerTest {
 		testFrozenSupplyBlockSuppressesUse();
 		testRecoveryAllowsStackedHitImpulses();
 		testArrowStandEffectsMatchAs3Deltas();
+		testPresentationDisplacementProjectsActiveContactNormals();
+		testPresentationPredictionMatchesNextMovement();
 		testFallingIntoWaterEntersSwimMode();
 		testWaterTouchEmitsRippleVisual();
 		testWaterDampsSinkingAndPaddlesUp();
@@ -568,6 +570,112 @@ class LocalPlayerControllerTest {
 		assertClose(5, new LocalCharacter(singleBlockLevel(BlockType.ArrowDown)).stateSnapshot().vy, "down arrow stand pushes down");
 		assertClose(-3, new LocalCharacter(singleBlockLevel(BlockType.ArrowLeft)).stateSnapshot().vx, "left arrow stand pushes left");
 		assertClose(3, new LocalCharacter(singleBlockLevel(BlockType.ArrowRight)).stateSnapshot().vx, "right arrow stand pushes right");
+	}
+
+	private static function testPresentationDisplacementProjectsActiveContactNormals():Void {
+		var downStand = new LocalCharacter(singleBlockLevel(BlockType.ArrowDown));
+		assertClose(5, downStand.stateSnapshot().vy, "down arrow retains authoritative inward floor velocity");
+		assertClose(0, downStand.controller.presentationDeltaY(), "floor contact projects inward presentation y displacement");
+
+		var upStand = new LocalCharacter(singleBlockLevel(BlockType.ArrowUp));
+		assertBelow(upStand.controller.presentationDeltaY(), 0, "floor contact preserves presentation displacement away from the floor");
+
+		var horizontalStand = new LocalCharacter(singleBlockLevel(BlockType.ArrowRight));
+		var horizontalBefore = horizontalStand.stateSnapshot();
+		var horizontalPredicted = horizontalStand.controller.presentationDeltaX();
+		horizontalStand.step(new LocalPlayerInput());
+		assertClose(horizontalStand.stateSnapshot().x - horizontalBefore.x, horizontalPredicted,
+			"arrow conveyor predicts the next applied horizontal displacement after damping");
+
+		var ceilingInto = new LocalCharacter(singleBlockLevel(BlockType.ArrowUp));
+		var ceilingIntoBlock = @:privateAccess ceilingInto.controller.level.blockAt(2, 3);
+		@:privateAccess ceilingInto.controller.clearPresentationContacts();
+		@:privateAccess ceilingInto.controller.vy = -2;
+		@:privateAccess ceilingInto.controller.onBump(ceilingIntoBlock, new LocalPlayerInput(), "presentationTest");
+		assertClose(-14, ceilingInto.stateSnapshot().vy, "up arrow retains authoritative inward ceiling velocity");
+		assertClose(0, ceilingInto.controller.presentationDeltaY(), "ceiling contact projects inward presentation y displacement");
+
+		var ceilingAway = new LocalCharacter(singleBlockLevel(BlockType.ArrowDown));
+		var ceilingAwayBlock = @:privateAccess ceilingAway.controller.level.blockAt(2, 3);
+		@:privateAccess ceilingAway.controller.clearPresentationContacts();
+		@:privateAccess ceilingAway.controller.vy = -2;
+		@:privateAccess ceilingAway.controller.onBump(ceilingAwayBlock, new LocalPlayerInput(), "presentationTest");
+		assertAbove(ceilingAway.controller.presentationDeltaY(), 0, "ceiling contact preserves presentation displacement away from the ceiling");
+
+		var rightWallInto = new LocalCharacter(singleBlockLevel(BlockType.ArrowRight));
+		var rightWallIntoBlock = @:privateAccess rightWallInto.controller.level.blockAt(2, 3);
+		@:privateAccess rightWallInto.controller.clearPresentationContacts();
+		@:privateAccess rightWallInto.controller.vx = 0;
+		@:privateAccess rightWallInto.controller.onLeftHit(rightWallIntoBlock, "presentationTest");
+		assertClose(3, rightWallInto.stateSnapshot().vx, "right arrow retains authoritative velocity into a right wall");
+		assertClose(0, rightWallInto.controller.presentationDeltaX(), "right wall contact projects inward presentation x displacement");
+
+		var rightWallAway = new LocalCharacter(singleBlockLevel(BlockType.ArrowLeft));
+		var rightWallAwayBlock = @:privateAccess rightWallAway.controller.level.blockAt(2, 3);
+		@:privateAccess rightWallAway.controller.clearPresentationContacts();
+		@:privateAccess rightWallAway.controller.vx = 0;
+		@:privateAccess rightWallAway.controller.onLeftHit(rightWallAwayBlock, "presentationTest");
+		assertBelow(rightWallAway.controller.presentationDeltaX(), 0, "right wall contact preserves presentation displacement away from the wall");
+
+		var leftWallInto = new LocalCharacter(singleBlockLevel(BlockType.ArrowLeft));
+		var leftWallIntoBlock = @:privateAccess leftWallInto.controller.level.blockAt(2, 3);
+		@:privateAccess leftWallInto.controller.clearPresentationContacts();
+		@:privateAccess leftWallInto.controller.vx = 0;
+		@:privateAccess leftWallInto.controller.onRightHit(leftWallIntoBlock, "presentationTest");
+		assertClose(-3, leftWallInto.stateSnapshot().vx, "left arrow retains authoritative velocity into a left wall");
+		assertClose(0, leftWallInto.controller.presentationDeltaX(), "left wall contact projects inward presentation x displacement");
+
+		var movedSupport = new LocalCharacter(pushBlockLevel());
+		@:privateAccess movedSupport.controller.vy = 5;
+		assertAbove(movedSupport.controller.presentationDeltaY(), 0, "a moved push block no longer constrains presentation displacement");
+	}
+
+	private static function testPresentationPredictionMatchesNextMovement():Void {
+		assertNextMovementPrediction(new LocalCharacter(singleBlockLevel(BlockType.ArrowRight)), new LocalPlayerInput(),
+			"neutral arrow conveyor");
+
+		var withConveyor = new LocalCharacter(singleBlockLevel(BlockType.ArrowRight));
+		var right = new LocalPlayerInput(false, true);
+		withConveyor.step(right);
+		assertNextMovementPrediction(withConveyor, right, "arrow conveyor with matching held input");
+
+		var againstConveyor = new LocalCharacter(singleBlockLevel(BlockType.ArrowRight));
+		var left = new LocalPlayerInput(true);
+		againstConveyor.step(left);
+		assertNextMovementPrediction(againstConveyor, left, "arrow conveyor with opposing held input");
+
+		var ordinaryGround = newPlayer();
+		ordinaryGround.step(right);
+		assertNextMovementPrediction(ordinaryGround, right, "ordinary held-input ground movement");
+
+		var fractional = new LocalCharacter(emptyLevel(0));
+		fractional.step(right);
+		fractional.controller.setPosition(75.37, 75.62);
+		@:privateAccess fractional.controller.vx = 1.25;
+		@:privateAccess fractional.controller.vy = -0.75;
+		assertNextMovementPrediction(fractional, right, "fractional Flash-coordinate movement");
+
+		var water = new LocalCharacter(waterPoolLevel());
+		for (_ in 0...40) {
+			water.step(new LocalPlayerInput());
+			if (water.stateSnapshot().mode == "water") {
+				break;
+			}
+		}
+		assertEquals("water", water.stateSnapshot().mode, "water prediction fixture enters water mode");
+		water.step(right);
+		assertEquals("water", water.stateSnapshot().mode, "water prediction fixture remains submerged with held input");
+		assertNextMovementPrediction(water, right, "held-input water movement");
+	}
+
+	private static function assertNextMovementPrediction(player:LocalCharacter, input:LocalPlayerInput, label:String):Void {
+		var before = player.stateSnapshot();
+		var predictedX = player.controller.presentationDeltaX();
+		var predictedY = player.controller.presentationDeltaY();
+		player.step(input);
+		var after = player.stateSnapshot();
+		assertClose(after.x - before.x, predictedX, '$label predicts the next authoritative x displacement');
+		assertClose(after.y - before.y, predictedY, '$label predicts the next authoritative y displacement');
 	}
 
 	private static function testFallingIntoWaterEntersSwimMode():Void {

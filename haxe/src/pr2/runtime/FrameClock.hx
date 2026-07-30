@@ -9,9 +9,9 @@ import pr2.Constants;
 	Application-owned classifier for stage frames.
 
 	Smooth strategies deliberately tie simulation progress to accepted stage
-	frames. Fixed strategies instead schedule zero or more authoritative 30 Hz
-	ticks from monotonic elapsed time. Extra catch-up ticks are complete synthetic
-	ENTER_FRAME broadcasts issued at EXIT_FRAME, before OpenFL renders.
+	frames. Fixed strategies instead schedule zero, one, or two authoritative
+	30 Hz ticks from monotonic elapsed time. Extra catch-up ticks are complete
+	synthetic ENTER_FRAME broadcasts issued at EXIT_FRAME, before OpenFL renders.
 **/
 @:access(openfl.display.Stage)
 class FrameClock {
@@ -31,6 +31,7 @@ class FrameClock {
 
 	private final diagnostics:FrameRateDiagnostics;
 	private static inline var CREDIT_EPSILON:Float = 0.000001;
+	private static inline var MAX_FIXED_SIMULATION_TICKS_PER_BROWSER_FRAME:Int = 2;
 	private var lastFrameTimeMs:Null<Float>;
 	private var fixedSimulationCredit:Float = 0;
 	private var smoothSimulationNext:Bool = true;
@@ -221,7 +222,10 @@ class FrameClock {
 
 		var elapsedMs = Math.max(0, frameTimeMs - previousFrameTimeMs);
 		fixedSimulationCredit += elapsedMs * Constants.SIMULATION_FRAME_RATE / 1000.0;
-		var ticks = Std.int(Math.floor(fixedSimulationCredit + CREDIT_EPSILON));
+		var ticks = Std.int(Math.min(
+			MAX_FIXED_SIMULATION_TICKS_PER_BROWSER_FRAME,
+			Math.floor(fixedSimulationCredit + CREDIT_EPSILON)
+		));
 		fixedSimulationCredit = Math.max(0, fixedSimulationCredit - ticks);
 		return ticks;
 	}

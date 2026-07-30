@@ -139,7 +139,7 @@ class GameShellMountTest {
 		testPresentationPoseCapturesAuthoritativeTickBounds();
 		testSmoothPresentationExtrapolatesWithoutAdvancingCharacterTimeline();
 		testPresentationLifecycleResets();
-		testPostStepVelocityPredictsThroughContacts();
+		testNextDisplacementPredictsThroughContacts();
 		testCameraPresentationStateIsDisposable();
 		testSpectatedRemoteAndCameraSnapAsOneUnit();
 		testSmoothPresentationTeardownClearsCallbacks();
@@ -475,7 +475,7 @@ class GameShellMountTest {
 		assertEquals(false, pose.hasSamples, "course teardown clears camera presentation state");
 	}
 
-	private static function testPostStepVelocityPredictsThroughContacts():Void {
+	private static function testNextDisplacementPredictsThroughContacts():Void {
 		var course = buildCourse();
 		var pose = @:privateAccess course.localPresentationPose;
 		var state = course.localCharacter.stateSnapshot();
@@ -488,11 +488,13 @@ class GameShellMountTest {
 		state = course.localCharacter.stateSnapshot();
 		@:privateAccess course.beginLocalPresentationPoseCapture(state);
 		@:privateAccess course.localCharacter.controller.collisionVersion++;
+		var expectedDx = course.localCharacter.controller.presentationDeltaX();
+		var expectedDy = course.localCharacter.controller.presentationDeltaY();
 		@:privateAccess course.finishLocalPresentationPoseCapture(course.localCharacter.stateSnapshot());
-		assertEquals(false, pose.discontinuity, "collision contact does not suppress post-step velocity prediction");
+		assertEquals(false, pose.discontinuity, "collision contact does not suppress next-displacement prediction");
 		@:privateAccess course.renderLocalPresentationFrame();
-		assertClose(-1, course.localCharacter.display.x, "wall contact predicts half of the post-collision x velocity");
-		assertClose(0.75, course.localCharacter.display.y, "wall contact preserves post-collision vertical motion");
+		assertClose(expectedDx * 0.5, course.localCharacter.display.x, "presentation applies half of predicted x displacement");
+		assertClose(expectedDy * 0.5, course.localCharacter.display.y, "presentation applies half of predicted y displacement");
 
 		@:privateAccess course.localCharacter.controller.vx = 4;
 		@:privateAccess course.localCharacter.controller.vy = 0;
@@ -500,21 +502,45 @@ class GameShellMountTest {
 		state = course.localCharacter.stateSnapshot();
 		@:privateAccess course.beginLocalPresentationPoseCapture(state);
 		@:privateAccess course.localCharacter.controller.grounded = true;
+		var activeFloor:Null<LevelBlock> = null;
+		for (block in @:privateAccess course.level.blocks) {
+			if (block.type.isSolid()) {
+				activeFloor = block;
+				break;
+			}
+		}
+		assertEquals(true, activeFloor != null, "contact projection fixture finds an active floor block");
+		@:privateAccess course.localCharacter.controller.presentationFloorContact.capture(activeFloor);
+		expectedDx = course.localCharacter.controller.presentationDeltaX();
+		expectedDy = course.localCharacter.controller.presentationDeltaY();
 		@:privateAccess course.finishLocalPresentationPoseCapture(course.localCharacter.stateSnapshot());
 		assertEquals(false, pose.discontinuity, "landing does not suppress post-step velocity prediction");
 		@:privateAccess course.renderLocalPresentationFrame();
-		assertClose(2, course.localCharacter.display.x, "landing keeps horizontal velocity smooth");
+		assertClose(expectedDx * 0.5, course.localCharacter.display.x, "landing keeps predicted horizontal displacement smooth");
 		assertClose(0, course.localCharacter.display.y, "landing's zero post-step y velocity stays pinned to the floor");
+
+		@:privateAccess course.localCharacter.controller.presentationFloorContact.capture(activeFloor);
+		@:privateAccess course.localCharacter.controller.vx = 4;
+		@:privateAccess course.localCharacter.controller.vy = 5;
+		state = course.localCharacter.stateSnapshot();
+		@:privateAccess course.beginLocalPresentationPoseCapture(state);
+		expectedDx = course.localCharacter.controller.presentationDeltaX();
+		@:privateAccess course.finishLocalPresentationPoseCapture(state);
+		@:privateAccess course.renderLocalPresentationFrame();
+		assertClose(expectedDx * 0.5, course.localCharacter.display.x, "active floor contact preserves tangential presentation displacement");
+		assertClose(0, course.localCharacter.display.y, "active floor contact removes inward presentation displacement");
 
 		@:privateAccess course.localCharacter.controller.vx = 2;
 		@:privateAccess course.localCharacter.controller.vy = 0;
 		state = course.localCharacter.stateSnapshot();
 		@:privateAccess course.beginLocalPresentationPoseCapture(state);
 		@:privateAccess course.localCharacter.controller.vx = -2;
+		expectedDx = course.localCharacter.controller.presentationDeltaX();
+		expectedDy = course.localCharacter.controller.presentationDeltaY();
 		@:privateAccess course.finishLocalPresentationPoseCapture(course.localCharacter.stateSnapshot());
 		@:privateAccess course.renderLocalPresentationFrame();
-		assertClose(-1, course.localCharacter.display.x, "velocity reversal predicts in the post-step direction");
-		assertClose(0, course.localCharacter.display.y, "velocity reversal does not invent perpendicular motion");
+		assertClose(expectedDx * 0.5, course.localCharacter.display.x, "velocity reversal predicts the next applied x displacement");
+		assertClose(expectedDy * 0.5, course.localCharacter.display.y, "velocity reversal predicts the next applied y displacement");
 		course.remove();
 	}
 
@@ -563,11 +589,15 @@ class GameShellMountTest {
 		@:privateAccess course.localPresentationDiscontinuityPending = false;
 		@:privateAccess course.beginLocalPresentationPoseCapture(state);
 		course.localCharacter.setControllerPosition(state.x + 100, state.y);
+		var teleportDx = course.localCharacter.controller.presentationDeltaX();
+		var teleportDy = course.localCharacter.controller.presentationDeltaY();
 		@:privateAccess course.finishLocalPresentationPoseCapture(course.localCharacter.stateSnapshot());
 		assertEquals(false, pose.discontinuity, "explicit teleport does not mark local position prediction as discontinuous");
 		@:privateAccess course.renderLocalPresentationFrame();
-		assertClose(3, course.localCharacter.display.x, "teleport predicts from the destination using post-step x velocity");
-		assertClose(-2, course.localCharacter.display.y, "teleport predicts from the destination using post-step y velocity");
+		assertClose(teleportDx * 0.5, course.localCharacter.display.x,
+			"teleport predicts from the destination using next applied x displacement");
+		assertClose(teleportDy * 0.5, course.localCharacter.display.y,
+			"teleport predicts from the destination using next applied y displacement");
 
 		var version = course.localCharacter.controller.movementDiscontinuityVersion;
 		course.localCharacter.resetControllerForRaceStart(state.x, state.y);
@@ -659,8 +689,10 @@ class GameShellMountTest {
 		assertClose(Math.round(Constants.STAGE_HEIGHT / 2 + authoritativeCameraY), authoritativeCameraOffset.y,
 			"presentation frame leaves renderer authoritative camera y unchanged");
 		var authoritativeState = course.localCharacter.stateSnapshot();
-		var predictedX = authoritativeState.x + authoritativeState.vx * 0.5;
-		var predictedY = authoritativeState.y + authoritativeState.vy * 0.5;
+		var predictedDeltaX = @:privateAccess course.localPresentationDeltaX;
+		var predictedDeltaY = @:privateAccess course.localPresentationDeltaY;
+		var predictedX = authoritativeState.x + predictedDeltaX * 0.5;
+		var predictedY = authoritativeState.y + predictedDeltaY * 0.5;
 		assertClose(pose.currentX, authoritativeState.x, "presentation offset never enters controller x");
 		assertClose(pose.currentY, authoritativeState.y, "presentation offset never enters controller y");
 		assertEquals(true, predictedX != authoritativeState.x || predictedY != authoritativeState.y,
@@ -721,10 +753,10 @@ class GameShellMountTest {
 		assertClose(before.y, pose.previousY, "pose previous y is captured immediately before simulation");
 		assertClose(after.x, pose.currentX, "pose current x is captured immediately after simulation");
 		assertClose(after.y, pose.currentY, "pose current y is captured immediately after simulation");
-		assertClose(after.vx, @:privateAccess course.localPresentationVelocityX,
-			"local presentation captures authoritative post-step x velocity");
-		assertClose(after.vy, @:privateAccess course.localPresentationVelocityY,
-			"local presentation captures authoritative post-step y velocity");
+		assertClose(course.localCharacter.controller.presentationDeltaX(), @:privateAccess course.localPresentationDeltaX,
+			"local presentation captures predicted next authoritative x displacement");
+		assertClose(course.localCharacter.controller.presentationDeltaY(), @:privateAccess course.localPresentationDeltaY,
+			"local presentation captures predicted next authoritative y displacement");
 		assertClose(course.localCharacter.characterRotation, pose.currentRotation, "pose captures authoritative character rotation");
 		assertEquals(course.localCharacter.facingScaleX, pose.currentFacing, "pose captures authoritative facing");
 		assertEquals(CharacterPresentationLayer.Front, pose.currentLayer, "pose captures the authoritative display layer");
@@ -846,8 +878,8 @@ class GameShellMountTest {
 			course.localCharacter.facingScaleX,
 			CharacterPresentationLayer.Front
 		);
-		@:privateAccess course.localPresentationVelocityX = 8;
-		@:privateAccess course.localPresentationVelocityY = 4;
+		@:privateAccess course.localPresentationDeltaX = 8;
+		@:privateAccess course.localPresentationDeltaY = 4;
 		@:privateAccess course.localPresentationDiscontinuityPending = false;
 		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true), new FrameRateDiagnostics(function():Float return 0));
 		@:privateAccess FrameClock.setCurrentForTests(clock);
@@ -1052,14 +1084,16 @@ class GameShellMountTest {
 		pose.finishSimulationTick(state.x - 2, state.y - 1, course.localCharacter.characterRotation, 1, CharacterPresentationLayer.Front);
 		pose.beginSimulationTick(state.x - 2, state.y - 1, course.localCharacter.characterRotation, 1, CharacterPresentationLayer.Front);
 		pose.finishSimulationTick(state.x, state.y, course.localCharacter.characterRotation, 1, CharacterPresentationLayer.Front);
-		@:privateAccess course.localPresentationVelocityX = 4;
-		@:privateAccess course.localPresentationVelocityY = 2;
+		@:privateAccess course.localPresentationDeltaX = 4;
+		@:privateAccess course.localPresentationDeltaY = 2;
 		@:privateAccess course.renderLocalPresentationFrame();
 		assertEquals(true, course.localCharacter.display.x != 0 || course.localCharacter.display.y != 0,
 			"fixture establishes a local presentation offset before a water-layer switch");
 		@:privateAccess course.beginLocalPresentationPoseCapture(state);
 		@:privateAccess course.localCharacter.controller.touchedBlock = new LevelBlock(0, 0, BlockType.Water);
 		@:privateAccess course.finishLocalPresentationPoseCapture(course.localCharacter.stateSnapshot());
+		var waterDx = @:privateAccess course.localPresentationDeltaX;
+		var waterDy = @:privateAccess course.localPresentationDeltaY;
 		course.updatePlayerDisplay();
 		assertEquals(course.backCharacterLayer, course.localCharacter.parent, "local water touch moves behind blocks");
 		assertEquals(true, pose.discontinuity, "local water-layer transition marks the presentation pose discontinuous");
@@ -1068,8 +1102,10 @@ class GameShellMountTest {
 		assertEquals(true, course.backCharacterLayer.contains(course.localCharacter),
 			"local water switch leaves exactly one back-layer character instance");
 		@:privateAccess course.renderLocalPresentationFrame();
-		assertClose(0, course.localCharacter.display.x, "local water switch invalidates stale presented x");
-		assertClose(0, course.localCharacter.display.y, "local water switch invalidates stale presented y");
+		assertClose(waterDx * 0.5, course.localCharacter.display.x,
+			"local water switch discards stale x history but preserves the fresh movement prediction");
+		assertClose(waterDy * 0.5, course.localCharacter.display.y,
+			"local water switch discards stale y history but preserves the fresh movement prediction");
 
 		@:privateAccess course.beginLocalPresentationPoseCapture(course.localCharacter.stateSnapshot());
 		@:privateAccess course.localCharacter.controller.touchedBlock = null;

@@ -99,18 +99,23 @@ class FrameClockTest {
 	}
 
 	private static function testFixedCatchUpAndRemainder():Void {
-		var clock = new FrameClock(FrameRateSettings.fromQuery("?frame_strategy=60fixed", true),
-			new FrameRateDiagnostics(currentTime));
-		clock.advanceFrame(0);
-		assertEquals(1, clock.simulationTicksThisBrowserFrame, "fixed clock starts with an immediate authoritative tick");
-		clock.advanceFrame(10);
-		assertEquals(0, clock.simulationTicksThisBrowserFrame, "fixed clock can spend a callback on presentation only");
-		clock.advanceFrame(40);
-		assertEquals(1, clock.simulationTicksThisBrowserFrame, "fixed clock preserves sub-tick elapsed credit");
-		clock.advanceFrame(140);
-		assertEquals(3, clock.simulationTicksThisBrowserFrame, "fixed clock catches up multiple authoritative ticks");
-		assertEquals(5, clock.simulationFrameNumber, "fixed catch-up total includes every due tick");
-		assertEquals(4, clock.stageFrameNumber, "catch-up ticks do not become browser frames");
+		for (strategy in ["30fixed", "60fixed"]) {
+			var clock = new FrameClock(FrameRateSettings.fromQuery('?frame_strategy=$strategy', true),
+				new FrameRateDiagnostics(currentTime));
+			clock.advanceFrame(0);
+			assertEquals(1, clock.simulationTicksThisBrowserFrame, '$strategy starts with an immediate authoritative tick');
+			clock.advanceFrame(10);
+			assertEquals(0, clock.simulationTicksThisBrowserFrame, '$strategy can spend a callback on presentation only');
+			clock.advanceFrame(40);
+			assertEquals(1, clock.simulationTicksThisBrowserFrame, '$strategy preserves sub-tick elapsed credit');
+			clock.advanceFrame(140);
+			assertEquals(2, clock.simulationTicksThisBrowserFrame, '$strategy caps catch-up at two authoritative ticks per browser frame');
+			assertEquals(4, clock.simulationFrameNumber, '$strategy defers rather than runs the third due tick');
+			clock.advanceFrame(150);
+			assertEquals(1, clock.simulationTicksThisBrowserFrame, '$strategy preserves deferred catch-up credit');
+			assertEquals(5, clock.simulationFrameNumber, '$strategy catch-up total includes every due tick');
+			assertEquals(5, clock.stageFrameNumber, '$strategy catch-up ticks do not become browser frames');
+		}
 	}
 
 	private static function testFixedPresentationPolicies():Void {

@@ -22,6 +22,24 @@ class TilePoint {
 	}
 }
 
+class PresentationContact {
+	public var block(default, null):Null<LevelBlock> = null;
+	public var tileX(default, null):Int = 0;
+	public var tileY(default, null):Int = 0;
+
+	public function new() {}
+
+	public inline function capture(block:LevelBlock):Void {
+		this.block = block;
+		tileX = block.x;
+		tileY = block.y;
+	}
+
+	public inline function clear():Void {
+		block = null;
+	}
+}
+
 typedef BlockRefs = {
 	final floorLeft:Null<LevelBlock>;
 	final floorCenter:Null<LevelBlock>;

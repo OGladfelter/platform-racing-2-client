@@ -21,6 +21,7 @@ import pr2.gameplay.player.LocalPlayerControllerTypes.PendingProjectileDamage;
 import pr2.gameplay.player.LocalPlayerControllerTypes.PhysicsBlockTrace;
 import pr2.gameplay.player.LocalPlayerControllerTypes.PixelPoint;
 import pr2.gameplay.player.LocalPlayerControllerTypes.PlayerStats;
+import pr2.gameplay.player.LocalPlayerControllerTypes.PresentationContact;
 import pr2.gameplay.player.LocalPlayerControllerTypes.TilePoint;
 
 class LocalPlayerController implements ItemRuntimeOwner {
@@ -168,6 +169,10 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	private var statsSelectSyncRequested:Bool = false;
 	private var animationLeft:Bool = false;
 	private var animationRight:Bool = false;
+	private var presentationInputLeft:Bool = false;
+	private var presentationInputRight:Bool = false;
+	private var presentationInputJump:Bool = false;
+	private var presentationInputDown:Bool = false;
 	private var pendingMinePlacements:Array<PendingMinePlacement> = [];
 	private var pendingProjectileDamages:Array<PendingProjectileDamage> = [];
 	// The level's allowed-item pool (GamePage.setItems), used when an item block
@@ -179,6 +184,10 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	private final traceReporter:PhysicsTraceReporter;
 	private var roguelikeStartX:Float;
 	private var roguelikeStartY:Float;
+	private final presentationFloorContact:PresentationContact = new PresentationContact();
+	private final presentationCeilingContact:PresentationContact = new PresentationContact();
+	private final presentationLeftContact:PresentationContact = new PresentationContact();
+	private final presentationRightContact:PresentationContact = new PresentationContact();
 
 	public function new(level:Level, ?courseBlockController:BlockController) {
 		this.level = level;
@@ -241,6 +250,10 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		mode = MODE_LAND;
 		animationState = CharacterState.Stand;
 		targetVelX = 0;
+		presentationInputLeft = false;
+		presentationInputRight = false;
+		presentationInputJump = false;
+		presentationInputDown = false;
 		accelFactor = BASE_ACCEL_FACTOR;
 		jumpHeld = false;
 		jumpVelBoost = 0;
@@ -271,6 +284,11 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	}
 
 	public function step(input:LocalPlayerInput):Void {
+		clearPresentationContacts();
+		presentationInputLeft = input.left;
+		presentationInputRight = input.right;
+		presentationInputJump = input.jump;
+		presentationInputDown = input.down;
 		setPlayerPos(Math.round(x), Math.round(y));
 		// Flash owns the rotate tween in Course, independently of whichever
 		// LocalCharacter physics mode is active. Its ENTER_FRAME listener runs
@@ -633,6 +651,34 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		return new LocalPlayerState(x, y, vx, vy, grounded, crouching, animationState, touchedBlock == null ? null : touchedBlock.type, mode, itemId, itemUses, lastItemEffect, speedStat, accelerationStat, jumpStat, courseRotation, finished, finishBlockId, finishX, finishY, lives, courseTime, jetPackActive, speedBurstFramesRemaining > 0 && speedBurstFromItem, touchedBlockX, touchedBlockY, lastCollisionEvent, roguelikeFinishHits);
 	}
 
+	public function presentationDeltaX():Float {
+		if (rotateFramesRemaining > 0) {
+			return 0;
+		}
+		var result = flashCoordinate(Math.round(x) + previewNextVelocityX()) - x;
+		if (result < 0 && presentationContactActive(presentationLeftContact)) {
+			result = 0;
+		}
+		if (result > 0 && presentationContactActive(presentationRightContact)) {
+			result = 0;
+		}
+		return result;
+	}
+
+	public function presentationDeltaY():Float {
+		if (rotateFramesRemaining > 0) {
+			return 0;
+		}
+		var result = flashCoordinate(Math.round(y) + previewNextVelocityY()) - y;
+		if (result < 0 && presentationContactActive(presentationCeilingContact)) {
+			result = 0;
+		}
+		if (result > 0 && presentationContactActive(presentationFloorContact)) {
+			result = 0;
+		}
+		return result;
+	}
+
 	public function blockAlphaAt(tileX:Int, tileY:Int):Float {
 		return blockController.blockAlphaAt(tileX, tileY);
 	}
@@ -790,23 +836,114 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		if (input.jump && propellerHatActive && vy > 0) {
 			vy *= 0.85;
 		}
-		targetVelX *= FRICTION;
-		if (crouching) {
-			targetVelX *= 0.7;
-		}
-		targetVelX = clamp(targetVelX, -maxVelX, maxVelX);
-
-		var velocityRatio = 1 - Math.abs(vx) / MAX_SPEED;
-		velocityRatio = velocityRatio * 0.9 + 0.1;
-		var effectiveAccelFactor = accelFactor * velocityRatio;
-		vx += (targetVelX - vx) * effectiveAccelFactor;
-		vx = clamp(vx, -MAX_SPEED, MAX_SPEED);
+		targetVelX = targetVelocityForPosition(targetVelX, crouching);
+		vx = horizontalVelocityForPosition(vx, targetVelX);
 		vy = clamp(vy, -MAX_SPEED, MAX_SPEED);
 		movePlayerBy(vx, vy);
 		if (isPastMapReturnBoundary()) {
 			returnToLastSafeSpot();
 		}
 		accelFactor = BASE_ACCEL_FACTOR;
+	}
+
+	private function previewNextVelocityX():Float {
+		var previewMode = mode;
+		if (cowboyHatActive && !grounded && previewMode == MODE_LAND) {
+			previewMode = MODE_WATER;
+		}
+		if (previewMode == MODE_PHYSICS_PAUSE || previewMode == MODE_JUMP) {
+			return 0;
+		}
+		if (previewMode == MODE_WATER) {
+			var waterVx = vx;
+			if (presentationInputRight) {
+				waterVx += accel * 0.5;
+			}
+			if (presentationInputLeft) {
+				waterVx -= accel * 0.5;
+			}
+			return clamp(waterVx * 0.92, -MAX_SPEED, MAX_SPEED);
+		}
+
+		var predictedTarget = targetVelX;
+		if (previewMode == MODE_FROZEN_SOLID || previewMode == MODE_HURT) {
+			predictedTarget = 0;
+		} else {
+			if (presentationInputRight) {
+				predictedTarget += accel;
+			}
+			if (presentationInputLeft) {
+				predictedTarget -= accel;
+			}
+			if (!presentationInputRight && !presentationInputLeft) {
+				predictedTarget = 0;
+			}
+			if (presentationInputDown && !crouching && grounded) {
+				var predictedCharge = crouchCharge < 100 ? crouchCharge + 2 : crouchCharge;
+				if (predictedCharge > 25) {
+					predictedTarget = 0;
+				}
+			}
+		}
+		predictedTarget = targetVelocityForPosition(predictedTarget, crouching);
+		return horizontalVelocityForPosition(vx, predictedTarget);
+	}
+
+	private function previewNextVelocityY():Float {
+		var previewMode = mode;
+		if (cowboyHatActive && !grounded && previewMode == MODE_LAND) {
+			previewMode = MODE_WATER;
+		}
+		if (previewMode == MODE_PHYSICS_PAUSE || previewMode == MODE_JUMP) {
+			return 0;
+		}
+		if (previewMode == MODE_WATER) {
+			var waterVy = vy;
+			if (presentationInputDown) {
+				waterVy += accel * 0.65;
+			}
+			if (presentationInputJump) {
+				waterVy -= accel * 0.65;
+			}
+			waterVy += DEFAULT_GRAVITY * 0.25;
+			return clamp(waterVy * 0.92, -MAX_SPEED, MAX_SPEED);
+		}
+
+		var predictedVy = vy;
+		if (previewMode != MODE_FROZEN_SOLID && previewMode != MODE_HURT) {
+			if (presentationInputJump) {
+				if (grounded && !crouching) {
+					predictedVy -= jumpVelocity;
+				} else if (jumpHeld) {
+					predictedVy += jumpVelBoost;
+				}
+			}
+			if (presentationInputDown && !crouching && !grounded) {
+				predictedVy += 0.5;
+			} else if (!presentationInputDown && crouchCharge > 25) {
+				predictedVy = -crouchCharge * 0.24;
+			}
+		}
+		predictedVy += gravity;
+		if (presentationInputJump && propellerHatActive && predictedVy > 0) {
+			predictedVy *= 0.85;
+		}
+		return clamp(predictedVy, -MAX_SPEED, MAX_SPEED);
+	}
+
+	private function targetVelocityForPosition(value:Float, isCrouching:Bool):Float {
+		var result = value * FRICTION;
+		if (isCrouching) {
+			result *= 0.7;
+		}
+		return clamp(result, -maxVelX, maxVelX);
+	}
+
+	private function horizontalVelocityForPosition(currentVx:Float, preparedTargetVelX:Float):Float {
+		var velocityRatio = 1 - Math.abs(currentVx) / MAX_SPEED;
+		velocityRatio = velocityRatio * 0.9 + 0.1;
+		var effectiveAccelFactor = accelFactor * velocityRatio;
+		return clamp(currentVx + (preparedTargetVelX - currentVx) * effectiveAccelFactor, -MAX_SPEED, MAX_SPEED);
 	}
 
 	private function isPastMapReturnBoundary():Bool {
@@ -965,6 +1102,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		setPlayerY(rotatedBlockPos(block).y);
 		vy = 0;
 		grounded = true;
+		presentationFloorContact.capture(block);
 		if (isSafeStandBlock(block)) {
 			updateSafeSpot(block, false);
 		}
@@ -981,6 +1119,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		var bounceOffset = blockController.blockBounceOffset(block);
 		setPlayerY(rotatedBlockPos(block).y + bounceOffset.y + level.tileSize + (crouching ? STANDING_HEIGHT / 2 : STANDING_HEIGHT));
 		vy *= -0.25;
+		presentationCeilingContact.capture(block);
 		jumpVelBoost = 0;
 		if (bumpPlaysThump(block)) {
 			var visualImpulse = RotationMath.rotatePoint(0, -15, courseRotation);
@@ -1013,6 +1152,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		if (targetVelX > 0) {
 			targetVelX = 0;
 		}
+		presentationRightContact.capture(block);
 		applySideHitEffect(block, sideForce, -1);
 		endBlockTrace(trace);
 	}
@@ -1029,6 +1169,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		if (targetVelX < 0) {
 			targetVelX = 0;
 		}
+		presentationLeftContact.capture(block);
 		applySideHitEffect(block, sideForce, 1);
 		endBlockTrace(trace);
 	}
@@ -1912,7 +2053,23 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	}
 
 	private function markMovementDiscontinuity():Void {
+		clearPresentationContacts();
 		movementDiscontinuityVersion++;
+	}
+
+	private function clearPresentationContacts():Void {
+		presentationFloorContact.clear();
+		presentationCeilingContact.clear();
+		presentationLeftContact.clear();
+		presentationRightContact.clear();
+	}
+
+	private function presentationContactActive(contact:PresentationContact):Bool {
+		var block = contact.block;
+		return block != null
+			&& block.x == contact.tileX
+			&& block.y == contact.tileY
+			&& getBlockAtTile(contact.tileX, contact.tileY, true) == block;
 	}
 
 	private static function flashCoordinate(value:Float):Float {
