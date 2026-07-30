@@ -97,6 +97,7 @@
 	"PlayerPopupTrophy": "assets/svg/native/player_popup_trophy.svg",
 	"PlayerPopupVerified": "assets/svg/native/player_popup_verified.svg",
 	"HalfSquarePanel": "assets/svg/native/half_square_panel.svg",
+	"SquarePanel": "assets/svg/native/square_panel.svg",
     "LoginBackgroundFar": "assets/svg/login/bg_far.svg",
     "LoginBackgroundMid": "assets/svg/login/bg_mid.svg",
     "LoginBackgroundSky": "assets/svg/login/bg_sky.svg",

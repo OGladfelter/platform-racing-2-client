@@ -104,6 +104,7 @@ enum abstract StaticSvg(String) to String {
 	var PlayerPopupTrophy = "assets/svg/native/player_popup_trophy.svg";
 	var PlayerPopupVerified = "assets/svg/native/player_popup_verified.svg";
 	var HalfSquarePanel = "assets/svg/native/half_square_panel.svg";
+	var SquarePanel = "assets/svg/native/square_panel.svg";
 	var LoginBackgroundFar = "assets/svg/login/bg_far.svg";
 	var LoginBackgroundMid = "assets/svg/login/bg_mid.svg";
 	var LoginBackgroundSky = "assets/svg/login/bg_sky.svg";
