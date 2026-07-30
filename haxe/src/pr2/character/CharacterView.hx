@@ -54,7 +54,10 @@ class CharacterView extends Sprite {
 	public static final STATE_NAMES = ["run", "stand", "jump", "superJump", "bumped", "crouch", "crouchWalk", "swim", "frozen"];
 	private static inline var VANISH_ASSET:String = "assets/blocks/vanish.png";
 	private static inline var PART_CACHE_PADDING:Int = 2;
+	private static inline var SUPER_JUMP_EFFECT_ROOT_NAME:String = "__superJumpEffectRoot";
 	private static final BITMAP_CACHE_SLOTS:Array<String> = ["head", "body", "frontFoot", "backFoot"];
+	private static inline var SUPER_JUMP_BLUR_ENABLED:Bool = #if pr2_disable_super_jump_blur false #else true #end;
+	private static inline var SUPER_JUMP_COLOR_TRANSFORM_ENABLED:Bool = #if pr2_disable_super_jump_color_transform false #else true #end;
 
 	public var currentFrame(default, null):Int = 1;
 	public var currentState(default, null):String = "stand";
@@ -81,6 +84,8 @@ class CharacterView extends Sprite {
 	private var completeDispatched:Bool = false;
 	private final slots:StringMap<Sprite> = new StringMap();
 	private final slotKinds:StringMap<String> = new StringMap();
+	private final superJumpEffectRoots:StringMap<Sprite> = new StringMap();
+	private final superJumpHatEffectRoots:Array<Null<Sprite>> = [null, null, null, null];
 	private var partIds:CharacterViewPartIds;
 	private final partColors:StringMap<CharacterViewPartColor> = new StringMap();
 	private var hatIds:Array<Int>;
@@ -147,13 +152,13 @@ class CharacterView extends Sprite {
 		if (!partBitmapCacheEnabled) return;
 		for (slotName in BITMAP_CACHE_SLOTS) {
 			var part = requireSlot(slotName);
-			var artwork = Std.downcast(part.getChildByName("artwork"), Sprite);
+			var artwork = Std.downcast(slotContentHost(part).getChildByName("artwork"), Sprite);
 			if (artwork == null) continue;
 			refreshExplicitBitmapCache(slotName, artwork);
 		}
 		for (index in 0...hatSlots.length) {
 			if (!hatSlots[index].visible) continue;
-			var artwork = Std.downcast(hatSlots[index].getChildByName("artwork"), Sprite);
+			var artwork = Std.downcast(hatContentHost(index).getChildByName("artwork"), Sprite);
 			if (artwork != null) refreshExplicitBitmapCache(hatCacheKey(index), artwork);
 			refreshHatOverlayCache(index);
 		}
@@ -184,7 +189,7 @@ class CharacterView extends Sprite {
 		var channels = partVariant("hat", hatIds[index]);
 		var animation = channels.overlayAnimation;
 		if (animation == null) return;
-		var overlay = Std.downcast(hatSlots[index].getChildByName("animatedOverlay"), Sprite);
+		var overlay = Std.downcast(hatContentHost(index).getChildByName("animatedOverlay"), Sprite);
 		if (overlay == null) return;
 		var effectiveScale = currentPartRasterScale(overlay);
 		if (effectiveScale <= 0) return;
@@ -316,12 +321,13 @@ class CharacterView extends Sprite {
 	}
 
 	private function createPartArtwork(container:Sprite, kind:String):Void {
-		var previous = container.getChildByName("artwork");
-		if (previous != null) container.removeChild(previous);
+		var host = slotContentHost(container);
+		var previous = host.getChildByName("artwork");
+		if (previous != null) host.removeChild(previous);
 		var artwork = new Sprite();
 		artwork.name = "artwork";
-		container.addChild(artwork);
-		container.setChildIndex(artwork, 0);
+		host.addChild(artwork);
+		host.setChildIndex(artwork, 0);
 		if (isEmptyPart(kind, partId(kind))) return;
 		var channels = partVariant(kind, partId(kind));
 		var primary = SvgAsset.create(partChannelAsset(channels, "primary"));
@@ -350,14 +356,15 @@ class CharacterView extends Sprite {
 	private function createHatArtwork(index:Int):Void {
 		var slot = hatSlots[index];
 		disposeHatBitmapCache(index, false);
-		while (slot.numChildren > 0) slot.removeChildAt(0);
+		var host = hatContentHost(index);
+		while (host.numChildren > 0) host.removeChildAt(0);
 		hatAnimationFrames[index] = 1;
 		slot.visible = hatIds[index] != 1;
 		if (!slot.visible) return;
 		var channels = partVariant("hat", hatIds[index]);
 		var artwork = new Sprite();
 		artwork.name = "artwork";
-		slot.addChild(artwork);
+		host.addChild(artwork);
 		var primary = SvgAsset.create(channels.primary);
 		primary.name = "primary";
 		artwork.addChild(primary);
@@ -371,7 +378,7 @@ class CharacterView extends Sprite {
 		if (channels.overlayAnimation != null) {
 			var overlay = new Sprite();
 			overlay.name = "animatedOverlay";
-			slot.addChild(overlay);
+			host.addChild(overlay);
 			renderHatOverlayFrame(index);
 		}
 	}
@@ -381,7 +388,7 @@ class CharacterView extends Sprite {
 		var channels = partVariant("hat", hatIds[index]);
 		var animation = channels.overlayAnimation;
 		if (animation == null) return;
-		var overlay = Std.downcast(hatSlots[index].getChildByName("animatedOverlay"), Sprite);
+		var overlay = Std.downcast(hatContentHost(index).getChildByName("animatedOverlay"), Sprite);
 		if (overlay == null) return;
 		var cachedFrames = hatOverlayFrameData[index];
 		var bitmap = hatOverlayBitmaps[index];
@@ -406,6 +413,7 @@ class CharacterView extends Sprite {
 
 	public function setState(state:String):Void {
 		state = normalizeState(state);
+		removeSuperJumpEffectRoots();
 		itemActionFrame = 1;
 		itemActionPlaying = false;
 		renderHeldItem();
@@ -433,6 +441,7 @@ class CharacterView extends Sprite {
 			rigRoot.setChildIndex(target, index);
 		}
 		applyAppearanceHierarchy();
+		if (state == "superJump") createSuperJumpEffectRoots();
 		applyFrame();
 	}
 
@@ -569,7 +578,7 @@ class CharacterView extends Sprite {
 		for (slotName in slots.keys()) {
 			if (slotKinds.get(slotName) != "body") continue;
 			disposePartBitmapCache(slotName);
-			var artwork = Std.downcast(requireSlot(slotName).getChildByName("artwork"), Sprite);
+			var artwork = Std.downcast(slotContentHost(requireSlot(slotName)).getChildByName("artwork"), Sprite);
 			if (artwork == null) continue;
 			for (animation in channels.channelAnimations) replaceAnimatedPartChannel(artwork, animation);
 			applyPartColorToArtwork("body", artwork);
@@ -633,7 +642,7 @@ class CharacterView extends Sprite {
 	public function setJetFlame(scale:Float, alpha:Float):Void {
 		jetFireScale = scale;
 		jetFireAlpha = alpha;
-		var holder = Std.downcast(heldItemSocket.getChildByName("heldItemArtwork"), Sprite);
+		var holder = Std.downcast(slotContentHost(heldItemSocket).getChildByName("heldItemArtwork"), Sprite);
 		var activeArtwork = holder == null ? null : Std.downcast(holder.getChildByName("jetPackActiveArtwork"), Sprite);
 		if (activeArtwork == null) return;
 		var fire1 = activeArtwork.getChildByName("fire1");
@@ -694,7 +703,8 @@ class CharacterView extends Sprite {
 	}
 
 	private function renderHeldItem():Void {
-		while (heldItemSocket.numChildren > 0) heldItemSocket.removeChildAt(0);
+		var host = slotContentHost(heldItemSocket);
+		while (host.numChildren > 0) host.removeChildAt(0);
 		if (itemFrameName == "None") return;
 		var key = heldItemArtworkKey();
 		var holder = heldItemArtworkCache.get(key);
@@ -703,7 +713,7 @@ class CharacterView extends Sprite {
 			if (holder == null) return;
 			heldItemArtworkCache.set(key, holder);
 		}
-		heldItemSocket.addChild(holder);
+		host.addChild(holder);
 	}
 
 	private function heldItemArtworkKey():String {
@@ -810,6 +820,8 @@ class CharacterView extends Sprite {
 
 	private function applyFrame():Void {
 		var index = currentFrame - 1;
+		var suppressSuperJumpBlur = currentState == "superJump" && !SUPER_JUMP_BLUR_ENABLED;
+		var suppressSuperJumpColorTransform = currentState == "superJump" && !SUPER_JUMP_COLOR_TRANSFORM_ENABLED;
 		for (slotDefinition in animation.slots) {
 			var target = requireSlot(slotDefinition.name);
 			var source = slotDefinition.frames[index];
@@ -829,26 +841,41 @@ class CharacterView extends Sprite {
 				source.ty + source.b * registration.x + source.d * registration.y
 			);
 			target.alpha = source.alpha;
-			var color = source.colorTransform;
-			target.transform.colorTransform = color == null ? new ColorTransform() : new ColorTransform(
-				color.redMultiplier,
-				color.greenMultiplier,
-				color.blueMultiplier,
-				color.alphaMultiplier,
-				color.redOffset,
-				color.greenOffset,
-				color.blueOffset,
-				color.alphaOffset
-			);
-			var blur = source.blur;
-			target.filters = blur == null ? [] : [new BlurFilter(blur.x, blur.y, blur.quality)];
+			var effectTarget = currentState == "superJump" ? superJumpEffectRoots.get(slotDefinition.name) : null;
+			if (effectTarget == null) effectTarget = target;
+			if (effectTarget != target) {
+				target.transform.colorTransform = new ColorTransform();
+				target.filters = [];
+			}
+			var color = suppressSuperJumpColorTransform ? null : source.colorTransform;
+			var blur = suppressSuperJumpBlur ? null : source.blur;
+			applyFrameEffects(effectTarget, color, blur);
+			if (currentState == "superJump" && hatSocket.parent == target) {
+				for (hatEffectRoot in superJumpHatEffectRoots) {
+					if (hatEffectRoot != null) applyFrameEffects(hatEffectRoot, color, blur);
+				}
+			}
 		}
 		positionHeadArtwork();
 	}
 
+	private function applyFrameEffects(target:Sprite, color:Dynamic, blur:Dynamic):Void {
+		target.transform.colorTransform = color == null ? new ColorTransform() : new ColorTransform(
+			color.redMultiplier,
+			color.greenMultiplier,
+			color.blueMultiplier,
+			color.alphaMultiplier,
+			color.redOffset,
+			color.greenOffset,
+			color.blueOffset,
+			color.alphaOffset
+		);
+		target.filters = blur == null ? [] : [new BlurFilter(blur.x, blur.y, blur.quality)];
+	}
+
 	private function positionHeadArtwork():Void {
 		var head = requireSlot("head");
-		var artwork = head.getChildByName("artwork");
+		var artwork = slotContentHost(head).getChildByName("artwork");
 		if (artwork == null) return;
 		// Animate exported head channels around the stage origin, while headsMC
 		// places those channels at its own authored registration. Restore that
@@ -921,7 +948,7 @@ class CharacterView extends Sprite {
 	private function applyPartColor(kind:String):Void {
 		for (slotName in slots.keys()) {
 			if (slotKinds.get(slotName) != kind) continue;
-			var artwork = Std.downcast(requireSlot(slotName).getChildByName("artwork"), Sprite);
+			var artwork = Std.downcast(slotContentHost(requireSlot(slotName)).getChildByName("artwork"), Sprite);
 			if (artwork != null) applyPartColorToArtwork(kind, artwork);
 		}
 	}
@@ -943,7 +970,7 @@ class CharacterView extends Sprite {
 	}
 
 	private function applyHatColor(index:Int):Void {
-		var artwork = Std.downcast(hatSlots[index].getChildByName("artwork"), Sprite);
+		var artwork = Std.downcast(hatContentHost(index).getChildByName("artwork"), Sprite);
 		if (artwork != null) applyHatColorToArtwork(index, artwork);
 	}
 
@@ -983,7 +1010,8 @@ class CharacterView extends Sprite {
 	private function applyAppearanceHierarchy():Void {
 		var fred = partIds.body == rig.fred.bodyId;
 		var parent = requireSlot(fred ? "body" : "head");
-		if (hatSocket.parent != parent) parent.addChild(hatSocket);
+		var host = slotContentHost(parent);
+		if (hatSocket.parent != host) host.addChild(hatSocket);
 		if (animation != null) {
 			for (slotName in rig.fred.hiddenSlots) requireSlot(slotName).visible = !fred;
 		}
@@ -1000,6 +1028,70 @@ class CharacterView extends Sprite {
 		var result = slots.get(name);
 		if (result == null) throw 'Character rig is missing slot $name';
 		return result;
+	}
+
+	private function slotContentHost(slot:Sprite):Sprite {
+		var effectRoot = superJumpEffectRoots.get(slot.name);
+		return effectRoot == null ? slot : effectRoot;
+	}
+
+	private function hatContentHost(index:Int):Sprite {
+		var effectRoot = superJumpHatEffectRoots[index];
+		return effectRoot == null ? hatSlots[index] : effectRoot;
+	}
+
+	private function createSuperJumpEffectRoots():Void {
+		for (slotDefinition in animation.slots) {
+			var target = requireSlot(slotDefinition.name);
+			var effectRoot = new Sprite();
+			effectRoot.name = SUPER_JUMP_EFFECT_ROOT_NAME;
+			var children = [for (index in 0...target.numChildren) target.getChildAt(index)];
+			for (child in children) {
+				if (child != hatSocket) effectRoot.addChild(child);
+			}
+			target.addChild(effectRoot);
+			superJumpEffectRoots.set(slotDefinition.name, effectRoot);
+		}
+		for (index in 0...hatSlots.length) {
+			var hatSlot = hatSlots[index];
+			var effectRoot = new Sprite();
+			effectRoot.name = SUPER_JUMP_EFFECT_ROOT_NAME;
+			while (hatSlot.numChildren > 0) effectRoot.addChild(hatSlot.getChildAt(0));
+			hatSlot.addChild(effectRoot);
+			superJumpHatEffectRoots[index] = effectRoot;
+		}
+	}
+
+	private function removeSuperJumpEffectRoots():Void {
+		var slotNames = [for (slotName in superJumpEffectRoots.keys()) slotName];
+		for (slotName in slotNames) {
+			var target = requireSlot(slotName);
+			var effectRoot = superJumpEffectRoots.get(slotName);
+			if (effectRoot == null) continue;
+			effectRoot.filters = [];
+			effectRoot.transform.colorTransform = new ColorTransform();
+			var insertionIndex = target.getChildIndex(effectRoot);
+			while (effectRoot.numChildren > 0) {
+				target.addChildAt(effectRoot.getChildAt(0), insertionIndex);
+				insertionIndex++;
+			}
+			if (effectRoot.parent == target) target.removeChild(effectRoot);
+			superJumpEffectRoots.remove(slotName);
+		}
+		for (index in 0...superJumpHatEffectRoots.length) {
+			var effectRoot = superJumpHatEffectRoots[index];
+			if (effectRoot == null) continue;
+			var hatSlot = hatSlots[index];
+			effectRoot.filters = [];
+			effectRoot.transform.colorTransform = new ColorTransform();
+			var insertionIndex = hatSlot.getChildIndex(effectRoot);
+			while (effectRoot.numChildren > 0) {
+				hatSlot.addChildAt(effectRoot.getChildAt(0), insertionIndex);
+				insertionIndex++;
+			}
+			if (effectRoot.parent == hatSlot) hatSlot.removeChild(effectRoot);
+			superJumpHatEffectRoots[index] = null;
+		}
 	}
 
 	private static function solidColor(color:Int):ColorTransform {
