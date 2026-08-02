@@ -72,11 +72,23 @@ class ItemController {
 	public function performSnakeItem():Void useSnake();
 
 	public function grantItemForDebug(itemCode:Int):Void {
+		endSpeedBurstForReplacement();
 		owner.heldItem = Items.getFromCode(itemCode);
 		owner.itemId = owner.heldItem == null ? null : Items.getCodeFromItem(owner.heldItem);
 		owner.itemUses = owner.heldItem == null ? null : owner.heldItem.initialUses;
 		owner.jetPackFuelRemaining = itemCode == LocalPlayerController.ITEM_JET_PACK ? LocalPlayerController.JET_PACK_TOTAL_FUEL : null;
 		owner.itemAvailable = true;
+	}
+
+	private function endSpeedBurstForReplacement():Void {
+		if (owner.speedBurstFramesRemaining <= 0) {
+			return;
+		}
+		// SpeedBurst.remove clears its timeout and restores movement stats before
+		// LocalCharacter.setItem constructs the replacement item in Flash.
+		owner.speedBurstFramesRemaining = 0;
+		owner.speedBurstFromItem = false;
+		owner.applyMovementStats();
 	}
 
 	public function useSnake():Void {
@@ -297,26 +309,7 @@ class ItemController {
 		var direction = owner.facingDirection < 0 ? "left" : "right";
 		owner.vx += owner.facingDirection < 0 ? -8 : 8;
 		owner.lastItemEffect = "slash:" + direction;
-		damageSwordArea();
 		consumeHeldItemUse();
-	}
-
-	private function damageSwordArea():Void {
-		var startX = owner.x;
-		var startY = owner.y - 25;
-		var reach = owner.facingDirection < 0 ? -29 : 29;
-		for (step in 0...3) {
-			var probeX = startX + reach * step;
-			damageSwordProbe(probeX, startY - 14, reach);
-			damageSwordProbe(probeX, startY + 14, reach);
-		}
-	}
-
-	private function damageSwordProbe(pixelX:Float, pixelY:Float, damageForce:Float):Void {
-		var block = owner.getBlockAtPixel(pixelX, pixelY);
-		if (block != null) {
-			damageBlockFromItem(block, damageForce);
-		}
 	}
 
 	public function useIceWave():Void {

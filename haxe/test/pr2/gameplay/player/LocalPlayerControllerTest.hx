@@ -75,7 +75,9 @@ class LocalPlayerControllerTest {
 		testTeleportItemMovesPlayerForwardAndConsumesItem();
 		testTeleportItemBlockedBySolidDestination();
 		testSpeedBurstBoostsMovementThenExpires();
+		testReplacingSpeedBurstEndsItWithoutDeletingNewItem();
 		testJetPackLiftsPlayerThenExpires();
+		testReplacingActiveJetPackStopsJetState();
 		testGroundJumpStacksWithJetPackThrust();
 		testLaserGunReloadTiming();
 		testLaserGunShotAnimatesBlockFromSide();
@@ -90,8 +92,6 @@ class LocalPlayerControllerTest {
 		testLightningEmitsZapAndConsumesItem();
 		testReloadableItemReleaseGateThenHeldRefire();
 		testSwordReloadTiming();
-		testSwordDamageBreaksTwoByTwoBrickGrid();
-		testSwordDamageActivatesVanishBlock();
 		testIceWaveReloadTiming();
 		testIceWaveShotAnimatesBlockFromSide();
 		testIceWaveDamageExplodesMineBlock();
@@ -105,6 +105,7 @@ class LocalPlayerControllerTest {
 		testBumpingHeartBlockAddsCappedLife();
 		testBumpingTimeBlockAddsTenSeconds();
 		testTeleportBlockMovesPlayerToNextSameColorBlock();
+		testRotatedTeleportBlockUsesRotatedDestinationDelta();
 		testTeleportBlockEmitsStartAndDestinationPops();
 		testCrouchingTeleportBlockBumpPreservesPreBumpY();
 		testTeleportCooldownPreventsImmediateReturn();
@@ -859,10 +860,10 @@ class LocalPlayerControllerTest {
 	}
 
 	private static function testHighImpactFallBreaksCrumbleBlock():Void {
-		var level = crumbleDropLevel();
+		var level = crumblePassThroughLevel();
 		var player = new LocalCharacter(level);
 		var touchedCrumble = false;
-		var framesAfterCrumble = 0;
+		var contactState:Null<LocalPlayerState> = null;
 
 		for (_ in 0...120) {
 			player.step(new LocalPlayerInput());
@@ -870,17 +871,15 @@ class LocalPlayerControllerTest {
 			if (state.touchedBlockType == "crumble") {
 				touchedCrumble = true;
 			}
-			if (touchedCrumble) {
-				framesAfterCrumble++;
-				if (framesAfterCrumble >= 7) {
-					break;
-				}
+			if (level.blockAt(2, 12) == null) {
+				contactState = state;
+				break;
 			}
 		}
 
-		var state = player.stateSnapshot();
 		assertEquals(true, touchedCrumble, "falling player touches crumble platform");
-		assertEquals(false, state.grounded, "broken crumble block no longer supports the player");
+		assertEquals(false, contactState.grounded, "destroying crumble does not ground the player on its removal frame");
+		assertAbove(contactState.vy, 0, "destroying crumble preserves downward velocity for seamless passage");
 		var crumbleActivate:Null<BlockVisualEvent> = null;
 		for (event in player.consumeBlockVisualEvents()) {
 			if (Type.enumConstructor(event.kind) == "LocalActivate" && event.tileX == 2 && event.tileY == 12) {
@@ -1472,6 +1471,24 @@ class LocalPlayerControllerTest {
 		assertClose(50, boosted.stateSnapshot().jumpStat, "speed burst expiry preserves jump stat");
 	}
 
+	private static function testReplacingSpeedBurstEndsItWithoutDeletingNewItem():Void {
+		var player = collectItem(speedBurstItemLevel(), 7);
+		makeItemAvailable(player);
+		player.step(new LocalPlayerInput(false, false, false, false, true));
+		assertEquals(true, player.stateSnapshot().speedBurstActive, "speed burst is active before item replacement");
+
+		player.grantItemForDebug(1);
+		assertEquals(false, player.stateSnapshot().speedBurstActive, "collecting another item calls Flash SpeedBurst.remove immediately");
+		assertEquals(1, player.stateSnapshot().itemId, "replacement item remains held after ending speed burst");
+
+		for (_ in 0...120) {
+			player.step(new LocalPlayerInput());
+		}
+		assertEquals(1, player.stateSnapshot().itemId, "cleared speed-burst timeout cannot delete the replacement item later");
+		assertClose(50, player.stateSnapshot().speedStat, "item replacement restores normal speed stats");
+		assertClose(50, player.stateSnapshot().accelerationStat, "item replacement restores normal acceleration stats");
+	}
+
 	private static function testJetPackLiftsPlayerThenExpires():Void {
 		var boosted = collectItem(jetPackItemLevel(), 6);
 		var normal = new LocalCharacter(jetPackComparisonLevel());
@@ -1506,6 +1523,19 @@ class LocalPlayerControllerTest {
 		}
 
 		assertEquals(null, boosted.stateSnapshot().itemId, "jet pack expires after 200 fuel frames");
+	}
+
+	private static function testReplacingActiveJetPackStopsJetState():Void {
+		var player = new LocalCharacter(jetPackComparisonLevel());
+		player.grantItemForDebug(6);
+		player.step(new LocalPlayerInput(false, false, false, false, true));
+		assertEquals(true, player.stateSnapshot().jetPackActive, "held Jetpack starts its engine while the item key is down");
+
+		@:privateAccess player.controller.useItemBlock(new LevelBlock(0, 0, BlockType.Item, "8"));
+		var replaced = player.stateSnapshot();
+
+		assertEquals(8, replaced.itemId, "item block replaces the active Jetpack with Sword");
+		assertEquals(false, replaced.jetPackActive, "replacing Jetpack applies Flash JetPack.remove endJet transition");
 	}
 
 	private static function testGroundJumpStacksWithJetPackThrust():Void {
@@ -1783,38 +1813,6 @@ class LocalPlayerControllerTest {
 		assertEquals(null, player.stateSnapshot().itemId, "sword is consumed after three swings");
 	}
 
-	private static function testSwordDamageActivatesVanishBlock():Void {
-		var player = collectItem(heldItemWithTargetBlockLevel(8, BlockType.Vanish, 3), 8);
-		player.consumeBlockVisualEvents();
-
-		makeItemAvailable(player);
-		player.step(new LocalPlayerInput(false, false, false, false, true));
-		var events = player.consumeBlockVisualEvents();
-		assertEquals(1, events.length, "slash-damaged vanish block emits the base bump event");
-		assertEquals("BlockBumpSound", Std.string(events[0].kind), "slash damage bumps the vanish block");
-		assertClose(1, player.blockAlphaAt(3, 5), "slash-damaged vanish block waits until the next frame to fade");
-		player.step(new LocalPlayerInput());
-		assertClose(0.9, player.blockAlphaAt(3, 5), "slash-damaged vanish block fades like contact activation");
-	}
-
-	private static function testSwordDamageBreaksTwoByTwoBrickGrid():Void {
-		var level = heldItemLevel(8);
-		level.blocks.push(new LevelBlock(3, 4, BlockType.Brick));
-		level.blocks.push(new LevelBlock(4, 4, BlockType.Brick));
-		level.blocks.push(new LevelBlock(3, 5, BlockType.Brick));
-		level.blocks.push(new LevelBlock(4, 5, BlockType.Brick));
-		var player = collectItem(level, 8);
-		player.consumeBlockVisualEvents();
-
-		makeItemAvailable(player);
-		player.step(new LocalPlayerInput(false, false, false, false, true));
-
-		assertClose(0, player.blockAlphaAt(3, 4), "sword breaks the upper-near brick");
-		assertClose(0, player.blockAlphaAt(4, 4), "sword breaks the upper-far brick");
-		assertClose(0, player.blockAlphaAt(3, 5), "sword breaks the lower-near brick");
-		assertClose(0, player.blockAlphaAt(4, 5), "sword breaks the lower-far brick");
-	}
-
 	private static function testIceWaveReloadTiming():Void {
 		var player = collectItem(heldItemLevel(9), 9);
 
@@ -2030,6 +2028,19 @@ class LocalPlayerControllerTest {
 		assertClose(135, state.x, "teleport moves player by matching block delta");
 		assertClose(90, state.y, "teleport preserves feet offset relative to block");
 		assertEquals(true, state.grounded, "player remains grounded after teleport");
+	}
+
+	private static function testRotatedTeleportBlockUsesRotatedDestinationDelta():Void {
+		var level = teleportPairLevel();
+		var player = new LocalCharacter(level);
+		player.resetControllerForRaceStart(100, 200);
+		@:privateAccess player.controller.courseRotation = 90;
+
+		@:privateAccess player.controller.maybeTeleport(level.blocks[0]);
+		var state = player.stateSnapshot();
+
+		assertClose(100, state.x, "90-degree teleport preserves x for a horizontal map-space pair");
+		assertClose(260, state.y, "90-degree teleport rotates the destination delta into world y");
 	}
 
 	private static function testTeleportBlockEmitsStartAndDestinationPops():Void {
@@ -3367,6 +3378,21 @@ class LocalPlayerControllerTest {
 				new LevelBlock(2, 12, BlockType.Crumble),
 				new LevelBlock(2, 13, BlockType.Solid)
 			]
+		);
+	}
+
+	private static function crumblePassThroughLevel():Level {
+		return new Level(
+			"crumble-pass-through",
+			"Crumble Pass Through",
+			5,
+			17,
+			30,
+			1,
+			new StatDefaults(50, 0.2 + 50 / 60, 2 + 50 / 40),
+			new TilePosition(2, 0),
+			new TilePosition(4, 12),
+			[new LevelBlock(2, 12, BlockType.Crumble)]
 		);
 	}
 

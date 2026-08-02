@@ -105,6 +105,13 @@ class ColorPickerTest {
 		assertEquals(0, changes, "same color does not dispatch change");
 		picker.setColor(0x123456);
 		assertEquals(1, changes, "changed color dispatches change");
+		var swatchTransform = @:privateAccess picker.swatch.transform.colorTransform;
+		assertClose(1, swatchTransform.redMultiplier, "saved swatch keeps an identity red multiplier");
+		assertClose(0, swatchTransform.redOffset, "saved swatch does not add the old gray red offset");
+		var blackPicker = new ColorPicker();
+		blackPicker.setColor(0x000000);
+		assertEquals(0x000000, blackPicker.getColor(), "black saved swatch retains exact selected RGB");
+		blackPicker.remove();
 
 		@:privateAccess picker.openPopup();
 		assertEquals(1, opens, "openPopup dispatches open");

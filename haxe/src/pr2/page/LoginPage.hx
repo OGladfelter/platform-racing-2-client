@@ -23,6 +23,7 @@ import pr2.net.LoginSessionGate;
 import pr2.net.LoginSessionGate.LoginSessionResult;
 import pr2.net.FormPostClient;
 import pr2.net.SavedAccounts;
+import pr2.lobby.SecureData;
 import pr2.net.ServerInfo;
 import pr2.net.ServerStatusClient;
 import pr2.ui.controls.GameSelect;
@@ -97,6 +98,7 @@ class LoginPage extends Page {
 	}
 
 	override public function initialize():Void {
+		SecureData.setNumber("userRank", 0);
 		AudioManager.enterLogin();
 		background = new LoginBackground();
 		addChild(background);
@@ -177,6 +179,7 @@ class LoginPage extends Page {
 	}
 
 	private function openLoginDialog():Void {
+		SecureData.setNumber("userRank", -1);
 		if (SavedAccounts.getAll().length > 0) {
 			openServerSelectPopup(false, false);
 			return;
@@ -248,6 +251,7 @@ class LoginPage extends Page {
 	}
 
 	private function openGuestDialog():Void {
+		SecureData.setNumber("userRank", 0);
 		loginToken = "";
 		openServerSelectPopup(true, false);
 	}
@@ -714,6 +718,11 @@ class LoginPage extends Page {
 					openLoggingInPopup(loginId, userName, userPass, remember, server);
 				case LoginSuccessful(group, socketUserName):
 					if (loginGate != null) loginGate.acceptSocket(group, socketUserName == "" ? userName : socketUserName);
+				case ServerMessageReceived(message):
+					// Flash displays CommandHandler's exact server message before the
+					// duplicate-login socket closes. Closing the probe here also prevents
+					// the later close event from replacing it with a generic disconnect.
+					failLogin(message == "" ? "Login failed." : message);
 				case LoginFailed(message), ConnectionClosed(message):
 					failLogin(message);
 			}

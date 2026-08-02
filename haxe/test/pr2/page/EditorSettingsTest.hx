@@ -78,6 +78,7 @@ class EditorSettingsTest {
 		testBackgroundButtonCommit();
 		testEditorBackgroundAndLayerParity();
 		testBlockGridLinesFollowZoomAndCamera();
+		testAlternateMovementControlsPanEditorCamera();
 		testTextObjectSaveStringUsesDecodedArtFormat();
 		testValueSettingsPopupCommit();
 		testMusicSettingsPopupCommit();
@@ -662,6 +663,22 @@ class EditorSettingsTest {
 		assertEquals(null, editor.blockGrid, "editor teardown clears block grid reference");
 	}
 
+	private static function testAlternateMovementControlsPanEditorCamera():Void {
+		Settings.useMemoryStoreForTests();
+		Settings.init("AlternateEditorControls");
+		Settings.setValue(Settings.ALTERNATE_CONTROLS, {up: 84, right: 89, down: 71, left: 70, item: 73});
+		var editor = new LevelEditor();
+		editor.initialize();
+		var startX = editor.posX;
+
+		@:privateAccess editor.pressedKeys[89] = true;
+		@:privateAccess editor.keyScroll(new Event(Event.ENTER_FRAME));
+
+		assertTrue(editor.posX < startX, "configured alternate right key pans the editor camera like Flash");
+		editor.remove();
+		Settings.disablePersistenceForTests();
+	}
+
 	private static function testTextObjectSaveStringUsesDecodedArtFormat():Void {
 		var layer = new EditorObjectLayer(1, 1);
 		var textObject = layer.addText("Hello #`,&+-;", 105, 116, 0x123456);
@@ -1016,6 +1033,13 @@ class EditorSettingsTest {
 		var stats = testCourse.statsSelect;
 		var speedSlider = @:privateAccess stats.speedSlider;
 		var persistedBeforeChange = Reflect.field(Settings.getValue(Settings.LE_TEST_STATS), "speed");
+		var testCharacter = @:privateAccess stats.localChar;
+		testCharacter.setHats([5, 0xFFFFFF, -1]);
+		assertEquals(10, Math.round(testCharacter.stateSnapshot().speedStat), "Cowboy hat keeps the saved LE speed display");
+		assertEquals(20, Math.round(testCharacter.stateSnapshot().accelerationStat), "Cowboy hat keeps the saved LE acceleration display");
+		assertEquals(30, Math.round(testCharacter.stateSnapshot().jumpStat), "Cowboy hat keeps the saved LE jumping display");
+		testCharacter.setHats([]);
+		assertEquals(10, Math.round(testCharacter.stateSnapshot().speedStat), "removing Cowboy restores the saved LE speed baseline");
 		stats.setStats(91, 82, 73);
 		stats.noteUserStatChange();
 		assertEquals(true, @:privateAccess stats.updateSavedLEStats, "stat change marks pending LE stats");
@@ -1129,10 +1153,12 @@ class EditorSettingsTest {
 		assertEquals(true, editor.continueSelectedBrushAt(drawPoint.x + 401, drawPoint.y), "brush segmentation stroke extends");
 		assertEquals(true, editor.isDrawing(), "brush remains active after distance segmentation restart");
 		assertEquals(1, layer.drawRasterizeCountForTests(), "distance segmentation rasterizes the completed draw segment");
+		var firstRasterTile = layer.rasterCanvas.getChildAt(0);
 		assertEquals(2, drawActionCount(layer), "distance segmentation starts a new draw action at the current point");
 
 		assertEquals(true, editor.restartSelectedBrushStrokeForTests(), "timer segmentation restarts active brush stroke");
 		assertEquals(2, layer.drawRasterizeCountForTests(), "timer segmentation rasterizes the completed draw segment");
+		assertEquals(firstRasterTile, layer.rasterCanvas.getChildAt(0), "new brush segments update persistent Flash-style raster tiles");
 		assertEquals(3, drawActionCount(layer), "timer segmentation records a fresh draw action");
 		assertEquals(true, editor.endSelectedBrush(), "segmented brush stroke finishes");
 		assertEquals(3, layer.drawRasterizeCountForTests(), "final brush finish rasterizes the draw segment");

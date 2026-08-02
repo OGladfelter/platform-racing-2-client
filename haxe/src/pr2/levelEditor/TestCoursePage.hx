@@ -133,6 +133,7 @@ class TestCoursePage extends Page {
 			speed = acceleration = jumping = 0;
 		}
 		course.localCharacter.levelEditorStatsEnabled = true;
+		course.localCharacter.setStartingStats(speed, acceleration, jumping);
 		statsSelect = new StatsSelect(TEST_STATS_TOTAL, speed, acceleration, jumping, course.localCharacter);
 		statsSelect.x = HOLDER_X + TEST_STATS_X;
 		statsSelect.y = HOLDER_Y + TEST_STATS_Y;

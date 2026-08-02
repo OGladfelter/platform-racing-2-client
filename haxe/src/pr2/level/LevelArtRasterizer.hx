@@ -141,6 +141,22 @@ class ArtRasterTiles {
 		this.budget = budget;
 	}
 
+	public function dispose():Void {
+		for (bitmap in tiles) {
+			if (bitmap.parent != null) {
+				bitmap.parent.removeChild(bitmap);
+			}
+			if (bitmap.bitmapData != null) {
+				bitmap.bitmapData.dispose();
+			}
+		}
+		tiles.clear();
+		attachQueue = [];
+		attachQueueSeen = new Map();
+		resetPendingBatch();
+		pendingLargeStroke = null;
+	}
+
 	public function applyAll(actions:Array<LevelDrawAction>):Void {
 		for (action in actions) {
 			while (!apply(action, true)) {}

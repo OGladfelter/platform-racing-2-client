@@ -91,9 +91,9 @@ class LocalCharacterTest {
 		cowboy.setHats([5, 0xFFFFFF, -1]);
 
 		var equipped = cowboy.stateSnapshot();
-		assertClose(100, equipped.speedStat, "cowboy hat raises speed to Flash minimum");
-		assertClose(99.6, equipped.accelerationStat, "cowboy hat raises acceleration to Flash minimum");
-		assertClose(100, equipped.jumpStat, "cowboy hat raises jump to Flash minimum");
+		assertClose(50, equipped.speedStat, "cowboy movement boost leaves displayed speed unchanged like Flash");
+		assertClose(50, equipped.accelerationStat, "cowboy movement boost leaves displayed acceleration unchanged like Flash");
+		assertClose(50, equipped.jumpStat, "cowboy movement boost leaves displayed jumping unchanged like Flash");
 
 		cowboy.step(new LocalPlayerInput());
 		var swimming = cowboy.stateSnapshot();
@@ -167,6 +167,17 @@ class LocalCharacterTest {
 			santa.step(new LocalPlayerInput(false, true));
 		}
 		assertAbove(santa.stateSnapshot().vx, normal.stateSnapshot().vx + 0.5, "santa hat raises max horizontal velocity");
+
+		var cycled = new LocalCharacter(longFlatLevel());
+		cycled.setHats([7, 0xFFFFFF, -1]);
+		cycled.setHats([]);
+		cycled.setHats([7, 0xFFFFFF, -1]);
+		cycled.setHats([]);
+		cycled.setHats([7, 0xFFFFFF, -1]);
+		for (_ in 0...90) {
+			cycled.step(new LocalPlayerInput(false, true));
+		}
+		assertClose(santa.stateSnapshot().vx, cycled.stateSnapshot().vx, "santa pickup and drop cycles do not stack the speed bonus");
 
 		var removed = new LocalCharacter(longFlatLevel());
 		removed.setHats([7, 0xFFFFFF, -1]);
@@ -283,6 +294,7 @@ class LocalCharacterTest {
 		jumpStart.setHats([10, 0xFFFFFF, -1]);
 
 		assertEquals(7, jumpStart.stateSnapshot().itemId, "jump-start hat immediately uses a speed burst");
+		assertEquals("sparkle", @:privateAccess jumpStart.activeParticleEmitter.kind, "jump-start hat starts Flash's Speed Burst stars");
 		for (_ in 0...24) {
 			normal.step(new LocalPlayerInput(false, true));
 			jumpStart.step(new LocalPlayerInput(false, true));
@@ -312,7 +324,8 @@ class LocalCharacterTest {
 		assertEquals(7, artifact.stateSnapshot().itemId, "artifact hat immediately uses a speed burst");
 		assertEquals(30, artifact.stateSnapshot().courseTime, "artifact hat clamps race timer to thirty seconds");
 		assertEquals(true, artifact.artifactControlsReversed, "artifact hat reverses controls on equip");
-		assertEquals("artifactYeah:1", sounds.join("|"), "artifact hat emits yeah feedback");
+		assertEquals("speedUp:1|artifactYeah:1", sounds.join("|"), "artifact hat starts Speed Burst stars before yeah feedback");
+		assertEquals("sparkle", @:privateAccess artifact.activeParticleEmitter.kind, "artifact hat starts Flash's Speed Burst stars");
 		assertEquals(1, musicActivations, "artifact hat switches to artifact music once");
 
 		for (_ in 0...24) {

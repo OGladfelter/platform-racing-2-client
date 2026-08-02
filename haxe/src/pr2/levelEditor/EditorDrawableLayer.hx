@@ -3,6 +3,7 @@ package pr2.levelEditor;
 import openfl.display.Sprite;
 import openfl.geom.Point;
 import pr2.level.Level.LevelDrawAction;
+import pr2.level.LevelArtRasterizer.ArtRasterTiles;
 import pr2.level.LevelDecoder;
 import pr2.level.LevelRenderer;
 
@@ -27,6 +28,8 @@ class EditorDrawableLayer extends Sprite {
 	private var drawing:Bool = false;
 	private var drawRasterizeCount:Int = 0;
 	private var eraseCleanupCount:Int = 0;
+	private var rasterTiles:ArtRasterTiles;
+	private var rasterizedActionCount:Int = 0;
 
 	public function new(layerNum:Int, layerScale:Float) {
 		super();
@@ -40,6 +43,7 @@ class EditorDrawableLayer extends Sprite {
 		brushCanvas = new Sprite();
 		addChild(rasterCanvas);
 		addChild(brushCanvas);
+		rasterTiles = new ArtRasterTiles(rasterCanvas);
 		brushCanvas.graphics.lineStyle(brushSize, color);
 	}
 
@@ -148,7 +152,7 @@ class EditorDrawableLayer extends Sprite {
 		if (parent != null) {
 			parent.removeChild(this);
 		}
-		clearChildren(rasterCanvas);
+		rasterTiles.dispose();
 		clearChildren(brushCanvas);
 		saveArray.resize(0);
 		redoArray.resize(0);
@@ -201,20 +205,35 @@ class EditorDrawableLayer extends Sprite {
 	}
 
 	private function rasterize():Void {
-		clearChildren(rasterCanvas);
-		LevelRenderer.renderLayerStrokes(rasterCanvas, drawActions);
+		rasterTiles.dispose();
+		rasterTiles = new ArtRasterTiles(rasterCanvas);
+		rasterTiles.applyAll(drawActions);
+		rasterTiles.attachQueuedTiles(1000000);
+		rasterizedActionCount = drawActions.length;
 		brushCanvas.graphics.clear();
 		brushCanvas.graphics.lineStyle(brushSize, color);
 	}
 
 	private function rasterizeDrawStroke():Void {
 		drawRasterizeCount++;
-		rasterize();
+		rasterizePendingActions();
 	}
 
 	private function erase():Void {
 		eraseCleanupCount++;
-		rasterize();
+		rasterizePendingActions();
+	}
+
+	private function rasterizePendingActions():Void {
+		while (rasterizedActionCount < drawActions.length) {
+			var action = drawActions[rasterizedActionCount];
+			while (!rasterTiles.apply(action, true)) {}
+			rasterizedActionCount++;
+		}
+		rasterTiles.flush();
+		rasterTiles.attachQueuedTiles(1000000);
+		brushCanvas.graphics.clear();
+		brushCanvas.graphics.lineStyle(brushSize, color);
 	}
 
 	private function roundedLocalPoint(stageX:Float, stageY:Float):Point {

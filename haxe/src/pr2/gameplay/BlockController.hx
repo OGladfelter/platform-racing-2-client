@@ -377,6 +377,12 @@ class BlockController {
 		if (block.type == BlockType.SnakeTrail) {
 			return false;
 		}
+		// Map.removeBlock evicts the object and clears its collision slot. Runtime
+		// state is deliberately discarded at that point, so collisionActive is the
+		// authoritative signal for a stale reference held by the current hit pass.
+		if (!block.collisionActive) {
+			return true;
+		}
 		var state = stateAt(owner.blockKey(block.x, block.y));
 		return state != null && state.removed;
 	}

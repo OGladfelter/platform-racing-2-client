@@ -21,6 +21,7 @@ class GameSlider extends NativeControl {
 	private var dragging:Bool = false;
 	private var thumbHovered:Bool = false;
 	private var thumbPressed:Bool = false;
+	private var reversed:Bool = false;
 
 	public function new(minimum:Float = 0, maximum:Float = 10, value:Float = 0, step:Float = 1, ?skin:ControlSkin) {
 		if (maximum < minimum || step <= 0) throw "Invalid slider range";
@@ -51,6 +52,11 @@ class GameSlider extends NativeControl {
 		var before = value;
 		value = next;
 		if (value != before) { if (onChange != null) onChange(value); dispatchEvent(new Event(Event.CHANGE)); }
+	}
+
+	public function setReversed(value:Bool):Void {
+		reversed = value;
+		drawThumb();
 	}
 
 	override public function setSize(width:Float, height:Float):Void { super.setSize(width, height); graphics.clear(); drawTrack(); drawThumb(); }
@@ -110,11 +116,14 @@ class GameSlider extends NativeControl {
 	}
 	private function setValueFromPosition(localX:Float):Void {
 		var usable = Math.max(1, controlWidth - 10);
-		setValueFromUser(minimum + (maximum - minimum) * Math.max(0, Math.min(1, (localX - 5) / usable)));
+		var ratio = Math.max(0, Math.min(1, (localX - 5) / usable));
+		if (reversed) ratio = 1 - ratio;
+		setValueFromUser(minimum + (maximum - minimum) * ratio);
 	}
 	private function drawThumb():Void {
 		if (thumb == null) return;
 		var ratio = maximum == minimum ? 0 : (value - minimum) / (maximum - minimum);
+		if (reversed) ratio = 1 - ratio;
 		while (thumb.numChildren > 0) thumb.removeChildAt(0);
 		var path = !enabled ? "assets/svg/ui/slider_thumb_disabled.svg" : (thumbPressed ? "assets/svg/ui/slider_thumb_down.svg" : (thumbHovered ?
 			"assets/svg/ui/slider_thumb_over.svg" : "assets/svg/ui/slider_thumb_up.svg"));
@@ -142,6 +151,7 @@ class GameSlider extends NativeControl {
 	@:noCompletion public function trackAssetForTests():String return enabled ? "slider_track_up" : "slider_track_disabled";
 
 	@:noCompletion public function setValueFromPositionForTests(localX:Float):Void setValueFromPosition(localX);
+	@:noCompletion public function thumbLocalXForTests():Float return thumb.x;
 	private function adjustFromKey(event:KeyboardEvent):Void {
 		if (event.keyCode == Keyboard.LEFT || event.keyCode == Keyboard.DOWN) setValueFromUser(value - step);
 		if (event.keyCode == Keyboard.RIGHT || event.keyCode == Keyboard.UP) setValueFromUser(value + step);

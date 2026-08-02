@@ -27,6 +27,7 @@ import pr2.level.ObjectCodes;
 import pr2.level.LevelDecoder;
 import pr2.level.LevelRenderer;
 import pr2.lobby.LobbyArt;
+import pr2.lobby.account.Settings;
 import pr2.lobby.dialogs.Popup;
 import pr2.net.ServerLevelData;
 import pr2.page.BlockGridLines;
@@ -43,6 +44,7 @@ class LevelEditor extends Page {
 	private static inline var LEVEL_HEIGHT:Int = 60000;
 	private static inline var BASE_HALF_STAGE_WIDTH:Float = 275;
 	private static inline var BASE_HALF_STAGE_HEIGHT:Float = 200;
+	private final alternateControls:Dynamic = Settings.getValue(Settings.ALTERNATE_CONTROLS, Settings.DEFAULT_ALT_CONTROLS);
 
 	public final isMod:Bool;
 	public var reportsMode(default, null):Bool;
@@ -1060,7 +1062,10 @@ class LevelEditor extends Page {
 
 	private function keyScroll(_:Event):Void {
 		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
-		var hasInput = isPressed(Keyboard.DOWN) || isPressed(Keyboard.UP) || isPressed(Keyboard.LEFT) || isPressed(Keyboard.RIGHT);
+		var hasInput = movementKeyPressed(Keyboard.DOWN, "down")
+			|| movementKeyPressed(Keyboard.UP, "up")
+			|| movementKeyPressed(Keyboard.LEFT, "left")
+			|| movementKeyPressed(Keyboard.RIGHT, "right");
 		if (!cameraStarted && !hasInput) {
 			return;
 		}
@@ -1070,21 +1075,26 @@ class LevelEditor extends Page {
 			return;
 		}
 		var accel = isPressed(Keyboard.SHIFT) ? 20 : 10;
-		if (isPressed(Keyboard.DOWN)) {
+		if (movementKeyPressed(Keyboard.DOWN, "down")) {
 			velY -= accel;
 		}
-		if (isPressed(Keyboard.UP)) {
+		if (movementKeyPressed(Keyboard.UP, "up")) {
 			velY += accel;
 		}
-		if (isPressed(Keyboard.LEFT)) {
+		if (movementKeyPressed(Keyboard.LEFT, "left")) {
 			velX += accel;
 		}
-		if (isPressed(Keyboard.RIGHT)) {
+		if (movementKeyPressed(Keyboard.RIGHT, "right")) {
 			velX -= accel;
 		}
 		velX *= 0.6;
 		velY *= 0.6;
 		setPos(posX + velX / zoom, posY + velY / zoom);
+	}
+
+	private function movementKeyPressed(primaryKey:Int, alternateField:String):Bool {
+		var alternateKey = Std.int(Reflect.field(alternateControls, alternateField));
+		return isPressed(primaryKey) || isPressed(alternateKey);
 	}
 
 	private function onKeyDown(event:KeyboardEvent):Void {

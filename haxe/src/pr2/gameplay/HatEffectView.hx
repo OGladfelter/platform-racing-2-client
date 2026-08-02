@@ -10,7 +10,10 @@ class HatEffectView extends Sprite {
 	public final colorMC:Sprite;
 	public final colorMC2:Sprite;
 	public final fixedArt:Sprite;
+	public final animatedOverlay:Sprite;
 	public var currentFrame(default, null):Int = 1;
+	public var overlayCurrentFrame(default, null):Int = 1;
+	private var overlayFrames:Array<String> = [];
 
 	public function new() {
 		super();
@@ -24,6 +27,9 @@ class HatEffectView extends Sprite {
 		colorMC2 = new Sprite();
 		colorMC2.name = "colorMC2";
 		addChild(colorMC2);
+		animatedOverlay = new Sprite();
+		animatedOverlay.name = "animatedOverlay";
+		addChild(animatedOverlay);
 		setHatId(1);
 	}
 
@@ -33,6 +39,23 @@ class HatEffectView extends Sprite {
 		setChannel(colorMC, channels.primary);
 		setChannel(fixedArt, channels.fixed);
 		setChannel(colorMC2, channels.secondary);
+		overlayFrames = channels.overlayAnimation == null ? [] : channels.overlayAnimation.frames.copy();
+		overlayCurrentFrame = 1;
+		renderOverlayFrame();
+	}
+
+	public function advanceOneFrame():Void {
+		if (overlayFrames.length == 0) return;
+		overlayCurrentFrame = overlayCurrentFrame >= overlayFrames.length ? 1 : overlayCurrentFrame + 1;
+		renderOverlayFrame();
+	}
+
+	private function renderOverlayFrame():Void {
+		while (animatedOverlay.numChildren > 0) animatedOverlay.removeChildAt(0);
+		if (overlayFrames.length == 0) return;
+		var art = SvgAsset.create(overlayFrames[overlayCurrentFrame - 1]);
+		art.name = "vectorFrame";
+		animatedOverlay.addChild(art);
 	}
 
 	private static function setChannel(holder:Sprite, path:String):Void {

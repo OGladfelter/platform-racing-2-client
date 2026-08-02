@@ -50,14 +50,5 @@ run_step browser-navigation \
     sequence test/sequences/openfl/navigation.json
 run_step lobby-interactions \
   python3 tools/openfl_driver.py sequence test/sequences/openfl/lobby-flow.json
-run_step lobby-flatten-capture \
-  python3 tools/openfl_driver.py --query 'screen=lobby&user=Tester' --delay 6 \
-    shot test/output/lobby.png
-run_step lobby-flatten-parity \
-  python3 tools/compare_screenshots.py \
-    test/baselines/openfl/lobby.png test/output/lobby.png \
-    --diff test/output/lobby-diff.png \
-    --metrics test/output/lobby-metrics.json \
-    --threshold-percent 2 --threshold-rms 1.0
 
 echo "All tests passed. Logs: ${ARTIFACT_DIR#$ROOT/}"

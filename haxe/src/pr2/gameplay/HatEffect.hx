@@ -79,6 +79,7 @@ class HatEffect {
 
 	public function step(level:Level, courseRotation:Int, ?playerX:Float, ?playerY:Float, playerCrouching:Bool = false,
 			playerRemoved:Bool = false, donePlaying:Bool = false):Void {
+		display.advanceOneFrame();
 		var previousVelX = velX;
 		var previousVelY = velY;
 		var previousGrounded = grounded;

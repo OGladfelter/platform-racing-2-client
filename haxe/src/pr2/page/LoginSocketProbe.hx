@@ -10,6 +10,7 @@ enum LoginProbeStatus {
 	LoginId(loginId:String);
 	LoginSuccessful(group:Int, userName:String);
 	LoginFailed(message:String);
+	ServerMessageReceived(message:String);
 	ConnectionClosed(message:String);
 }
 
@@ -77,6 +78,8 @@ class LoginSocketProbe {
 				onStatus(LoginSuccessful(group, userName));
 			case LoginFailure(message):
 				onStatus(LoginFailed(message == "" ? "Login failed." : message));
+			case ServerMessage(message):
+				onStatus(ServerMessageReceived(message));
 			case Other(command):
 				onStatus(Message('Received $command from ${server.label()}.'));
 		}

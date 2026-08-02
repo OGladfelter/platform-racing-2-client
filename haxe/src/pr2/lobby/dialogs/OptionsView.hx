@@ -76,6 +76,10 @@ class OptionsView extends NativeView {
 
 	private function slider(name:String, x:Float, y:Float):Void {
 		var control = ownControl(new GameSlider(0, 100, 100, 5));
+		// The authored Slider instances are vertical. Flash's vertical direction
+		// puts the maximum at the top; the reflected XFL matrix then maps the
+		// horizontal component track onto the stage's Y axis.
+		control.setReversed(true);
 		control.name = name;
 		control.setSize(100, 22);
 		control.transform.matrix = new Matrix(0, 1, 1, 0, x, y);

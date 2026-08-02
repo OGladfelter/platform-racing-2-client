@@ -46,6 +46,9 @@ class LoginSocketProtocolTest {
 	private static function testParsesLoginResponses():Void {
 		assertLoginSuccessful(7, "Player", LoginSocketProtocol.parseFrame("abc`1`loginSuccessful`7`Player"), "login success state");
 		assertLoginFailure("bad login", LoginSocketProtocol.parseFrame("abc`1`loginFailure`bad`login"), "login failure message");
+		assertServerMessage("Your account was already running on this server. It has been logged out to save your data. Please log in again.",
+			LoginSocketProtocol.parseFrame("abc`2`message`Your account was already running on this server. It has been logged out to save your data. Please log in again."),
+			"duplicate-login warning keeps the exact Flash server message");
 		assertEquals(null, LoginSocketProtocol.parseFrame("too-short"), "short frame ignored");
 	}
 
@@ -73,6 +76,15 @@ class LoginSocketProtocolTest {
 			case LoginFailure(error) if (error == expected):
 			case _:
 				throw '$message: expected LoginFailure($expected), got $actual';
+		}
+	}
+
+	private static function assertServerMessage(expected:String, actual:Null<LoginSocketMessage>, message:String):Void {
+		assertions++;
+		switch (actual) {
+			case ServerMessage(value) if (value == expected):
+			case _:
+				throw '$message: expected ServerMessage($expected), got $actual';
 		}
 	}
 

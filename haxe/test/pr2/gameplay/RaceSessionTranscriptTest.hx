@@ -93,7 +93,7 @@ class RaceSessionTranscriptTest {
 		assertTrue(course.localCharacter != null, "buffered local character applied on mount");
 		assertEquals(7, course.localCharacter.tempID, "buffered local character keeps its temp id");
 		assertEquals(5, course.localCharacter.hat1, "buffered cowboy hat update replays after mount");
-		assertTrue(course.localCharacter.stateSnapshot().speedStat >= 100, "replayed cowboy hat activates its stat boost");
+		assertEquals(80.0, course.localCharacter.stateSnapshot().speedStat, "replayed cowboy hat keeps the displayed server speed stat");
 		assertEquals(false, course.raceStarted, "race waits for the countdown");
 		assertTrue(course.countdown != null, "begin-race mounts the countdown");
 		physicsClock.advanceFrame();

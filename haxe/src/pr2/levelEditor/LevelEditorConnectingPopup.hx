@@ -65,7 +65,7 @@ class LevelEditorConnectingPopup extends Popup {
 				}, fail, token);
 			case LoginSuccessful(group, socketUserName):
 				if (gate != null) gate.acceptSocket(group, socketUserName == "" ? userName : socketUserName);
-			case LoginFailed(message), ConnectionClosed(message):
+			case LoginFailed(message), ServerMessageReceived(message), ConnectionClosed(message):
 				fail(message);
 			case Message(_):
 		}

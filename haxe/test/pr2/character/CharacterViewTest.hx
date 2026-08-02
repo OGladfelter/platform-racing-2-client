@@ -569,8 +569,11 @@ class CharacterViewTest {
 		var view = new CharacterView();
 		view.setState("superJump");
 		var head = view.slot("head");
+		var body = view.slot("body");
 		var heldItem = view.slot("heldItem");
 		var rigRoot = Std.downcast(view.getChildByName("rigRoot"), openfl.display.Sprite);
+		assertEquals(head, view.hatSocket.parent, "super-jump keeps the equipped hat stack attached to the moving head");
+		assertTrue(rigRoot.getChildIndex(head) > rigRoot.getChildIndex(body), "super-jump preserves Flash's head-and-hats layer above the body");
 		view.gotoFrame(39);
 		assertEquals(0, rigRoot.filters.length, "super-jump frame 39 has not started the authored charge glow");
 		assertClose(0.25, rigRoot.transform.colorTransform.redMultiplier, "super-jump frame 39 keeps the authored pre-glow desaturation");

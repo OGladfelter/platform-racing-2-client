@@ -34,6 +34,7 @@ class LocalCharacter extends Character {
 	public var networkPlayerCount:Int = 1;
 	public var stingCooldown(default, null):Int = 0;
 	public var artifactControlsReversed(default, null):Bool = false;
+	public var onArtifactVisualActivated:Null<Void->Void> = null;
 	public var onArtifactHatActivated:Null<Void->Void> = null;
 	public var levelEditorStatsEnabled:Bool = false;
 	/** Flash `LocalCharacter.testMode`: editor hits animate but do not shed hats. */
@@ -57,7 +58,7 @@ class LocalCharacter extends Character {
 		baseGravityMultiplier = level.gravity;
 		controller = new LocalPlayerController(level, blockController);
 		controller.onHeartGain = gainHeart;
-		controller.weaponEffectPosition = currentWeaponEffectPosition;
+		controller.weaponEffectPosition = getWeaponEffectPosition;
 		controller.onHitAccepted = dropHighestHatFromHit;
 		controller.onBumpRecovery = function(frames:Int):Void beginRecovery(frames);
 		syncFromController();
@@ -69,7 +70,7 @@ class LocalCharacter extends Character {
 		The facing scale is taken from the controller because Flash changes
 		`scaleX` immediately before dispatching item use.
 	**/
-	private function currentWeaponEffectPosition():PixelPoint {
+	public function getWeaponEffectPosition():PixelPoint {
 		var socketGlobal = display.heldItemSocket.localToGlobal(new Point());
 		var socketInDisplay = display.globalToLocal(socketGlobal);
 		var characterPoint = new Point(socketInDisplay.x * controller.facingScaleX, socketInDisplay.y * display.scaleY);
@@ -110,11 +111,12 @@ class LocalCharacter extends Character {
 		if (hadSanta && !hasHatFlag(Character.SANTA)) {
 			controller.resetStats();
 		}
-		if (hasHatFlag(Character.SANTA) && !hadSanta && !(hasHatFlag(Character.COWBOY) && !hadCowboy)) {
+		if (hasHatFlag(Character.SANTA) && !hadSanta) {
 			controller.ensureSantaStats();
 		}
 		if (hasHatFlag(Character.JUMP_START) && !hadJumpStart) {
 			controller.grantSpeedBurst(2000);
+			syncFromController();
 		}
 		if (hadArtifact && !hasHatFlag(Character.ARTIFACT)) {
 			controller.clearSpeedBurst();
@@ -123,15 +125,19 @@ class LocalCharacter extends Character {
 		}
 		if (hasHatFlag(Character.ARTIFACT) && !hadArtifact) {
 			controller.grantSpeedBurst(30000);
+			syncFromController();
 			controller.clampCourseTime(30);
-			artifactControlsReversed = true;
-			setArtifactReversedControls(true);
+			if (onArtifactVisualActivated != null) {
+				onArtifactVisualActivated();
+			}
 			if (onPlayCharacterSound != null) {
 				onPlayCharacterSound({kind: "artifactYeah", x: x, y: y, volume: 1, target: this});
 			}
 			if (onArtifactHatActivated != null) {
 				onArtifactHatActivated();
 			}
+			artifactControlsReversed = true;
+			setArtifactReversedControls(true);
 		}
 		syncFromController();
 	}
@@ -152,6 +158,11 @@ class LocalCharacter extends Character {
 		controller.topHatActive = hasHatFlag(Character.TOP);
 		controller.cheeseHatActive = hasHatFlag(Character.CHEESE);
 		controller.step(input);
+		syncFromController();
+	}
+
+	public function setStartingStats(speed:Float, acceleration:Float, jump:Float):Void {
+		controller.setStartingStats(speed, acceleration, jump);
 		syncFromController();
 	}
 

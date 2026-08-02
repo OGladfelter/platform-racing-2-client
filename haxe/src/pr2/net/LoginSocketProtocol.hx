@@ -6,6 +6,7 @@ enum LoginSocketMessage {
 	LoginId(loginId:String);
 	LoginSuccessful(group:Int, userName:String);
 	LoginFailure(message:String);
+	ServerMessage(message:String);
 	Other(command:String);
 }
 
@@ -64,6 +65,11 @@ class LoginSocketProtocol {
 				LoginSuccessful(group == null ? 0 : group, parts.length >= 5 ? parts[4] : "");
 			case "loginFailure":
 				LoginFailure(parts.slice(3).join(" "));
+			case "message":
+				// Flash routes this through CommandHandler.message even while the
+				// LoggingInPopup is active. The duplicate-login warning is delivered
+				// this way immediately before the server closes the socket.
+				ServerMessage(parts.length >= 4 ? parts[3] : "");
 			case _:
 				Other(command);
 		}

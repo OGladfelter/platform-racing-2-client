@@ -119,12 +119,14 @@ class GameShellMountTest {
 		assertEquals(true, course.localCharacter == null, "local character torn down");
 
 		testDeathmatchHeartsShowInitialLives();
+		testSwitchingEqualUseItemsRefreshesAmmoDisplay();
 		testRoguelikeHudAndInitialState();
 		testRoguelikeOnlyEmitsTerminalFinishOnNinthHit();
 		testRenderingUsesFreeMoveCamera();
 		testFinishDrawingReadinessEmission();
 		testLocalFinishBeginsCharacterRemoval();
 		testTestModeFinishDelegatesWithoutRaceRemoval();
+		testTestModeFinishMaySynchronouslyRemoveCourse();
 		testObjectiveModeReportsEachFinishOnce();
 		testRotateBlockDisplayKeepsLocalCharacterCentered();
 		testCountdownKeepsCameraStill();
@@ -175,6 +177,16 @@ class GameShellMountTest {
 		assertEquals(null, course.playerSpectating, "spectate switch returns to free camera");
 		assertEquals(true, @:privateAccess remote.externalPresentationSnapPending,
 			"old spectate target also snaps when camera leaves it");
+		course.remove();
+	}
+
+	private static function testSwitchingEqualUseItemsRefreshesAmmoDisplay():Void {
+		var course = buildCourse();
+		@:privateAccess course.syncItemDisplay(Items.LASER_GUN, 3);
+		assertEquals(3, course.itemDisplay.ammo, "first multi-use item shows all three charges");
+
+		@:privateAccess course.syncItemDisplay(Items.SWORD, 3);
+		assertEquals(3, course.itemDisplay.ammo, "switching to another unused three-charge item reapplies all dots");
 		course.remove();
 	}
 
@@ -1328,6 +1340,26 @@ class GameShellMountTest {
 		course.localCharacter.dispatchEvent(new Event(Event.ENTER_FRAME));
 		assertClose(alphaBefore, course.localCharacter.alpha, "test-mode finish does not fade out the character");
 		course.remove();
+	}
+
+	private static function testTestModeFinishMaySynchronouslyRemoveCourse():Void {
+		var course = buildCourse("race");
+		course.offlineMode = true;
+		course.beginRace();
+		while (!course.levelRenderer.isDrawingComplete()) {
+			course.levelRenderer.dispatchEvent(new Event(Event.ENTER_FRAME));
+		}
+		var callbacks = 0;
+		course.onFinish = function(_):Void {
+			callbacks++;
+			course.remove();
+		};
+		@:privateAccess course.localCharacter.controller.finished = true;
+
+		course.dispatchEvent(new Event(Event.ENTER_FRAME));
+
+		assertEquals(1, callbacks, "test-mode finish permits the level tester to replace its course synchronously");
+		assertEquals(null, course.localCharacter, "removed test course does not continue its old frame after the finish callback");
 	}
 
 	private static function testObjectiveModeReportsEachFinishOnce():Void {

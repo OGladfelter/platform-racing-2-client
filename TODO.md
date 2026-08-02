@@ -108,3 +108,177 @@ and XFL sources. Completed work belongs in git history and `README.md`.
   popup, race-return, and rotation tests on representative physical iOS and
   Android phones/tablets before release. Browser coverage is available with
   `?screen=lobby&mobile=1` (and `offlineLists=1` for deterministic level data).
+
+#### HTML PR2 Forum Bug Reports
+
+These unresolved reports were reviewed from pages 1-4 of the Jiggmin's Village
+HTML PR2 bug-report prefix on 2 August 2026. Locked threads and threads whose
+original reporter confirmed the bug was fixed are intentionally omitted.
+Supporting images are stored in `docs/bug-reports/html-pr2/`; videos remain
+available from their source threads.
+
+##### Bug reports
+
+- [!] [Super jump animation can blur body parts](https://jiggmin2.com/forums/showthread.php?tid=5423):
+  a super jump can randomly blur or lower the resolution of body parts until a
+  later super jump happens to restore them.
+- [!] [Heart Block Doesn't Work](https://jiggmin2.com/forums/showthread.php?tid=5439):
+  touching a Heart Block does not grant invincibility.
+- [!] [Santa Hat does not give +10 Speed boost unless picked up](https://jiggmin2.com/forums/showthread.php?tid=5432):
+  starting a race with the hat gives no boost, while repeated pickup/drop cycles
+  stack +10 Speed without removing the boost on drop.
+- [!] [Colour pallete color picker not working](https://jiggmin2.com/forums/showthread.php?tid=5438):
+  the eyedropper appears but does not sample a colour.
+- [x] [LE lags when drawing](https://jiggmin2.com/forums/showthread.php?tid=5437):
+  drawing in an art-heavy level produces noticeable freezes.
+- [!] [Super Jumping layers Player in front of Hat](https://jiggmin2.com/forums/showthread.php?tid=5436):
+  charging a super jump draws the player in front of the equipped hat until a
+  hat is dropped or picked up.
+  [Evidence](docs/bug-reports/html-pr2/tid-5436-01.png)
+- [x] [Sword hitbox still not identical](https://jiggmin2.com/forums/showthread.php?tid=5435):
+  sword reach is too short in one standing setup and remains standing-height
+  while crawling instead of matching the Flash hitbox.
+  Evidence: [standing range](docs/bug-reports/html-pr2/tid-5435-01.png),
+  [HTML crawl hitbox](docs/bug-reports/html-pr2/tid-5435-02.png), and
+  [Flash crawl hitbox](docs/bug-reports/html-pr2/tid-5435-03.png).
+- [x] [Colour Swatch Displays incorrect colours](https://jiggmin2.com/forums/showthread.php?tid=5434):
+  saved swatches display colours roughly `#808080` brighter per channel than the
+  popup and character part.
+  Evidence: [example 1](docs/bug-reports/html-pr2/tid-5434-01.png) and
+  [example 2](docs/bug-reports/html-pr2/tid-5434-02.png).
+- [x] [Hat Effect Bugs](https://jiggmin2.com/forums/showthread.php?tid=5417):
+  audit Moon, Jellyfish, Jumpstart, Artifact, and Santa effects: start-of-race
+  effects are missing, several pickup/drop effects persist incorrectly, the
+  Jellyfish lightning graphic and Speed Burst stars are absent, Artifact timing
+  and facing are wrong, and Santa does not freeze Arrow or Vanish Blocks.
+- [x] [Changing Hats changes stats](https://jiggmin2.com/forums/showthread.php?tid=5433):
+  switching Santa/Cowboy hats while testing in Level Editor mutates displayed
+  stats to 50 or 100, including during Super Flying Cowboy Mode.
+  [Evidence](docs/bug-reports/html-pr2/tid-5433-01.png)
+- [x] [Minimum Rank Requirement only updates on Account tab](https://jiggmin2.com/forums/showthread.php?tid=5431):
+  logging into a lower-ranked account while another lobby tab is selected can
+  retain the prior account's rank and bypass level rank restrictions.
+  Evidence: [step 1](docs/bug-reports/html-pr2/tid-5431-01.png),
+  [step 2](docs/bug-reports/html-pr2/tid-5431-02.png), and
+  [result](docs/bug-reports/html-pr2/tid-5431-03.png).
+- [!] [Player gets forfeited at start of race](https://jiggmin2.com/forums/showthread.php?tid=5429):
+  with Flash and HTML players on Lightspeed 2 (3711604), the second entrant can
+  be marked forfeited during countdown, continue playing, and receive no EXP.
+  [Evidence](docs/bug-reports/html-pr2/tid-5429-01.png)
+- [!] [Mine rotate glitch not working as expected](https://jiggmin2.com/forums/showthread.php?tid=5428):
+  super-jumping into a Rotate Block while quickly placing a Mine does not match
+  Flash's mine disappearance and wall-pass behavior.
+- [!] [Mine doesn't delete itself on explosion](https://jiggmin2.com/forums/showthread.php?tid=5427):
+  a Mine remains present if a player is inside it when it explodes.
+- [!] [No mine placement animation while rotated](https://jiggmin2.com/forums/showthread.php?tid=5392):
+  placed Mines omit their placement animation while the player is rotated.
+  [Evidence](docs/bug-reports/html-pr2/tid-5392-01.gif)
+- [!] [Block stacking doesn't work the same way](https://jiggmin2.com/forums/showthread.php?tid=5395):
+  layered/stacked Block behavior differs from Flash and remains reproducible on
+  the extra-glitches build.
+- [!] [Attacks from alien eggs don't do anything](https://jiggmin2.com/forums/showthread.php?tid=5393):
+  Alien Egg attacks only apply the freeze effect instead of their full behavior.
+  [Evidence](docs/bug-reports/html-pr2/tid-5393-01.gif)
+- [!] [Mines can't be placed in the same column that you're standing](https://jiggmin2.com/forums/showthread.php?tid=5390):
+  Mine placement is offset one block forward and cannot target the player's
+  current column.
+  [Evidence](docs/bug-reports/html-pr2/tid-5390-01.png)
+- [x] [Teleport blocks teleport rotated players to random position](https://jiggmin2.com/forums/showthread.php?tid=5424):
+  Teleport Blocks send rotated players to apparently random positions while
+  unrotated players work normally.
+- [x] [Hitting a finish block while testing in LE crashes](https://jiggmin2.com/forums/showthread.php?tid=5422):
+  touching a Finish Block during a Level Editor test plays the finish sound and
+  then crashes the client.
+- [x] [Alternate Movement Controls don't work in Level Editor](https://jiggmin2.com/forums/showthread.php?tid=5421):
+  edit mode accepts only arrow keys; configured alternate movement keys such as
+  WASD do nothing.
+- [!] [Campaign Tab Bug](https://jiggmin2.com/forums/showthread.php?tid=5420):
+  reloading the in-game Campaign tab resets it to the server's daily campaign
+  instead of preserving the user's most recent campaign selection.
+- [x] [Item Uses Display Bug](https://jiggmin2.com/forums/showthread.php?tid=5419):
+  switching between unused multi-charge items can display one charge until the
+  item is used, even though all three charges remain.
+- [x] [Infinite Jetpack Sound Bug](https://jiggmin2.com/forums/showthread.php?tid=5418):
+  collecting another item while using a Jetpack can leave its sound looping for
+  every player until all charges of a later item are consumed.
+- [!] [Super Flying Cowboy Hat Mode doesn't exist?](https://jiggmin2.com/forums/showthread.php?tid=5387):
+  the Fred-with-hat animation appears, but the mode text is absent and the mode
+  does not activate.
+- [?] [Up Arrow physics not identical](https://jiggmin2.com/forums/showthread.php?tid=5360):
+  Up Arrow, player, and/or Safety Net collision differs from Flash on Pixel
+  Perfect (6511621), leaving the player stuck after the Crumble Blocks.
+  Evidence: [initial comparison](docs/bug-reports/html-pr2/tid-5360-01.png) and
+  [remaining failure](docs/bug-reports/html-pr2/tid-5360-02.gif).
+- [!] [Scale issue with canvas of game](https://jiggmin2.com/forums/showthread.php?tid=5415):
+  the game canvas chooses the wrong scale at common 1080p/1440p viewport sizes;
+  opening developer tools before loading produces the expected scale.
+  Evidence: [normal load](docs/bug-reports/html-pr2/tid-5415-01.png) and
+  [developer-tools load](docs/bug-reports/html-pr2/tid-5415-02.png).
+- [!] [Other players can destroy blocks by touching them](https://jiggmin2.com/forums/showthread.php?tid=5375):
+  remote contact with Bricks, Crumble Blocks, or Mines hides the local graphic
+  and repeatedly plays destruction art even though local collision remains.
+  Evidence: [brick contact](docs/bug-reports/html-pr2/tid-5375-01.png),
+  [invisible brick](docs/bug-reports/html-pr2/tid-5375-02.png), and
+  [removed Mine position](docs/bug-reports/html-pr2/tid-5375-03.png).
+- [!] [Stamps not aligned properly](https://jiggmin2.com/forums/showthread.php?tid=5413):
+  stamps and art layers 00, 2, and 3 are offset relative to Blocks and lines.
+  Evidence: [stamp](docs/bug-reports/html-pr2/tid-5413-01.png),
+  [layer example 1](docs/bug-reports/html-pr2/tid-5413-02.png), and
+  [layer example 2](docs/bug-reports/html-pr2/tid-5413-03.png).
+- [!] [A couple of Level Editor problems](https://jiggmin2.com/forums/showthread.php?tid=5412):
+  fix the reported editor parity gaps: initial camera/Block positions and Start
+  numbers, hover icons, option-popup positions, Custom Stats/sliders, Text
+  bounding-box resizing, cross-layer selection, dragging placement, and hard-to-
+  click selection controls.
+  Evidence: [1](docs/bug-reports/html-pr2/tid-5412-01.png),
+  [2](docs/bug-reports/html-pr2/tid-5412-02.png),
+  [3](docs/bug-reports/html-pr2/tid-5412-03.png),
+  [4](docs/bug-reports/html-pr2/tid-5412-04.png),
+  [5](docs/bug-reports/html-pr2/tid-5412-05.png), and
+  [6](docs/bug-reports/html-pr2/tid-5412-06.png).
+- [x] [Option sliders are inverted](https://jiggmin2.com/forums/showthread.php?tid=5410):
+  Options sliders map the bottom to 100% and the top to 0%.
+  Evidence: [example 1](docs/bug-reports/html-pr2/tid-5410-01.png) and
+  [example 2](docs/bug-reports/html-pr2/tid-5410-02.png).
+- [x] [Part colour picker shows white for both colours when on epic upgraded parts](https://jiggmin2.com/forums/showthread.php?tid=5406):
+  the part-colour picker displays white for both channels on epic-upgraded parts.
+  [Evidence](docs/bug-reports/html-pr2/tid-5406-01.png)
+- [x] [Propeller hat loses its hat after being removed](https://jiggmin2.com/forums/showthread.php?tid=5405):
+  a removed Propeller Hat loses its propeller blades.
+  [Evidence](docs/bug-reports/html-pr2/tid-5405-01.png)
+- [!] [Hats become transparent and non-interactable after being removed](https://jiggmin2.com/forums/showthread.php?tid=5370):
+  removed EXP and Propeller Hats become transparent and cannot be picked up.
+  [Evidence](docs/bug-reports/html-pr2/tid-5370-01.png)
+- [!] [Giant Dialog Boxes](https://jiggmin2.com/forums/showthread.php?tid=5388):
+  verify dialog sizing parity and restore scrolling; a follow-up reports that
+  boxes became smaller but scrolling remained broken.
+  [Evidence](docs/bug-reports/html-pr2/tid-5388-01.png)
+- [x] [Logging into an account twice on the same server errors](https://jiggmin2.com/forums/showthread.php?tid=5403):
+  make duplicate-login handling return HTML to the main menu and match Flash's
+  specific already-running-account error instead of a generic disconnect.
+- [!] [Cowboy Hat speed is not identical](https://jiggmin2.com/forums/showthread.php?tid=5361):
+  upward Cowboy Hat flight is too fast and incorrectly depends on Acceleration.
+- [x] [Destroying Crumble Blocks stops movement](https://jiggmin2.com/forums/showthread.php?tid=5367):
+  destroying a Crumble Block collides like a solid Block and stops running or
+  falling instead of allowing seamless passage through multiple Blocks.
+- [!] [Safety Nets allow you to jump from anywhere](https://jiggmin2.com/forums/showthread.php?tid=5364):
+  touching a Safety Net resets jump availability and permits mid-air jumps.
+  [Evidence](docs/bug-reports/html-pr2/tid-5364-01.png)
+- [?] [Mines through block above water glitch not working](https://jiggmin2.com/forums/showthread.php?tid=5400):
+  need a reproducible Flash trace for the water-edge clipping case. Flash's
+  `LocalCharacter.hit` enters the normal 60-frame hurt mode for Mine hits, and
+  shortening that recovery breaks established Mine-driven levels.
+- [x] [Getting new item does not end Speed Burst](https://jiggmin2.com/forums/showthread.php?tid=5399):
+  picking up an item leaves Speed Burst active, then deletes the held item when
+  the burst ends.
+- [!] [Backgrounds are wrongly positioned](https://jiggmin2.com/forums/showthread.php?tid=5397):
+  loaded/tested level backgrounds are offset and custom backgrounds render only
+  their associated solid colour.
+  Evidence: [loaded view](docs/bug-reports/html-pr2/tid-5397-01.png),
+  [editor/test view](docs/bug-reports/html-pr2/tid-5397-02.png), and
+  [custom background](docs/bug-reports/html-pr2/tid-5397-03.png).
+- [!] [Tab Key Select Element Doesn't Work](https://jiggmin2.com/forums/showthread.php?tid=5398):
+  keyboard focus skips most controls; only a few stat/part arrows, Favorite, and
+  help controls are reachable with Tab.
+- [!] [Santa hat doesn't freeze arrow blocks](https://jiggmin2.com/forums/showthread.php?tid=5396):
+  Santa Hat does not freeze Arrow Blocks or reproduce their frozen animation.

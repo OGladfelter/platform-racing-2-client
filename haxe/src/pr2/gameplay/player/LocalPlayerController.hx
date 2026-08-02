@@ -122,9 +122,9 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	private var maxVelX:Float;
 	private var jumpVelocity:Float;
 	private var gravity:Float;
-	private final startingSpeedStat:Float;
-	private final startingAccelerationStat:Float;
-	private final startingJumpStat:Float;
+	private var startingSpeedStat:Float;
+	private var startingAccelerationStat:Float;
+	private var startingJumpStat:Float;
 	private var speedStat:Float;
 	private var accelerationStat:Float;
 	private var jumpStat:Float;
@@ -353,6 +353,13 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		applyStats(speed, acceleration, jump);
 	}
 
+	public function setStartingStats(speed:Float, acceleration:Float, jump:Float):Void {
+		startingSpeedStat = clamp(speed, 0, 100);
+		startingAccelerationStat = clamp(acceleration, 0, 100);
+		startingJumpStat = clamp(jump, 0, 100);
+		applyStats(startingSpeedStat, startingAccelerationStat, startingJumpStat);
+	}
+
 	public function consumeStatsSelectSyncRequest():Bool {
 		var requested = statsSelectSyncRequested;
 		statsSelectSyncRequested = false;
@@ -360,7 +367,9 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	}
 
 	public function ensureCowboyStats():Void {
-		applyStats(Math.max(speedStat, 100), Math.max(accelerationStat, 99.6), Math.max(jumpStat, 100));
+		maxVelX = Math.max(maxVelX, 12);
+		accel = Math.max(accel, 1.86);
+		jumpVelocity = 4.5;
 	}
 
 	public function ensureSantaStats():Void {
@@ -648,7 +657,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	}
 
 	public function stateSnapshot():LocalPlayerState {
-		return new LocalPlayerState(x, y, vx, vy, grounded, crouching, animationState, touchedBlock == null ? null : touchedBlock.type, mode, itemId, itemUses, lastItemEffect, speedStat, accelerationStat, jumpStat, courseRotation, finished, finishBlockId, finishX, finishY, lives, courseTime, jetPackActive, speedBurstFramesRemaining > 0 && speedBurstFromItem, touchedBlockX, touchedBlockY, lastCollisionEvent, roguelikeFinishHits);
+		return new LocalPlayerState(x, y, vx, vy, grounded, crouching, animationState, touchedBlock == null ? null : touchedBlock.type, mode, itemId, itemUses, lastItemEffect, speedStat, accelerationStat, jumpStat, courseRotation, finished, finishBlockId, finishX, finishY, lives, courseTime, jetPackActive, speedBurstFramesRemaining > 0, touchedBlockX, touchedBlockY, lastCollisionEvent, roguelikeFinishHits);
 	}
 
 	public function presentationDeltaX():Float {
@@ -1099,6 +1108,17 @@ class LocalPlayerController implements ItemRuntimeOwner {
 			endBlockTrace(trace);
 			return;
 		}
+		// CrumbleBlock activates before calling super.onStand in Flash. If that
+		// activation removes it, the player keeps falling instead of receiving a
+		// one-frame solid collision response.
+		if (block.type == BlockType.Crumble && !isBlockFrozen(block)) {
+			applyCrumbleForce(block, cheeseCrumbleForce(standForce, true));
+			if (isBlockRemoved(block)) {
+				grounded = false;
+				endBlockTrace(trace);
+				return;
+			}
+		}
 		setPlayerY(rotatedBlockPos(block).y);
 		vy = 0;
 		grounded = true;
@@ -1116,6 +1136,14 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		touch(block);
 		var bumpForce = Math.round(-vy);
 		var preBumpY = y;
+		// Flash's CrumbleBlock.onBump likewise activates before Block.onBump.
+		if (block.type == BlockType.Crumble) {
+			applyCrumbleForce(block, cheeseCrumbleForce(bumpForce));
+			if (isBlockRemoved(block)) {
+				endBlockTrace(trace);
+				return;
+			}
+		}
 		var bounceOffset = blockController.blockBounceOffset(block);
 		setPlayerY(rotatedBlockPos(block).y + bounceOffset.y + level.tileSize + (crouching ? STANDING_HEIGHT / 2 : STANDING_HEIGHT));
 		vy *= -0.25;
@@ -1145,6 +1173,15 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		recordCollision(block, "leftHit");
 		touch(block);
 		var sideForce = Math.round(Math.abs(vx) * 1.75);
+		if (block.type == BlockType.Crumble) {
+			var crumbleForce = cheeseCrumbleForce(sideForce);
+			maybeBreakCheeseAdjacentCrumble(block, crumbleForce, -1);
+			applyCrumbleForce(block, crumbleForce);
+			if (isBlockRemoved(block)) {
+				endBlockTrace(trace);
+				return;
+			}
+		}
 		setPlayerX(rotatedBlockPos(block).x - HALF_WIDTH);
 		if (vx > 0) {
 			vx *= -0.05;
@@ -1162,6 +1199,15 @@ class LocalPlayerController implements ItemRuntimeOwner {
 		recordCollision(block, "rightHit");
 		touch(block);
 		var sideForce = Math.round(Math.abs(vx) * 1.75);
+		if (block.type == BlockType.Crumble) {
+			var crumbleForce = cheeseCrumbleForce(sideForce);
+			maybeBreakCheeseAdjacentCrumble(block, crumbleForce, 1);
+			applyCrumbleForce(block, crumbleForce);
+			if (isBlockRemoved(block)) {
+				endBlockTrace(trace);
+				return;
+			}
+		}
 		setPlayerX(rotatedBlockPos(block).x + level.tileSize + HALF_WIDTH);
 		if (vx < 0) {
 			vx *= -0.05;
@@ -1190,8 +1236,6 @@ class LocalPlayerController implements ItemRuntimeOwner {
 			return;
 		}
 		switch (block.type) {
-			case BlockType.Crumble:
-				applyCrumbleForce(block, cheeseCrumbleForce(force, true));
 			case BlockType.Vanish:
 				activateVanish(block);
 			case BlockType.Mine:
@@ -1229,8 +1273,6 @@ class LocalPlayerController implements ItemRuntimeOwner {
 					courseTime += 10;
 					blockVisualEvents.push(new BlockVisualEvent(BlockVisualEventKind.TimeBlockSound, block.x, block.y));
 				}
-			case BlockType.Crumble:
-				applyCrumbleForce(block, cheeseCrumbleForce(force));
 			case BlockType.Vanish:
 				activateVanish(block);
 			case BlockType.ArrowDown | BlockType.ArrowUp | BlockType.ArrowLeft | BlockType.ArrowRight:
@@ -1308,10 +1350,6 @@ class LocalPlayerController implements ItemRuntimeOwner {
 
 	private function applySideHitEffect(block:LevelBlock, force:Int, playerTileOffset:Int):Void {
 		switch (block.type) {
-			case BlockType.Crumble:
-				var crumbleForce = cheeseCrumbleForce(force);
-				maybeBreakCheeseAdjacentCrumble(block, crumbleForce, playerTileOffset);
-				applyCrumbleForce(block, crumbleForce);
 			case BlockType.Vanish:
 				activateVanish(block);
 			case BlockType.Mine:
@@ -1678,6 +1716,17 @@ class LocalPlayerController implements ItemRuntimeOwner {
 
 		var nextItem = itemFromBlockOptions(block.options);
 		if (nextItem != null) {
+			// Flash removes the old Item before constructing its replacement.
+			// JetPack.remove() calls endJet immediately; collecting another Jetpack
+			// is the one exception and only replenishes the current pack's fuel.
+			if (speedBurstFramesRemaining > 0) {
+				speedBurstFramesRemaining = 0;
+				speedBurstFromItem = false;
+				applyMovementStats();
+			}
+			if (itemId == ITEM_JET_PACK && nextItem != ITEM_JET_PACK) {
+				jetPackActive = false;
+			}
 			heldItem = Items.getFromCode(nextItem);
 			itemId = Items.getCodeFromItem(heldItem);
 			itemUses = heldItem == null ? null : heldItem.initialUses;
@@ -1859,7 +1908,11 @@ class LocalPlayerController implements ItemRuntimeOwner {
 			state.depletedSupply = true;
 			state.depletedVisualSupply = true;
 		}
-		movePlayerBy((dest.x - block.x) * level.tileSize, (dest.y - block.y) * level.tileSize);
+		// Flash moves by the difference between each block's `getRotatedPos()`.
+		// Raw tile deltas point along the wrong world axis once the course rotates.
+		var sourcePosition = rotatedBlockPos(block);
+		var destinationPosition = rotatedBlockPos(dest);
+		movePlayerBy(destinationPosition.x - sourcePosition.x, destinationPosition.y - sourcePosition.y);
 		markMovementDiscontinuity();
 		blockVisualEvents.push(new BlockVisualEvent(BlockVisualEventKind.TeleportBlockPop, block.x, block.y, 1, null, null, startX, startY));
 		blockVisualEvents.push(new BlockVisualEvent(BlockVisualEventKind.TeleportBlockPop, dest.x, dest.y, 1, null, null, x, y - 25));

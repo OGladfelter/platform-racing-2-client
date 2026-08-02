@@ -239,6 +239,7 @@ class Course extends Sprite {
 		snakeManager = new SnakeManager(level, levelRenderer, player.controller);
 		player.onPlayJumpSound = playJumpSound;
 		player.onPlayCharacterSound = playCharacterSound;
+		player.onArtifactVisualActivated = onArtifactVisualActivated;
 		player.onArtifactHatActivated = onArtifactHatActivated;
 		player.onStartJetSound = startJetSound;
 		player.onStopJetSound = stopJetSound;
@@ -742,6 +743,9 @@ class Course extends Sprite {
 		if (musicSelection != null) {
 			musicSelection.gotArtifact();
 		}
+	}
+
+	private function onArtifactVisualActivated():Void {
 		if (localCharacter != null && characterLayer != null) {
 			characterLayer.addChild(new ZapEffect(localCharacter, false, false, true));
 		}
@@ -955,6 +959,11 @@ class Course extends Sprite {
 		updatePlayerDisplay();
 		emitLocalItemEffect(state);
 		maybeHandleLocalFinish(state);
+		// TestCourse's finish callback synchronously removes this Course and mounts
+		// its replacement. Do not continue the old frame after that teardown.
+		if (player == null) {
+			return;
+		}
 		syncItemDisplay(state.itemId, state.itemUses);
 		if (player.consumeStatsSelectSyncRequest() && onStatsSelectSyncRequest != null) {
 			onStatsSelectSyncRequest();
@@ -1324,8 +1333,9 @@ class Course extends Sprite {
 				LobbySocket.write('add_effect`Laser`$worldX`$worldY`$direction`$rotation`' + localCharacter.tempID);
 			case "slash":
 				localCharacter.playItemUseAnimation("Sword");
-				var worldX = Std.int(state.x);
-				var worldY = Std.int(state.y - 25);
+				var weaponPosition = localCharacter.getWeaponEffectPosition();
+				var worldX = Std.int(weaponPosition.x);
+				var worldY = Std.int(weaponPosition.y);
 				var direction = parts.length > 1 ? parts[1] : "right";
 				var payload = 'Slash`$worldX`$worldY`$direction`' + localCharacter.tempID;
 				mountSlashEffect(worldX, worldY, direction, localCharacter.tempID);
@@ -1439,6 +1449,10 @@ class Course extends Sprite {
 		if (itemId != displayedItemId) {
 			itemDisplay.setItemCode(itemId == null ? 0 : itemId);
 			displayedItemId = itemId;
+			// ItemDisplay.setItem resets its dots to one. Flash then has the new
+			// item's constructor reapply its use count, even when the prior item had
+			// the same count, so invalidate the cached HUD value here.
+			displayedItemUses = null;
 		}
 		if (itemUses != displayedItemUses) {
 			itemDisplay.setAmmo(itemUses == null ? 0 : itemUses);

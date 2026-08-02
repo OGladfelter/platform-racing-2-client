@@ -2801,7 +2801,17 @@ class LobbyServicesTest {
 		};
 
 		var page = new LoginPage();
+		SecureData.setNumber("userRank", 50);
 		page.initialize();
+		assertEquals(0.0, SecureData.getNumber("userRank"), "login page clears the prior account rank like Flash");
+		SecureData.setNumber("userRank", 50);
+		Reflect.callMethod(page, Reflect.field(page, "openLoginDialog"), []);
+		assertEquals(-1.0, SecureData.getNumber("userRank"), "account login waits for the new server rank instead of retaining the old account rank");
+		Reflect.callMethod(page, Reflect.field(page, "closePopup"), []);
+		SecureData.setNumber("userRank", 50);
+		Reflect.callMethod(page, Reflect.field(page, "openGuestDialog"), []);
+		assertEquals(0.0, SecureData.getNumber("userRank"), "guest login cannot inherit an account rank");
+		Reflect.callMethod(page, Reflect.field(page, "closePopup"), []);
 		assertEquals(1, fetches.length, "login server activation immediately fetches server status");
 		Reflect.callMethod(page, Reflect.field(page, "onServerRefreshTimer"), [new TimerEvent(TimerEvent.TIMER)]);
 		assertEquals(2, fetches.length, "login server activation reloads from timer handler");

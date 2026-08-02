@@ -556,6 +556,10 @@ class CharacterLifecycleTest {
 
 		assertTrue(LobbySocket.lastSent().indexOf("add_effect`Slash`") == 0, "sword emits Slash effect command");
 		assertTrue(LobbySocket.lastSent().indexOf("`right`0") > 0, "sword Slash payload includes direction and temp id");
+		var slashPayload = LobbySocket.lastSent().split("`");
+		var weaponPosition = course.localCharacter.getWeaponEffectPosition();
+		assertEquals(Std.int(weaponPosition.x), Std.parseInt(slashPayload[2]), "sword Slash starts at Flash's authored weapon socket x");
+		assertEquals(Std.int(weaponPosition.y), Std.parseInt(slashPayload[3]), "sword Slash starts at Flash's authored weapon socket y");
 		assertEquals(effectChildren + 1, course.effectBackground.numChildren, "sword mounts the authored Slash effect");
 		assertTrue(Std.downcast(course.effectBackground.getChildAt(effectChildren), Slash) != null, "sword uses concrete Slash effect");
 		course.setKey(Keyboard.SPACE, false);
@@ -1285,6 +1289,14 @@ class CharacterLifecycleTest {
 		});
 		assertTrue(handler.hasCommand("setHats4"), "local character registers setHats command for pickup replies");
 		finishDrawing(course);
+
+		var propeller = course.addLooseHat(100, -100, 0, 4, 0xFFFFFF, -1, 9);
+		assertEquals(1, propeller.display.animatedOverlay.numChildren,
+			"removed Propeller Hat keeps its authored blade overlay");
+		assertEquals(1, propeller.display.overlayCurrentFrame, "loose Propeller Hat starts on authored blade frame one");
+		propeller.step(course.level, 0, null, null, false, false, true);
+		assertEquals(2, propeller.display.overlayCurrentFrame, "loose Propeller Hat blades continue their nested Flash timeline");
+		propeller.remove();
 
 		var falling = course.addLooseHat(15, -45, 0, 5, 0xFFFFFF, -1, 1);
 		for (_ in 0...90) {

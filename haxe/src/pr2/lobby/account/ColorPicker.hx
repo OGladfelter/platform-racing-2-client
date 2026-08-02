@@ -62,10 +62,10 @@ class ColorPicker extends Sprite {
 
 	private function drawSwatch():Void {
 		swatch.graphics.clear();
-		swatch.graphics.beginFill(0x808080);
+		swatch.transform.colorTransform = new ColorTransform();
+		swatch.graphics.beginFill(color & 0xFFFFFF);
 		swatch.graphics.drawRect(0, 0, COLOR_WELL, COLOR_WELL);
 		swatch.graphics.endFill();
-		swatch.transform.colorTransform = new ColorTransform(0, 0, 0, 1, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, 0);
 	}
 
 	private function onSwatchClick(_:MouseEvent):Void {
