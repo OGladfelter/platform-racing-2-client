@@ -569,40 +569,40 @@ class CharacterViewTest {
 		var view = new CharacterView();
 		view.setState("superJump");
 		var head = view.slot("head");
-		var glow = cast(head.getChildByName("__superJumpEffectRoot"), openfl.display.Sprite);
-		assertTrue(glow != null, "super-jump isolates transient rendering effects from the stable head slot");
-		assertEquals(0, head.filters.length, "the stable head slot never receives the transient super-jump filter");
-		assertClose(1, head.transform.colorTransform.redMultiplier, "the stable head slot keeps its normal color transform");
+		var heldItem = view.slot("heldItem");
+		var rigRoot = Std.downcast(view.getChildByName("rigRoot"), openfl.display.Sprite);
 		view.gotoFrame(39);
-		assertEquals(0, glow.filters.length, "super-jump frame 39 has not started the authored charge glow");
-		assertClose(0.25, glow.transform.colorTransform.redMultiplier, "super-jump frame 39 keeps the authored pre-glow desaturation");
-		assertClose(191, glow.transform.colorTransform.redOffset, "super-jump frame 39 keeps the authored pre-glow brightness");
+		assertEquals(0, rigRoot.filters.length, "super-jump frame 39 has not started the authored charge glow");
+		assertClose(0.25, rigRoot.transform.colorTransform.redMultiplier, "super-jump frame 39 keeps the authored pre-glow desaturation");
+		assertClose(191, rigRoot.transform.colorTransform.redOffset, "super-jump frame 39 keeps the authored pre-glow brightness");
+		assertClose(1, head.transform.colorTransform.redMultiplier, "super-jump effects are not applied separately to the head");
+		assertClose(1, heldItem.transform.colorTransform.redMultiplier, "the held item inherits the shared character effect");
 
 		view.gotoFrame(40);
-		var blur = Std.downcast(glow.filters[0], BlurFilter);
+		var blur = Std.downcast(rigRoot.filters[0], BlurFilter);
 		assertTrue(blur != null, "super-jump frame 40 starts the authored horizontal blur");
 		assertClose(25, blur.blurX, "super-jump frame 40 starts at the authored blur width");
 		assertClose(0, blur.blurY, "super-jump charge glow remains horizontal");
-		assertClose(0, glow.transform.colorTransform.redMultiplier, "super-jump frame 40 replaces the original red channel");
-		assertClose(255, glow.transform.colorTransform.redOffset, "super-jump frame 40 starts fully yellow");
-		assertClose(255, glow.transform.colorTransform.greenOffset, "super-jump frame 40 starts fully yellow-green");
-		assertClose(0, glow.transform.colorTransform.blueOffset, "super-jump charge adds no blue offset");
+		assertClose(0, rigRoot.transform.colorTransform.redMultiplier, "super-jump frame 40 replaces the original red channel");
+		assertClose(255, rigRoot.transform.colorTransform.redOffset, "super-jump frame 40 starts fully yellow");
+		assertClose(255, rigRoot.transform.colorTransform.greenOffset, "super-jump frame 40 starts fully yellow-green");
+		assertClose(0, rigRoot.transform.colorTransform.blueOffset, "super-jump charge adds no blue offset");
+		assertEquals(0, head.filters.length, "the head does not create its own filtered cache");
+		assertEquals(0, heldItem.filters.length, "the held item does not create its own filtered cache");
 
 		view.gotoFrame(46);
-		blur = Std.downcast(glow.filters[0], BlurFilter);
+		blur = Std.downcast(rigRoot.filters[0], BlurFilter);
 		assertClose(11.3636016845703, blur.blurX, "super-jump midpoint tapers the authored blur");
-		assertClose(0.26953125, glow.transform.colorTransform.redMultiplier, "super-jump midpoint restores the authored color fraction");
-		assertClose(186, glow.transform.colorTransform.redOffset, "super-jump midpoint tapers the yellow offset");
+		assertClose(0.26953125, rigRoot.transform.colorTransform.redMultiplier, "super-jump midpoint restores the authored color fraction");
+		assertClose(186, rigRoot.transform.colorTransform.redOffset, "super-jump midpoint tapers the yellow offset");
 
 		view.gotoFrame(51);
-		assertEquals(0, glow.filters.length, "super-jump final frame finishes the horizontal blur");
-		assertClose(0.5, glow.transform.colorTransform.redMultiplier, "super-jump final frame keeps the authored yellow tint");
-		assertClose(128, glow.transform.colorTransform.redOffset, "super-jump final frame keeps the authored yellow offset");
+		assertEquals(0, rigRoot.filters.length, "super-jump final frame finishes the horizontal blur");
+		assertClose(0.5, rigRoot.transform.colorTransform.redMultiplier, "super-jump final frame keeps the authored yellow tint");
+		assertClose(128, rigRoot.transform.colorTransform.redOffset, "super-jump final frame keeps the authored yellow offset");
 		view.setState("stand");
-		assertEquals(0, head.filters.length, "leaving super-jump clears its charge filter");
-		assertClose(1, head.transform.colorTransform.redMultiplier, "leaving super-jump restores the normal character color transform");
-		assertEquals(null, glow.parent, "leaving super-jump destroys the filtered wrapper instead of reusing its cached surface");
-		assertTrue(head.getChildByName("artwork") != null, "leaving super-jump restores the original artwork directly to the stable slot");
+		assertEquals(0, rigRoot.filters.length, "leaving super-jump clears its charge filter");
+		assertClose(1, rigRoot.transform.colorTransform.redMultiplier, "leaving super-jump restores the normal character color transform");
 	}
 
 	private static function testSuperJumpWobbleDoesNotLeakIntoDisplayScale():Void {
