@@ -1223,7 +1223,11 @@ class LocalPlayerController implements ItemRuntimeOwner {
 	private function applyStandEffect(block:LevelBlock, force:Int):Void {
 		if (isBlockFrozen(block)) {
 			accelFactor = 0.05;
-			return;
+			// Flash still runs ArrowBlock.onStand after Block.onStand freezes the
+			// tile, so the ice overlay does not suppress the arrow impulse.
+			if (!isArrowBlock(block)) {
+				return;
+			}
 		}
 		if (isArrowBlock(block)) {
 			var rotation = arrowEffectiveRotation(block);
@@ -2049,7 +2053,7 @@ class LocalPlayerController implements ItemRuntimeOwner {
 
 	private function canSantaFreeze(block:LevelBlock):Bool {
 		return switch (block.type) {
-			case BlockType.Finish | BlockType.Ice | BlockType.Vanish | BlockType.Crumble | BlockType.ArrowUp | BlockType.ArrowLeft | BlockType.ArrowRight | BlockType.ArrowDown | BlockType.Move:
+			case BlockType.Finish | BlockType.Ice | BlockType.Vanish | BlockType.Crumble | BlockType.Move:
 				false;
 			default:
 				true;

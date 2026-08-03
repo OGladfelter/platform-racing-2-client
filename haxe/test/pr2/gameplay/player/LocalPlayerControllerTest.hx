@@ -32,6 +32,7 @@ class LocalPlayerControllerTest {
 		testHoldingDownChargesAndLaunchesSuperJump();
 		testIceBlockReducesNextFrameAcceleration();
 		testSantaHatFreezesSafeStandBlock();
+		testSantaHatVisuallyFreezesArrowWithoutSuppressingImpulse();
 		testFrozenMineSuppressesHit();
 		testFrozenPushBlockSuppressesMovement();
 		testFrozenRotateBlockSuppressesRotation();
@@ -462,6 +463,32 @@ class LocalPlayerControllerTest {
 			santa.step(new LocalPlayerInput());
 		}
 		assertEquals(0.0, santa.controller.blockIceOverlayAlphaAt(2, 3), "santa ice overlay thaws after Flash fade");
+	}
+
+	private static function testSantaHatVisuallyFreezesArrowWithoutSuppressingImpulse():Void {
+		var samples = [
+			{type: BlockType.ArrowUp, expectedVx: 0.0, expectedVy: -10.0, label: "up"},
+			{type: BlockType.ArrowDown, expectedVx: 0.0, expectedVy: 5.0, label: "down"},
+			{type: BlockType.ArrowLeft, expectedVx: -3.0, expectedVy: 0.0, label: "left"},
+			{type: BlockType.ArrowRight, expectedVx: 3.0, expectedVy: 0.0, label: "right"}
+		];
+		for (sample in samples) {
+			var santa = new LocalCharacter(singleBlockLevel(sample.type));
+			santa.setHats([7, 0xFFFFFF, -1]);
+			var arrow = @:privateAccess santa.controller.level.blockAt(2, 3);
+			@:privateAccess santa.controller.vx = 0;
+			@:privateAccess santa.controller.vy = 0;
+			santa.consumeBlockVisualEvents();
+
+			@:privateAccess santa.controller.onStand(arrow, "levelEditorTest");
+
+			assertEquals(1.0, santa.controller.blockIceOverlayAlphaAt(2, 3), 'santa adds an ice overlay to the ${sample.label} arrow');
+			assertClose(sample.expectedVx, santa.stateSnapshot().vx, 'the visually frozen ${sample.label} arrow keeps its Flash x impulse');
+			assertClose(sample.expectedVy, santa.stateSnapshot().vy, 'the visually frozen ${sample.label} arrow keeps its Flash y impulse');
+			var events = santa.consumeBlockVisualEvents();
+			assertEquals(1, events.length, 'the visually frozen ${sample.label} arrow still animates when activated');
+			assertEquals("ArrowAnimate", Type.enumConstructor(events[0].kind), 'the frozen ${sample.label} arrow uses its normal authored animation');
+		}
 	}
 
 	private static function testFrozenMineSuppressesHit():Void {

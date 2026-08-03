@@ -280,5 +280,6 @@ available from their source threads.
 - [!] [Tab Key Select Element Doesn't Work](https://jiggmin2.com/forums/showthread.php?tid=5398):
   keyboard focus skips most controls; only a few stat/part arrows, Favorite, and
   help controls are reachable with Tab.
-- [!] [Santa hat doesn't freeze arrow blocks](https://jiggmin2.com/forums/showthread.php?tid=5396):
-  Santa Hat does not freeze Arrow Blocks or reproduce their frozen animation.
+- [x] [Santa hat doesn't freeze arrow blocks](https://jiggmin2.com/forums/showthread.php?tid=5396):
+  Santa Hat now gives Arrow Blocks the same fading ice overlay as Flash while
+  preserving their normal arrow impulse and activation animation.
