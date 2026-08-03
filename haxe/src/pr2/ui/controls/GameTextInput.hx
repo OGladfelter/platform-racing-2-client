@@ -16,7 +16,6 @@ import pr2.assets.NativeAssets;
 class GameTextInput extends NativeControl {
 	private static final UP_GRID = new Rectangle(2.25, 1.45, 147.8, 18.6);
 	private static final DISABLED_GRID = new Rectangle(2, 2, 148, 17.95);
-	private static final FOCUS_GRID = new Rectangle(4, 2, 74, 18);
 
 	public var text(get, set):String;
 	public var htmlText(get, set):String;
@@ -31,7 +30,6 @@ class GameTextInput extends NativeControl {
 
 	private var useAuthoredSkin:Bool = false;
 	private var authoredBackground:Null<Sprite>;
-	private var focusBackground:Null<Sprite>;
 
 	public function new(text:String = "", ?skin:ControlSkin) {
 		super(100, 22, skin);
@@ -44,11 +42,6 @@ class GameTextInput extends NativeControl {
 			authoredBackground.mouseEnabled = false;
 			authoredBackground.mouseChildren = false;
 			addChild(authoredBackground);
-			focusBackground = new Sprite();
-			focusBackground.mouseEnabled = false;
-			focusBackground.mouseChildren = false;
-			focusBackground.visible = false;
-			addChild(focusBackground);
 		}
 
 		textField = new TextField();
@@ -57,6 +50,9 @@ class GameTextInput extends NativeControl {
 		textField.wordWrap = false;
 		textField.selectable = true;
 		textField.mouseEnabled = true;
+		// Flash tabs to the TextInput component, which then delegates focus to its
+		// internal field. Keeping both in OpenFL's tab list creates a duplicate stop.
+		textField.tabEnabled = false;
 		textField.autoSize = TextFieldAutoSize.NONE;
 		textField.defaultTextFormat = textFormatForState();
 		textField.text = text == null ? "" : text;
@@ -76,6 +72,7 @@ class GameTextInput extends NativeControl {
 		focused = true;
 		if (stage != null && stage.focus != textField) stage.focus = textField;
 		redraw();
+		refreshFocusIndicator();
 	}
 
 	override public function blur():Void {
@@ -83,10 +80,11 @@ class GameTextInput extends NativeControl {
 		pressed = false;
 		if (stage != null && stage.focus == textField) stage.focus = null;
 		redraw();
+		refreshFocusIndicator();
 	}
 
 	override public function redraw():Void {
-		if (!useAuthoredSkin || authoredBackground == null || focusBackground == null) {
+		if (!useAuthoredSkin || authoredBackground == null) {
 			super.redraw();
 			return;
 		}
@@ -98,13 +96,6 @@ class GameTextInput extends NativeControl {
 		background.height = controlHeight;
 		authoredBackground.addChild(background);
 
-		while (focusBackground.numChildren > 0) focusBackground.removeChildAt(0);
-		var focusArt = NativeAssets.svg(StaticSvg.FocusRect);
-		focusArt.scale9Grid = FOCUS_GRID;
-		focusArt.width = controlWidth;
-		focusArt.height = controlHeight;
-		focusBackground.addChild(focusArt);
-		focusBackground.visible = focused && enabled;
 	}
 
 	override public function enabledChanged(value:Bool):Void {

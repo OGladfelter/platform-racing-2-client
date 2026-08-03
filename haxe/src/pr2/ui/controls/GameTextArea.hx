@@ -17,7 +17,6 @@ class GameTextArea extends NativeControl {
 	private static inline var SCROLL_WIDTH:Float = 15;
 	private static final UP_GRID = new Rectangle(1.55, 1.55, 148.5, 18.4);
 	private static final DISABLED_GRID = new Rectangle(38, 5.5, 76, 11);
-	private static final FOCUS_GRID = new Rectangle(4, 2, 74, 18);
 
 	public var text(get, set):String;
 	public var htmlText(get, set):String;
@@ -31,7 +30,6 @@ class GameTextArea extends NativeControl {
 	public final verticalScrollBar:GameScrollBar;
 
 	private var authoredBackground:Sprite;
-	private var focusBackground:Sprite;
 
 	public function new(width:Float = 160, height:Float = 100) {
 		super(width, height);
@@ -43,18 +41,13 @@ class GameTextArea extends NativeControl {
 		authoredBackground.mouseEnabled = false;
 		authoredBackground.mouseChildren = false;
 		addChild(authoredBackground);
-		focusBackground = new Sprite();
-		focusBackground.mouseEnabled = false;
-		focusBackground.mouseChildren = false;
-		focusBackground.visible = false;
-		addChild(focusBackground);
-
 		textField = new TextField();
 		textField.type = TextFieldType.INPUT;
 		textField.multiline = true;
 		textField.wordWrap = true;
 		textField.selectable = true;
 		textField.mouseEnabled = true;
+		textField.tabEnabled = false;
 		textField.autoSize = TextFieldAutoSize.NONE;
 		textField.defaultTextFormat = textFormatForState();
 		textField.addEventListener(Event.CHANGE, onTextChange);
@@ -78,6 +71,7 @@ class GameTextArea extends NativeControl {
 		focused = true;
 		if (stage != null && stage.focus != textField) stage.focus = textField;
 		redraw();
+		refreshFocusIndicator();
 	}
 
 	override public function blur():Void {
@@ -85,10 +79,11 @@ class GameTextArea extends NativeControl {
 		pressed = false;
 		if (stage != null && stage.focus == textField) stage.focus = null;
 		redraw();
+		refreshFocusIndicator();
 	}
 
 	override public function redraw():Void {
-		if (authoredBackground == null || focusBackground == null) {
+		if (authoredBackground == null) {
 			super.redraw();
 			return;
 		}
@@ -99,13 +94,6 @@ class GameTextArea extends NativeControl {
 		background.width = controlWidth;
 		background.height = controlHeight;
 		authoredBackground.addChild(background);
-		while (focusBackground.numChildren > 0) focusBackground.removeChildAt(0);
-		var focusArt = NativeAssets.svg(StaticSvg.FocusRect);
-		focusArt.scale9Grid = FOCUS_GRID;
-		focusArt.width = controlWidth;
-		focusArt.height = controlHeight;
-		focusBackground.addChild(focusArt);
-		focusBackground.visible = focused && enabled;
 	}
 
 	override public function enabledChanged(value:Bool):Void {

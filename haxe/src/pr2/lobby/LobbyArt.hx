@@ -4,9 +4,12 @@ import openfl.display.DisplayObject;
 import openfl.display.DisplayObjectContainer;
 import openfl.display.InteractiveObject;
 import openfl.display.Sprite;
+import openfl.events.Event;
+import openfl.events.KeyboardEvent;
 import openfl.events.MouseEvent;
 import openfl.text.TextField;
 import pr2.ui.controls.GameTextInput;
+import pr2.ui.controls.NativeControl;
 import pr2.util.DisplayUtil;
 
 /**
@@ -135,12 +138,26 @@ class LobbyArt {
 			handler();
 		};
 		target.addEventListener(MouseEvent.CLICK, listener);
-		return {target: target, listener: listener};
+		var activationListener:Null<Event->Void> = null;
+		var keyboardListener:Null<KeyboardEvent->Void> = null;
+		var nativeControl = Std.downcast(target, NativeControl);
+		if (nativeControl != null) {
+			activationListener = function(_:Event):Void handler();
+			nativeControl.addEventListener(Event.ACTIVATE, activationListener);
+		} else if (interactive != null) {
+			keyboardListener = function(event:KeyboardEvent):Void {
+				if (event.keyCode == 13 || event.keyCode == 32) handler();
+			};
+			interactive.addEventListener(KeyboardEvent.KEY_DOWN, keyboardListener);
+		}
+		return {target: target, listener: listener, activationListener: activationListener, keyboardListener: keyboardListener};
 	}
 
 	public static function unbind(binding:Null<Binding>):Void {
 		if (binding != null) {
 			binding.target.removeEventListener(MouseEvent.CLICK, binding.listener);
+			if (binding.activationListener != null) binding.target.removeEventListener(Event.ACTIVATE, binding.activationListener);
+			if (binding.keyboardListener != null) binding.target.removeEventListener(KeyboardEvent.KEY_DOWN, binding.keyboardListener);
 		}
 	}
 }
@@ -148,4 +165,6 @@ class LobbyArt {
 typedef Binding = {
 	var target:DisplayObject;
 	var listener:MouseEvent->Void;
+	var activationListener:Null<Event->Void>;
+	var keyboardListener:Null<KeyboardEvent->Void>;
 };

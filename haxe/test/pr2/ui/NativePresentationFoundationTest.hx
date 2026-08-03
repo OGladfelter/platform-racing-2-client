@@ -1,6 +1,7 @@
 package pr2.ui;
 
 import openfl.display.Shape;
+import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.events.KeyboardEvent;
 import openfl.events.MouseEvent;
@@ -15,12 +16,14 @@ import pr2.assets.NativeAssetIds.BitmapAsset;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssetIds.SoundAsset;
 import pr2.assets.NativeAssetIds.StaticSvg;
+import pr2.lobby.LobbyArt;
 import pr2.lobby.dialogs.ConfirmDialogView;
 import pr2.lobby.dialogs.MessageDialogView;
 import pr2.lobby.dialogs.MessagePopup;
 import pr2.lobby.dialogs.Popup;
 import pr2.page.CreateAccountView;
 import pr2.page.ForgotPasswordView;
+import pr2.page.LoginFlashPopup;
 import pr2.ui.controls.GameButton;
 import pr2.ui.controls.GameCheckBox;
 import pr2.ui.controls.GameScrollBar;
@@ -42,6 +45,7 @@ class NativePresentationFoundationTest {
 		testAnimationCompositionAndOwnership();
 		testControlParityContracts();
 		testFocusKeyboardAndTeardown();
+		testFlashTabOrdering();
 		testTypedViewOwnership();
 		testConfirmDialogAuthoredContract();
 		testPopupStackLifecycle();
@@ -163,9 +167,24 @@ class NativePresentationFoundationTest {
 		button.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, 0, Keyboard.ENTER));
 		assertEquals(true, button.focused, "control exposes explicit focus state");
 		assertEquals(1, presses, "focused button activates from Enter");
+		assertEquals(true, @:privateAccess button.focusIndicator.visible, "focused native button shows the authored Flash focus outline");
+		assertEquals(true, button.tabEnabled, "enabled native button participates in Tab navigation");
+		button.enabled = false;
+		assertEquals(false, button.tabEnabled, "disabled native button leaves the Tab order like Flash UIComponent");
+		assertEquals(false, @:privateAccess button.focusIndicator.visible, "disabled native button hides the focus outline");
+		button.enabled = true;
+		assertEquals(true, button.tabEnabled, "re-enabled native button returns to the Tab order");
+		var lobbyActivations = 0;
+		var lobbyBinding = LobbyArt.bind(button, function():Void lobbyActivations++);
+		button.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, 0, Keyboard.ENTER));
+		assertEquals(2, presses, "button keeps its own keyboard activation callback when lobby wiring is attached");
+		assertEquals(1, lobbyActivations, "lobby click wiring also responds to keyboard activation");
+		LobbyArt.unbind(lobbyBinding);
+		button.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, 0, Keyboard.ENTER));
+		assertEquals(1, lobbyActivations, "removing lobby wiring also removes its keyboard activation listener");
 		button.dispose();
 		button.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertEquals(1, presses, "disposed button removes click callbacks");
+		assertEquals(3, presses, "disposed button removes click callbacks");
 
 		var slider = new GameSlider(0, 10, 5, 1);
 		var fallbackTrack = new Shape();
@@ -226,6 +245,8 @@ class NativePresentationFoundationTest {
 		assertEquals(cast StaticSvg.ScrollArrowDownDisabledAuthored, cast @:privateAccess scroll.arrowAsset(false, false, false), "disabled scrollbar selects exact authored arrow skin");
 		var input = new GameTextInput("hello");
 		assertEquals(cast StaticSvg.TextInputUp, cast @:privateAccess input.authoredAsset(), "text input starts with exact authored up skin");
+		assertEquals(true, input.tabEnabled, "TextInput component participates in the Flash tab order");
+		assertEquals(false, input.textField.tabEnabled, "TextInput internal field does not create a duplicate tab stop");
 		assertEquals(5.0, input.textField.x, "text input keeps the authored component five-pixel horizontal padding");
 		assertEquals(1.0, input.textField.y, "text input leaves one pixel for the authored bevel");
 		assertEquals(90.0, input.textField.width, "text input text width excludes both authored horizontal gutters");
@@ -254,6 +275,7 @@ class NativePresentationFoundationTest {
 
 		var area = new GameTextArea(200, 80);
 		assertEquals(cast StaticSvg.TextAreaUp, cast @:privateAccess area.authoredAsset(), "text area starts with exact authored up skin");
+		assertEquals(false, area.textField.tabEnabled, "TextArea internal field does not create a duplicate tab stop");
 		assertEquals(true, area.textField.multiline, "text area preserves authored multiline behavior");
 		assertEquals(true, area.textField.wordWrap, "text area preserves authored default word wrapping");
 		assertEquals(3.0, area.textField.x, "text area keeps the authored inner text inset");
@@ -273,6 +295,42 @@ class NativePresentationFoundationTest {
 		assertEquals(cast StaticSvg.TextAreaDisabled, cast @:privateAccess area.authoredAsset(), "disabled text area uses exact authored disabled skin");
 		assertEquals(false, area.textField.selectable, "disabled text area removes selection");
 		area.dispose();
+	}
+
+	private static function testFlashTabOrdering():Void {
+		var root = new Sprite();
+		var lower = new GameButton("Lower");
+		lower.x = 10;
+		lower.y = 80;
+		root.addChild(lower);
+		var upperRight = new GameButton("Upper right");
+		upperRight.x = 100;
+		upperRight.y = 20;
+		var renderedSkinChild = new Sprite();
+		renderedSkinChild.tabEnabled = true;
+		upperRight.addChild(renderedSkinChild);
+		root.addChild(upperRight);
+		var upperLeft = new GameTextInput();
+		upperLeft.x = 10;
+		upperLeft.y = 20;
+		root.addChild(upperLeft);
+		var disabled = new GameButton("Disabled");
+		disabled.y = 5;
+		disabled.enabled = false;
+		root.addChild(disabled);
+		var ordered = @:privateAccess KeyboardFocusManager.orderedCandidates(root);
+		assertEquals(3, ordered.length, "Flash tab order treats native components as atomic and excludes disabled controls");
+		assertEquals(upperLeft, ordered[0], "automatic Flash tab order starts at the upper-left control");
+		assertEquals(upperRight, ordered[1], "automatic Flash tab order moves left-to-right on a row");
+		assertEquals(lower, ordered[2], "automatic Flash tab order then moves top-to-bottom");
+		assertEquals(0, @:privateAccess KeyboardFocusManager.candidateIndex(ordered, upperLeft.textField),
+			"focus delegated to a TextInput field resolves back to its component tab stop");
+		lower.tabIndex = 2;
+		upperRight.tabIndex = 1;
+		ordered = @:privateAccess KeyboardFocusManager.orderedCandidates(root);
+		assertEquals(2, ordered.length, "authored tabIndex order excludes automatic controls like Flash");
+		assertEquals(upperRight, ordered[0], "authored tabIndex sorts in ascending order");
+		assertEquals(lower, ordered[1], "authored tabIndex retains the remaining indexed control");
 	}
 
 	private static function testTypedViewOwnership():Void {
@@ -353,6 +411,18 @@ class NativePresentationFoundationTest {
 	}
 
 	private static function testNativeLoginPopupRoots():Void {
+		var login = new LoginFlashPopup("LoginPopupGraphic");
+		var forgotButton = Std.downcast(login.child("forgotPass"), openfl.display.InteractiveObject);
+		assertEquals(true, forgotButton != null && forgotButton.tabEnabled, "login forgot-password SimpleButton remains reachable with Tab");
+		var forgotContainer = Std.downcast(forgotButton, openfl.display.DisplayObjectContainer);
+		var forgotLabel = Std.downcast(forgotContainer.getChildAt(0), TextField);
+		assertEquals(10, forgotLabel.defaultTextFormat.size, "tab support preserves the original forgot-password font size");
+		var forgotActivations = 0;
+		login.bindButton("forgotPass", function():Void forgotActivations++);
+		forgotButton.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, 0, Keyboard.ENTER));
+		assertEquals(1, forgotActivations, "login popup buttons activate from the keyboard like Flash buttons");
+		login.remove();
+
 		var forgotHolder = new openfl.display.Sprite();
 		var forgot = new ForgotPasswordView("Jiggmin");
 		forgotHolder.addChild(forgot);

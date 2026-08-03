@@ -4,12 +4,15 @@ import openfl.display.DisplayObject;
 import openfl.display.InteractiveObject;
 import openfl.display.Sprite;
 import openfl.events.Event;
+import openfl.events.FocusEvent;
 import openfl.events.KeyboardEvent;
 import openfl.events.MouseEvent;
+import openfl.geom.Rectangle;
 import openfl.text.TextField;
 import openfl.text.TextFieldType;
 import openfl.text.TextFormat;
 import openfl.text.TextFormatAlign;
+import openfl.ui.Keyboard;
 import pr2.Constants;
 import pr2.assets.NativeAssetIds.FontAsset;
 import pr2.assets.NativeAssetIds.StaticSvg;
@@ -28,6 +31,7 @@ class LoginFlashPopup extends Sprite {
 	public var fadeOutStarted(default, null):Bool = false;
 	private var art:LoginPopupView;
 	private var buttonHandlers:Array<{target:DisplayObject, handler:MouseEvent->Void}> = [];
+	private var activationHandlers:Array<{target:DisplayObject, handler:Event->Void}> = [];
 	private var comboHandlers:Array<{target:GameSelect<Dynamic>, handler:Event->Void}> = [];
 	private var keyHandlers:Array<{target:TextField, handler:KeyboardEvent->Void}> = [];
 
@@ -123,6 +127,9 @@ class LoginFlashPopup extends Sprite {
 		};
 		target.addEventListener(MouseEvent.CLICK, handler);
 		buttonHandlers.push({target: target, handler: handler});
+		var activationHandler = function(_:Event):Void clickHandler();
+		target.addEventListener(Event.ACTIVATE, activationHandler);
+		activationHandlers.push({target: target, handler: activationHandler});
 	}
 
 	public function setButtonEnabled(name:String, enabled:Bool, alpha:Float):Void {
@@ -131,6 +138,8 @@ class LoginFlashPopup extends Sprite {
 		target.alpha = alpha;
 		var interactive = Std.downcast(target, InteractiveObject);
 		if (interactive != null) interactive.mouseEnabled = enabled;
+		var nativeControl = Std.downcast(target, NativeControl);
+		if (nativeControl != null) nativeControl.enabled = enabled;
 	}
 
 	public function bindEnter(name:String, enterHandler:Void->Void):Void {
@@ -182,6 +191,10 @@ class LoginFlashPopup extends Sprite {
 			entry.target.removeEventListener(MouseEvent.CLICK, entry.handler);
 		}
 		buttonHandlers = [];
+		for (entry in activationHandlers) {
+			entry.target.removeEventListener(Event.ACTIVATE, entry.handler);
+		}
+		activationHandlers = [];
 		for (entry in comboHandlers) {
 			entry.target.removeEventListener(Event.CHANGE, entry.handler);
 		}
@@ -304,22 +317,10 @@ private class LoginPopupView extends NativeView {
 	}
 
 	private function forgotPasswordLink():Void {
-		var control = new Sprite();
+		var control = new LoginTextButton("Forget your password?");
 		control.name = "forgotPass";
 		control.x = -34;
 		control.y = -24.25;
-		control.buttonMode = true;
-		control.useHandCursor = true;
-		var field = new TextField();
-		field.mouseEnabled = false;
-		field.selectable = false;
-		field.x = 1.964111328125;
-		field.y = 1.964111328125;
-		field.width = 111.069;
-		field.height = 13;
-		field.defaultTextFormat = new TextFormat(NativeAssets.font(FontAsset.Interface), 10, 0x4E4EFE);
-		field.text = "Forget your password?";
-		control.addChild(field);
 		addChild(control);
 		named.set(control.name, control);
 	}
@@ -354,6 +355,45 @@ private class LoginPopupView extends NativeView {
 		field.text = value;
 		addChild(field);
 		if (name != null) named.set(name, field);
+	}
+}
+
+private class LoginTextButton extends Sprite {
+	private static final FOCUS_GRID = new Rectangle(4, 2, 74, 18);
+	private final focusIndicator:Sprite;
+
+	public function new(label:String) {
+		super();
+		tabEnabled = true;
+		buttonMode = true;
+		useHandCursor = true;
+		mouseChildren = false;
+		var labelField = new TextField();
+		labelField.mouseEnabled = false;
+		labelField.selectable = false;
+		labelField.x = 1.964111328125;
+		labelField.y = 1.964111328125;
+		labelField.width = 111.069;
+		labelField.height = 13;
+		labelField.defaultTextFormat = new TextFormat(NativeAssets.font(FontAsset.Interface), 10, 0x4E4EFE);
+		labelField.text = label;
+		addChild(labelField);
+
+		focusIndicator = new Sprite();
+		focusIndicator.mouseEnabled = false;
+		focusIndicator.mouseChildren = false;
+		var art = NativeAssets.svg(StaticSvg.FocusRect);
+		art.scale9Grid = FOCUS_GRID;
+		art.width = 113.033;
+		art.height = 16.928;
+		focusIndicator.addChild(art);
+		focusIndicator.visible = false;
+		addChild(focusIndicator);
+		addEventListener(FocusEvent.FOCUS_IN, function(_):Void focusIndicator.visible = true);
+		addEventListener(FocusEvent.FOCUS_OUT, function(_):Void focusIndicator.visible = false);
+		addEventListener(KeyboardEvent.KEY_DOWN, function(event):Void {
+			if (event.keyCode == Keyboard.ENTER || event.keyCode == Keyboard.SPACE) dispatchEvent(new Event(Event.ACTIVATE));
+		});
 	}
 }
 

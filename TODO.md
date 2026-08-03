@@ -277,9 +277,10 @@ available from their source threads.
   Evidence: [loaded view](docs/bug-reports/html-pr2/tid-5397-01.png),
   [editor/test view](docs/bug-reports/html-pr2/tid-5397-02.png), and
   [custom background](docs/bug-reports/html-pr2/tid-5397-03.png).
-- [!] [Tab Key Select Element Doesn't Work](https://jiggmin2.com/forums/showthread.php?tid=5398):
-  keyboard focus skips most controls; only a few stat/part arrows, Favorite, and
-  help controls are reachable with Tab.
+- [x] [Tab Key Select Element Doesn't Work](https://jiggmin2.com/forums/showthread.php?tid=5398):
+  native controls now show Flash's authored focus outline when reached with Tab,
+  Enter/Space activates focused login and lobby buttons, and disabled controls no
+  longer remain in the tab order.
 - [x] [Santa hat doesn't freeze arrow blocks](https://jiggmin2.com/forums/showthread.php?tid=5396):
   Santa Hat now gives Arrow Blocks the same fading ice overlay as Flash while
   preserving their normal arrow impulse and activation animation.

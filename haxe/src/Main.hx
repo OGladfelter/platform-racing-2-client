@@ -44,6 +44,7 @@ import pr2.runtime.FrameRateDiagnostics;
 import pr2.runtime.FrameRateSettings;
 import pr2.runtime.Html5PresentationPacer;
 import pr2.ui.GpNotification;
+import pr2.ui.KeyboardFocusManager;
 import pr2.ui.MuteButton;
 import pr2.ui.controls.NativeControl;
 import pr2.util.AsyncRemovalGuard.AsyncRemovable;
@@ -82,6 +83,7 @@ class Main extends Sprite {
 		applyPresentationFrameRate();
 		frameRateDebugSignals.publish(frameRateSettings, FrameRateDiagnostics.shared);
 		pr2.app.AppStage.stage = stage;
+		KeyboardFocusManager.install(stage);
 		frameClock = new FrameClock(frameRateSettings);
 		frameClock.onFrame = publishFrameRateDiagnostics;
 		frameClock.install(stage);
