@@ -6,7 +6,7 @@ class LoginSessionGateTest {
 	private static var assertions = 0;
 
 	public static function main():Void {
-		testWaitsForBothResponsesInEitherOrder();
+		pr2.DeterministicTestMode.runTest("LoginSessionGateTest.testWaitsForBothResponsesInEitherOrder", testWaitsForBothResponsesInEitherOrder);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LoginSessionGateTest")) return;
 		trace('LoginSessionGateTest passed $assertions assertions');
 	}

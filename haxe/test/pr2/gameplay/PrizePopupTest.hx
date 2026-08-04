@@ -14,14 +14,14 @@ class PrizePopupTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testAOrAn();
+		pr2.DeterministicTestMode.runTest("PrizePopupTest.testAOrAn", testAOrAn);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PrizePopupTest")) return;
-		testWonPart();
-		testUniversalAndWinner();
-		testFeet();
-		testFlavor();
-		testExp();
-		testCancel();
+		pr2.DeterministicTestMode.runTest("PrizePopupTest.testWonPart", testWonPart);
+		pr2.DeterministicTestMode.runTest("PrizePopupTest.testUniversalAndWinner", testUniversalAndWinner);
+		pr2.DeterministicTestMode.runTest("PrizePopupTest.testFeet", testFeet);
+		pr2.DeterministicTestMode.runTest("PrizePopupTest.testFlavor", testFlavor);
+		pr2.DeterministicTestMode.runTest("PrizePopupTest.testExp", testExp);
+		pr2.DeterministicTestMode.runTest("PrizePopupTest.testCancel", testCancel);
 		closeAll();
 		trace('PrizePopupTest passed $assertions assertions');
 	}

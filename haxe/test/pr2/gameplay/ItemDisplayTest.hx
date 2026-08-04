@@ -1,13 +1,12 @@
 package pr2.gameplay;
 
-
 class ItemDisplayTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testItemNames();
+		pr2.DeterministicTestMode.runTest("ItemDisplayTest.testItemNames", testItemNames);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ItemDisplayTest")) return;
-		testAuthoredDisplayState();
+		pr2.DeterministicTestMode.runTest("ItemDisplayTest.testAuthoredDisplayState", testAuthoredDisplayState);
 		trace('ItemDisplayTest passed $assertions assertions');
 	}
 

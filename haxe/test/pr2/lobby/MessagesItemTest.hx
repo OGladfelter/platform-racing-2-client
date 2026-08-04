@@ -14,16 +14,16 @@ class MessagesItemTest {
 
 	public static function main():Void {
 		Settings.disablePersistenceForTests();
-		testPrivateMessageBodyFormatting();
+		pr2.DeterministicTestMode.runTest("MessagesItemTest.testPrivateMessageBodyFormatting", testPrivateMessageBodyFormatting);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("MessagesItemTest")) return;
-		testMessageTextStaysInsidePmPane();
-		testExactAuthoredLayout();
-		testFilterSettingAndTrustedHtml();
-		testMessageBodyLinksStayClickable();
-		testTimestampDisplayAndHover();
-		testActionButtonHoverWrappers();
-		testAuthoredActionButtonStates();
-		testReportConfirmationCopy();
+		pr2.DeterministicTestMode.runTest("MessagesItemTest.testMessageTextStaysInsidePmPane", testMessageTextStaysInsidePmPane);
+		pr2.DeterministicTestMode.runTest("MessagesItemTest.testExactAuthoredLayout", testExactAuthoredLayout);
+		pr2.DeterministicTestMode.runTest("MessagesItemTest.testFilterSettingAndTrustedHtml", testFilterSettingAndTrustedHtml);
+		pr2.DeterministicTestMode.runTest("MessagesItemTest.testMessageBodyLinksStayClickable", testMessageBodyLinksStayClickable);
+		pr2.DeterministicTestMode.runTest("MessagesItemTest.testTimestampDisplayAndHover", testTimestampDisplayAndHover);
+		pr2.DeterministicTestMode.runTest("MessagesItemTest.testActionButtonHoverWrappers", testActionButtonHoverWrappers);
+		pr2.DeterministicTestMode.runTest("MessagesItemTest.testAuthoredActionButtonStates", testAuthoredActionButtonStates);
+		pr2.DeterministicTestMode.runTest("MessagesItemTest.testReportConfirmationCopy", testReportConfirmationCopy);
 		trace('MessagesItemTest passed $assertions assertions');
 	}
 

@@ -25,14 +25,14 @@ class CreateGuildPopupTest {
 		var savedGroup = LobbySession.group;
 		ServerConfig.setHost("http://example.test");
 
-		testCreateUpdatesAccount();
+		pr2.DeterministicTestMode.runTest("CreateGuildPopupTest.testCreateUpdatesAccount", testCreateUpdatesAccount);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CreateGuildPopupTest")) return;
-		testExactAuthoredLayout();
-		testSaveErrorRestoresConfirm();
-		testEditLoadsDeletesAndPosts();
-		testModEditDoesNotUpdateAccount();
-		testTransferGate();
-		testGuildPopupEditButton();
+		pr2.DeterministicTestMode.runTest("CreateGuildPopupTest.testExactAuthoredLayout", testExactAuthoredLayout);
+		pr2.DeterministicTestMode.runTest("CreateGuildPopupTest.testSaveErrorRestoresConfirm", testSaveErrorRestoresConfirm);
+		pr2.DeterministicTestMode.runTest("CreateGuildPopupTest.testEditLoadsDeletesAndPosts", testEditLoadsDeletesAndPosts);
+		pr2.DeterministicTestMode.runTest("CreateGuildPopupTest.testModEditDoesNotUpdateAccount", testModEditDoesNotUpdateAccount);
+		pr2.DeterministicTestMode.runTest("CreateGuildPopupTest.testTransferGate", testTransferGate);
+		pr2.DeterministicTestMode.runTest("CreateGuildPopupTest.testGuildPopupEditButton", testGuildPopupEditButton);
 
 		CreateGuildPopup.infoFactory = savedInfoFactory;
 		CreateGuildPopup.saveFactory = savedSaveFactory;

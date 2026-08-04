@@ -5,10 +5,10 @@ class FrameRateDiagnosticsTest {
 	private static var now:Float = 0;
 
 	public static function main():Void {
-		testCountersAreIndependent();
+		pr2.DeterministicTestMode.runTest("FrameRateDiagnosticsTest.testCountersAreIndependent", testCountersAreIndependent);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("FrameRateDiagnosticsTest")) return;
-		testSeparateThirtyAndSixtyRates();
-		testWindowRolloverPreservesTotals();
+		pr2.DeterministicTestMode.runTest("FrameRateDiagnosticsTest.testSeparateThirtyAndSixtyRates", testSeparateThirtyAndSixtyRates);
+		pr2.DeterministicTestMode.runTest("FrameRateDiagnosticsTest.testWindowRolloverPreservesTotals", testWindowRolloverPreservesTotals);
 		trace('FrameRateDiagnosticsTest passed $assertions assertions');
 	}
 

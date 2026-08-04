@@ -4,12 +4,12 @@ class AccountCreationClientTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testBuildsFlashCompatibleFields();
+		pr2.DeterministicTestMode.runTest("AccountCreationClientTest.testBuildsFlashCompatibleFields", testBuildsFlashCompatibleFields);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("AccountCreationClientTest")) return;
-		testParsesSuccess();
-		testParsesErrorMessage();
-		testParsesFlashBooleanValues();
-		testRejectsMalformedResponses();
+		pr2.DeterministicTestMode.runTest("AccountCreationClientTest.testParsesSuccess", testParsesSuccess);
+		pr2.DeterministicTestMode.runTest("AccountCreationClientTest.testParsesErrorMessage", testParsesErrorMessage);
+		pr2.DeterministicTestMode.runTest("AccountCreationClientTest.testParsesFlashBooleanValues", testParsesFlashBooleanValues);
+		pr2.DeterministicTestMode.runTest("AccountCreationClientTest.testRejectsMalformedResponses", testRejectsMalformedResponses);
 		trace('AccountCreationClientTest passed $assertions assertions');
 	}
 

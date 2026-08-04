@@ -14,10 +14,10 @@ class ShotEffectTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testMovementCollisionOrderingAndLife();
+		pr2.DeterministicTestMode.runTest("ShotEffectTest.testMovementCollisionOrderingAndLife", testMovementCollisionOrderingAndLife);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ShotEffectTest")) return;
-		testPlayerHitFilteringAndRecoil();
-		testInactiveBlocksAndFrameCleanup();
+		pr2.DeterministicTestMode.runTest("ShotEffectTest.testPlayerHitFilteringAndRecoil", testPlayerHitFilteringAndRecoil);
+		pr2.DeterministicTestMode.runTest("ShotEffectTest.testInactiveBlocksAndFrameCleanup", testInactiveBlocksAndFrameCleanup);
 		trace('ShotEffectTest passed $assertions assertions');
 	}
 

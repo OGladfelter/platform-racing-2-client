@@ -4,13 +4,13 @@ class PresentationPoseTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testConstantMotion();
+		pr2.DeterministicTestMode.runTest("PresentationPoseTest.testConstantMotion", testConstantMotion);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PresentationPoseTest")) return;
-		testFractionalAndNegativeMotion();
-		testStoppedMotion();
-		testDirectionReversal();
-		testEverySnapCondition();
-		testSampleLifecycle();
+		pr2.DeterministicTestMode.runTest("PresentationPoseTest.testFractionalAndNegativeMotion", testFractionalAndNegativeMotion);
+		pr2.DeterministicTestMode.runTest("PresentationPoseTest.testStoppedMotion", testStoppedMotion);
+		pr2.DeterministicTestMode.runTest("PresentationPoseTest.testDirectionReversal", testDirectionReversal);
+		pr2.DeterministicTestMode.runTest("PresentationPoseTest.testEverySnapCondition", testEverySnapCondition);
+		pr2.DeterministicTestMode.runTest("PresentationPoseTest.testSampleLifecycle", testSampleLifecycle);
 		trace('PresentationPoseTest passed $assertions assertions');
 	}
 

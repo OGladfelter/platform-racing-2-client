@@ -4,9 +4,9 @@ class ModesTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testConstants();
+		pr2.DeterministicTestMode.runTest("ModesTest.testConstants", testConstants);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ModesTest")) return;
-		testFullNames();
+		pr2.DeterministicTestMode.runTest("ModesTest.testFullNames", testFullNames);
 		trace('ModesTest passed $assertions assertions');
 	}
 

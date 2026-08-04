@@ -14,10 +14,10 @@ class PhysicsEffectTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testGravityLandingWallAndPlayerProbe();
+		pr2.DeterministicTestMode.runTest("PhysicsEffectTest.testGravityLandingWallAndPlayerProbe", testGravityLandingWallAndPlayerProbe);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PhysicsEffectTest")) return;
-		testRotatedCollisionAndInactiveOptIn();
-		testEnterFrameDriverAndRemovalCleanup();
+		pr2.DeterministicTestMode.runTest("PhysicsEffectTest.testRotatedCollisionAndInactiveOptIn", testRotatedCollisionAndInactiveOptIn);
+		pr2.DeterministicTestMode.runTest("PhysicsEffectTest.testEnterFrameDriverAndRemovalCleanup", testEnterFrameDriverAndRemovalCleanup);
 		trace('PhysicsEffectTest passed $assertions assertions');
 	}
 

@@ -13,9 +13,9 @@ class GpNotificationTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testGpGainCommandMountsAuthoredNotification();
-		testLoadingViewUsesAuthoredNestedTimelines();
-		testLoadingViewAdvancesOnlyOnSimulationFrames();
+		pr2.DeterministicTestMode.runTest("GpNotificationTest.testGpGainCommandMountsAuthoredNotification", testGpGainCommandMountsAuthoredNotification);
+		pr2.DeterministicTestMode.runTest("GpNotificationTest.testLoadingViewUsesAuthoredNestedTimelines", testLoadingViewUsesAuthoredNestedTimelines);
+		pr2.DeterministicTestMode.runTest("GpNotificationTest.testLoadingViewAdvancesOnlyOnSimulationFrames", testLoadingViewAdvancesOnlyOnSimulationFrames);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("GpNotificationTest")) return;
 		trace('GpNotificationTest passed $assertions assertions');
 	}

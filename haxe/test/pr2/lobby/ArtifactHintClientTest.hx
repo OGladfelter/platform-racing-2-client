@@ -9,11 +9,11 @@ class ArtifactHintClientTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testParsesCurrentAndScheduledHintData();
+		pr2.DeterministicTestMode.runTest("ArtifactHintClientTest.testParsesCurrentAndScheduledHintData", testParsesCurrentAndScheduledHintData);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ArtifactHintClientTest")) return;
-		testMissingCurrentIsAllowed();
-		testBuildsFredMessages();
-		testLoadUsesLevelOfTheWeekUrl();
+		pr2.DeterministicTestMode.runTest("ArtifactHintClientTest.testMissingCurrentIsAllowed", testMissingCurrentIsAllowed);
+		pr2.DeterministicTestMode.runTest("ArtifactHintClientTest.testBuildsFredMessages", testBuildsFredMessages);
+		pr2.DeterministicTestMode.runTest("ArtifactHintClientTest.testLoadUsesLevelOfTheWeekUrl", testLoadUsesLevelOfTheWeekUrl);
 		ArtifactHintClient.resetHooksForTests();
 		ServerConfig.resetHost();
 		trace('ArtifactHintClientTest passed $assertions assertions');

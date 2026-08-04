@@ -14,12 +14,12 @@ class ObjectsCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testStampMappings();
+		pr2.DeterministicTestMode.runTest("ObjectsCompatTest.testStampMappings", testStampMappings);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ObjectsCompatTest")) return;
-		testBlockMappings();
-		testBackgroundAndTextMappings();
-		testUnknownCodeReturnsNull();
-		testRendererUsesObjectFactoryForAllStamps();
+		pr2.DeterministicTestMode.runTest("ObjectsCompatTest.testBlockMappings", testBlockMappings);
+		pr2.DeterministicTestMode.runTest("ObjectsCompatTest.testBackgroundAndTextMappings", testBackgroundAndTextMappings);
+		pr2.DeterministicTestMode.runTest("ObjectsCompatTest.testUnknownCodeReturnsNull", testUnknownCodeReturnsNull);
+		pr2.DeterministicTestMode.runTest("ObjectsCompatTest.testRendererUsesObjectFactoryForAllStamps", testRendererUsesObjectFactoryForAllStamps);
 		trace('ObjectsCompatTest passed $assertions assertions');
 	}
 

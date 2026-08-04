@@ -8,9 +8,9 @@ class RemovableTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testBaseRemoveContract();
+		pr2.DeterministicTestMode.runTest("RemovableTest.testBaseRemoveContract", testBaseRemoveContract);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("RemovableTest")) return;
-		testMigratedClassRemoveContract();
+		pr2.DeterministicTestMode.runTest("RemovableTest.testMigratedClassRemoveContract", testMigratedClassRemoveContract);
 		trace('RemovableTest passed $assertions assertions');
 	}
 

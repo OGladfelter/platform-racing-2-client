@@ -21,10 +21,10 @@ class SetEmailPopupTest {
 	public static function main():Void {
 		var savedUploadFactory = SetEmailPopup.uploadFactory;
 		ServerConfig.setHost("http://example.test");
-		testValidation();
+		pr2.DeterministicTestMode.runTest("SetEmailPopupTest.testValidation", testValidation);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SetEmailPopupTest")) return;
-		testEncryptedUploadFromEnterKey();
-		testCancel();
+		pr2.DeterministicTestMode.runTest("SetEmailPopupTest.testEncryptedUploadFromEnterKey", testEncryptedUploadFromEnterKey);
+		pr2.DeterministicTestMode.runTest("SetEmailPopupTest.testCancel", testCancel);
 		SetEmailPopup.uploadFactory = savedUploadFactory;
 		ServerConfig.resetHost();
 		closeAll();

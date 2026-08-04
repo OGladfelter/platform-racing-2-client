@@ -21,9 +21,9 @@ class TransferGuildPopupTest {
 	public static function main():Void {
 		var savedUploadFactory = TransferGuildPopup.uploadFactory;
 		ServerConfig.setHost("http://example.test");
-		testValidationAndCancel();
+		pr2.DeterministicTestMode.runTest("TransferGuildPopupTest.testValidationAndCancel", testValidationAndCancel);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("TransferGuildPopupTest")) return;
-		testEncryptedUploadAndGuildState();
+		pr2.DeterministicTestMode.runTest("TransferGuildPopupTest.testEncryptedUploadAndGuildState", testEncryptedUploadAndGuildState);
 		TransferGuildPopup.uploadFactory = savedUploadFactory;
 		ServerConfig.resetHost();
 		closeAll();

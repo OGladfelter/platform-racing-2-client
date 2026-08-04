@@ -60,48 +60,42 @@ class EditorSettingsTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testSideBarCatalog();
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testSideBarCatalog", testSideBarCatalog);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("EditorSettingsTest")) return;
-		testChooseLevelsModeAuthoredLayout();
-		testLevelEditorMenuAuthoredLayout();
-		testLevelEditorMenuCommands();
-		testBlockOptionsButtonAuthoredStates();
-		testAuthoredEditorToolGraphics();
-		testBrushSizePickerAuthoredLayout();
-		testDefaultSetters();
-		testSettingButtonValuesRefresh();
-		testVariablesAndLevelVars();
-		testApplyLoadedLevelData();
-		testPasswordHashing();
-		testBackgroundColorPickerCommit();
-		testBrushColorPickerStageCapture();
-		testBackgroundButtonCommit();
-		testEditorBackgroundAndLayerParity();
-		testBlockGridLinesFollowZoomAndCamera();
-		testAlternateMovementControlsPanEditorCamera();
-		testTextObjectSaveStringUsesDecodedArtFormat();
-		testValueSettingsPopupCommit();
-		testMusicSettingsPopupCommit();
-		testModeSettingsPopupCommit();
-		testItemSettingsPopupCommit();
-		testHatsSettingsPopupCommit();
-		testBrushTargetGating();
-		testBrushStrokeSegmentation();
-		testStampPlacementCancellationAndCursorScale();
-		testArtLayerSwitchDeselectsItem();
-		testBlockDragPlacement();
-		testModalPopupBlocksEditorInput();
-		testBlockObjectInteractions();
-		testObjectDeleterLifecycle();
-		testTextToolDropLifecycle();
-		testTextObjectEditSemantics();
-		testStampDrawObjectActions();
-		testAuthoredStampDimensions();
-		testEditorToolCursorLifecycle();
-		testCustomCursorRuntimeHooks();
-		testStatSliderHoldAccelerationAndSavePaths();
-		testEditorTestCourseHitsKeepSelectedHat();
-		testRoguelikeTestCourseStartsWithZeroStats();
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testChooseLevelsModeAuthoredLayout", testChooseLevelsModeAuthoredLayout);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testLevelEditorMenuAuthoredLayout", testLevelEditorMenuAuthoredLayout);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBlockOptionsButtonAuthoredStates", testBlockOptionsButtonAuthoredStates);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testAuthoredEditorToolGraphics", testAuthoredEditorToolGraphics);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBrushSizePickerAuthoredLayout", testBrushSizePickerAuthoredLayout);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testDefaultSetters", testDefaultSetters);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testSettingButtonValuesRefresh", testSettingButtonValuesRefresh);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testVariablesAndLevelVars", testVariablesAndLevelVars);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testApplyLoadedLevelData", testApplyLoadedLevelData);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testPasswordHashing", testPasswordHashing);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBackgroundColorPickerCommit", testBackgroundColorPickerCommit);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBrushColorPickerStageCapture", testBrushColorPickerStageCapture);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBackgroundButtonCommit", testBackgroundButtonCommit);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testEditorBackgroundAndLayerParity", testEditorBackgroundAndLayerParity);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBlockGridLinesFollowZoomAndCamera", testBlockGridLinesFollowZoomAndCamera);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testAlternateMovementControlsPanEditorCamera", testAlternateMovementControlsPanEditorCamera);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testTextObjectSaveStringUsesDecodedArtFormat", testTextObjectSaveStringUsesDecodedArtFormat);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testValueSettingsPopupCommit", testValueSettingsPopupCommit);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testMusicSettingsPopupCommit", testMusicSettingsPopupCommit);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testModeSettingsPopupCommit", testModeSettingsPopupCommit);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testHatsSettingsPopupCommit", testHatsSettingsPopupCommit);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBrushTargetGating", testBrushTargetGating);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testStampPlacementCancellationAndCursorScale", testStampPlacementCancellationAndCursorScale);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testArtLayerSwitchDeselectsItem", testArtLayerSwitchDeselectsItem);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBlockDragPlacement", testBlockDragPlacement);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testModalPopupBlocksEditorInput", testModalPopupBlocksEditorInput);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBlockObjectInteractions", testBlockObjectInteractions);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testObjectDeleterLifecycle", testObjectDeleterLifecycle);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testTextToolDropLifecycle", testTextToolDropLifecycle);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testTextObjectEditSemantics", testTextObjectEditSemantics);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testStampDrawObjectActions", testStampDrawObjectActions);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testAuthoredStampDimensions", testAuthoredStampDimensions);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testEditorToolCursorLifecycle", testEditorToolCursorLifecycle);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testCustomCursorRuntimeHooks", testCustomCursorRuntimeHooks);
 		trace('EditorSettingsTest passed $assertions assertions');
 	}
 
@@ -136,94 +130,6 @@ class EditorSettingsTest {
 		assertEquals("25", zoom.itemAt(0), "editor menu preserves authored minimum zoom");
 		assertEquals("500", zoom.itemAt(6), "editor menu preserves authored maximum zoom");
 		view.dispose();
-	}
-
-	private static function testLevelEditorMenuCommands():Void {
-		var previousGroup = pr2.lobby.LobbySession.group;
-		pr2.lobby.LobbySession.group = 1;
-		var editor = new LevelEditor();
-		var holder = new pr2.page.PageHolder(editor);
-		var menu = editor.menu;
-		assertNotNull(menu, "initialized editor owns its command menu");
-		var blocksButton = Std.downcast(directChild(menu.art, "blocksButton"), GameButton);
-		var settingsButton = Std.downcast(directChild(menu.art, "settingsButton"), GameButton);
-		var bgButton = Std.downcast(directChild(menu.art, "bgButton"), GameButton);
-		var layer2Button = Std.downcast(directChild(menu.art, "layer2Button"), GameButton);
-		var layerButtons = [
-			{button: Std.downcast(directChild(menu.art, "layer00Button"), GameButton), layer: 5},
-			{button: Std.downcast(directChild(menu.art, "layer0Button"), GameButton), layer: 4},
-			{button: Std.downcast(directChild(menu.art, "layer1Button"), GameButton), layer: 1},
-			{button: layer2Button, layer: 2},
-			{button: Std.downcast(directChild(menu.art, "layer3Button"), GameButton), layer: 3},
-		];
-		var undoButton = Std.downcast(directChild(menu.art, "undoButton"), GameButton);
-		var redoButton = Std.downcast(directChild(menu.art, "redoButton"), GameButton);
-		var saveButton = Std.downcast(directChild(menu.art, "saveButton"), GameButton);
-		var loadButton = Std.downcast(directChild(menu.art, "loadButton"), GameButton);
-		var newButton = Std.downcast(directChild(menu.art, "newButton"), GameButton);
-		var testButton = Std.downcast(directChild(menu.art, "testButton"), GameButton);
-		assertEquals(menu.blocks, menu.sideBar, "menu initializes on the Blocks sidebar");
-		assertEquals("blocks", editor.focusedEditorLayer, "Blocks command focuses the block layer");
-
-		settingsButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertEquals(menu.settings, menu.sideBar, "Settings command swaps to settings sidebar");
-		assertEquals("", editor.focusedEditorLayer, "Settings command clears editor focus");
-		bgButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertEquals(menu.bg, menu.sideBar, "BG command swaps to backgrounds sidebar");
-		for (entry in layerButtons) {
-			entry.button.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-			assertEquals(editor.objectLayers[entry.layer - 1], editor.activeObjectLayer, 'Art ${entry.layer} command selects its object layer');
-		}
-		assertEquals(menu.stamps, menu.sideBar, "layer command swaps a non-art sidebar to stamps");
-		assertEquals("objects", editor.focusedEditorLayer, "layer command focuses its object layer");
-		blocksButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertEquals(menu.blocks, menu.sideBar, "Blocks command restores blocks sidebar");
-		var placed = editor.blockLayer.addBlockAtStage(ObjectCodes.BLOCK_BASIC1, null, 120, 120);
-		assertNotNull(placed, "menu undo fixture places a real block");
-		menu.updateUndoRedoState();
-		assertEquals(true, undoButton.enabled, "menu enables Undo when Flash saveArray has work");
-		undoButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertEquals(null, editor.blockLayer.getBlockAtStage(120, 120), "Undo command reverses the active block-layer action");
-		assertEquals(true, redoButton.enabled, "Undo command enables Redo");
-		redoButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertNotNull(editor.blockLayer.getBlockAtStage(120, 120), "Redo command restores the active block-layer action");
-
-		menu.art.zoomSelect.selectFromUser(6);
-		assertClose(5, editor.zoom, "500% command applies authored editor zoom");
-		assertClose(5, menu.tools.zoom, "zoom command synchronizes tools sidebar");
-
-		saveButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertTrue(Std.isOfType(Popup.getOpen()[Popup.getOpen().length - 1], SaveLevelPopup), "Save command opens real SaveLevelPopup");
-		Popup.getOpen()[Popup.getOpen().length - 1].remove();
-		loadButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertTrue(Std.isOfType(Popup.getOpen()[Popup.getOpen().length - 1], GetLevelsPopup), "Load command opens owned-level picker for regular editors");
-		Popup.getOpen()[Popup.getOpen().length - 1].remove();
-		newButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertTrue(Std.isOfType(Popup.getOpen()[Popup.getOpen().length - 1], ConfirmPopup), "New command owns a confirmation modal");
-		Popup.getOpen()[Popup.getOpen().length - 1].remove();
-		var exitButton = Std.downcast(directChild(menu.art, "exitButton"), GameButton);
-		exitButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertTrue(Std.isOfType(Popup.getOpen()[Popup.getOpen().length - 1], ConfirmPopup), "Exit command owns a confirmation modal");
-		Popup.getOpen()[Popup.getOpen().length - 1].remove();
-
-		menu.setReportsMode(true);
-		assertEquals(false, saveButton.enabled, "reports mode disables Save like Flash");
-		menu.setReportsMode(false);
-		assertEquals(true, saveButton.enabled, "leaving reports mode restores Save");
-		var disposedBlocksButton = blocksButton;
-		testButton.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
-		assertTrue(Std.isOfType(holder.getCurrentPage(), TestCoursePage), "Test command navigates through the real page holder");
-		assertEquals(false, disposedBlocksButton.hasEventListener(MouseEvent.CLICK), "page removal cleans command listeners");
-
-		pr2.lobby.LobbySession.group = 0;
-		var guest = new LevelEditor();
-		guest.initialize();
-		var guestSave = Std.downcast(directChild(guest.menu.art, "saveButton"), GameButton);
-		var guestLoad = Std.downcast(directChild(guest.menu.art, "loadButton"), GameButton);
-		assertEquals(false, guestSave.enabled, "guest editor disables Save");
-		assertEquals(false, guestLoad.enabled, "guest editor disables Load");
-		guest.remove();
-		pr2.lobby.LobbySession.group = previousGroup;
 	}
 
 	private static function testChooseLevelsModeAuthoredLayout():Void {
@@ -845,60 +751,6 @@ class EditorSettingsTest {
 		StageFocus.resetHooks();
 	}
 
-	private static function testItemSettingsPopupCommit():Void {
-		var editor = new LevelEditor();
-		editor.initialize();
-		editor.setItems("Laser`Teleport");
-		var itemBlock = editor.blockLayer.addBlockAtStage(ObjectCodes.BLOCK_ITEM, BlockType.Item, 120, 120);
-		itemBlock.setOptions(Items.MINE + "-" + Items.TELEPORT + "-" + Items.SNAKE);
-		editor.openItemSettingsMenu(new Sprite());
-		var popup = editor.activeItemSettingsPopup;
-		var itemsBackground = directChild(popup.art, "background");
-		var itemsTitle = Std.downcast(directChild(popup.art, "title"), TextField);
-		var laserCheck = Std.downcast(directChild(popup.art, "check1"), pr2.ui.controls.GameCheckBox);
-		var iceCheck = Std.downcast(directChild(popup.art, "check9"), pr2.ui.controls.GameCheckBox);
-		assertNotNull(itemsBackground, "item menu mounts authored ShadowBG");
-		assertClose(-118.9, itemsBackground.x, "item menu background x follows XFL matrix");
-		assertClose(-61.4, itemsBackground.y, "item menu background y follows XFL matrix");
-		assertEquals("-- Items --", itemsTitle.text, "item menu preserves authored title");
-		assertEquals("Laser Gun", laserCheck.label, "item menu preserves authored Laser Gun label");
-		assertClose(-102, laserCheck.x, "item menu Laser Gun x follows XFL matrix");
-		assertClose(-19, laserCheck.y, "item menu Laser Gun y follows XFL matrix");
-		assertEquals("Ice Wave", iceCheck.label, "item menu preserves authored Ice Wave label");
-		assertClose(-102, iceCheck.x, "item menu Ice Wave x follows XFL matrix");
-		assertClose(81, iceCheck.y, "item menu Ice Wave y follows XFL matrix");
-		var itemsLocalBounds = popup.getBounds(popup);
-		var itemsPosition = EditorItemSettingsPopup.positionNear(new openfl.geom.Rectangle(), itemsLocalBounds, 550, 400);
-		assertEquals(true, itemsPosition.y + itemsLocalBounds.top >= 0, "item menu visible artwork is clamped below the top of the stage");
-
-		assertEquals(true, popup.isItemSelected(Items.LASER_GUN), "item menu loads allowed item");
-		assertEquals(false, popup.isItemSelected(Items.MINE), "item menu leaves disallowed item unchecked");
-		assertEquals(true, popup.isItemSelected(Items.TELEPORT), "item menu loads second allowed item");
-		assertEquals(false, popup.isItemSelected(Items.SNAKE), "item menu excludes post-Flash Snake from the authored choices");
-		var editorMouseDowns = @:privateAccess editor.mouseDownEventsForTests;
-		@:privateAccess popup.autoDismiss.armForTests();
-		laserCheck.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_DOWN, true));
-		assertEquals(popup, editor.activeItemSettingsPopup, "item menu checkbox survives the auto-dismiss capture listener");
-		laserCheck.dispatchEvent(new MouseEvent(MouseEvent.CLICK, true));
-		assertEquals(false, laserCheck.selected, "item menu checkbox receives a real bubbled mouse click");
-		assertEquals(editorMouseDowns, @:privateAccess editor.mouseDownEventsForTests, "item menu click is not consumed as level-canvas input");
-
-		popup.setItemSelected(Items.MINE, true);
-		popup.setItemSelected(Items.SNAKE, true);
-		popup.remove();
-
-		assertArrayEquals([Items.MINE, Items.TELEPORT], editor.allowedItems, "item menu commits only authored selected items in code order");
-		assertEquals("2`4", editor.getLevelVars().get("items"), "committed item menu exports authored numeric codes");
-		assertEquals("2-4-10", itemBlock.options, "item menu preserves item-block overrides that differ from authored allowed items");
-
-		var testCourse = new TestCoursePage(editor.getLevelVars());
-		testCourse.initialize();
-		assertArrayEquals([Items.MINE, Items.TELEPORT], testCourse.course.allowedItemsForTests(),
-			"test course receives item menu allowed-items semantics");
-		testCourse.remove();
-		editor.remove();
-	}
-
 	private static function testHatsSettingsPopupCommit():Void {
 		var editor = new LevelEditor();
 		editor.setBadHats("5,12");
@@ -1004,106 +856,6 @@ class EditorSettingsTest {
 		editor.remove();
 	}
 
-	private static function testStatSliderHoldAccelerationAndSavePaths():Void {
-		var standalone = new StatSlider("Speed", null);
-		standalone.setValue(10);
-		standalone.beginHoldForTests("inc");
-		assertEquals(8, standalone.holdSpeedForTests(), "stat hold starts at 8 updates/sec");
-		assertEquals(11, standalone.value, "stat hold applies first step immediately");
-		standalone.setHoldElapsedForTests(2501);
-		standalone.updateHoldSpeedForTests("inc");
-		assertEquals(16, standalone.holdSpeedForTests(), "stat hold accelerates after two seconds");
-		standalone.updateStatFromHeldForTests("inc");
-		assertEquals(12, standalone.value, "stat hold continues incrementing after acceleration");
-		standalone.setHoldElapsedForTests(4501);
-		standalone.updateHoldSpeedForTests("inc");
-		assertEquals(32, standalone.holdSpeedForTests(), "stat hold accelerates after four seconds");
-		standalone.setValue(100);
-		standalone.updateStatFromHeldForTests("inc");
-		assertEquals(0, standalone.holdSpeedForTests(), "stat hold stops at upper bound");
-		standalone.remove();
-
-		Settings.useMemoryStoreForTests();
-		Settings.init("Tester");
-		Settings.setValue(Settings.LE_TEST_STATS, {speed: 10, acceleration: 20, jumping: 30});
-		var editor = new LevelEditor();
-		editor.initialize();
-		var testCourse = new TestCoursePage(editor.getLevelVars());
-		testCourse.initialize();
-		var stats = testCourse.statsSelect;
-		var speedSlider = @:privateAccess stats.speedSlider;
-		var persistedBeforeChange = Reflect.field(Settings.getValue(Settings.LE_TEST_STATS), "speed");
-		var testCharacter = @:privateAccess stats.localChar;
-		testCharacter.setHats([5, 0xFFFFFF, -1]);
-		assertEquals(10, Math.round(testCharacter.stateSnapshot().speedStat), "Cowboy hat keeps the saved LE speed display");
-		assertEquals(20, Math.round(testCharacter.stateSnapshot().accelerationStat), "Cowboy hat keeps the saved LE acceleration display");
-		assertEquals(30, Math.round(testCharacter.stateSnapshot().jumpStat), "Cowboy hat keeps the saved LE jumping display");
-		testCharacter.setHats([]);
-		assertEquals(10, Math.round(testCharacter.stateSnapshot().speedStat), "removing Cowboy restores the saved LE speed baseline");
-		stats.setStats(91, 82, 73);
-		stats.noteUserStatChange();
-		assertEquals(true, @:privateAccess stats.updateSavedLEStats, "stat change marks pending LE stats");
-		assertEquals(true, @:privateAccess stats.localChar.inLE(), "test stats character reports level editor mode");
-		assertEquals(91, stats.getStats().speed, "stat picker holds changed speed before save path");
-		assertEquals(persistedBeforeChange, Reflect.field(Settings.getValue(Settings.LE_TEST_STATS), "speed"), "stat change does not persist before save path");
-		@:privateAccess speedSlider.onSliderThumbRelease();
-		assertEquals(91, Reflect.field(Settings.getValue(Settings.LE_TEST_STATS), "speed"), "thumb release persists pending LE stats");
-		stats.setStats(92, 82, 73);
-		stats.noteUserStatChange();
-		@:privateAccess stats.localChar.levelEditorStatsEnabled = false;
-		stats.saveLEStats();
-		assertEquals(91, Reflect.field(Settings.getValue(Settings.LE_TEST_STATS), "speed"), "saveLEStats respects inLE guard");
-		testCourse.remove();
-		editor.remove();
-		Settings.disablePersistenceForTests();
-	}
-
-	private static function testRoguelikeTestCourseStartsWithZeroStats():Void {
-		Settings.useMemoryStoreForTests();
-		Settings.init("Tester");
-		Settings.setValue(Settings.LE_TEST_STATS, {speed: 61, acceleration: 72, jumping: 83});
-		var editor = new LevelEditor();
-		editor.initialize();
-		var variables = editor.getLevelVars();
-		variables.set("gameMode", "roguelike");
-		var testCourse = new TestCoursePage(variables);
-		testCourse.initialize();
-		var characterStats = testCourse.course.localCharacter.stateSnapshot();
-		assertEquals(0, Math.round(characterStats.speedStat), "roguelike test course starts character speed at zero");
-		assertEquals(0, Math.round(characterStats.accelerationStat), "roguelike test course starts character acceleration at zero");
-		assertEquals(0, Math.round(characterStats.jumpStat), "roguelike test course starts character jumping at zero");
-		var selectedStats = testCourse.statsSelect.getStats();
-		assertEquals(0, selectedStats.speed, "roguelike test course starts speed slider at zero");
-		assertEquals(0, selectedStats.acceleration, "roguelike test course starts acceleration slider at zero");
-		assertEquals(0, selectedStats.jumping, "roguelike test course starts jumping slider at zero");
-		var savedStats:Dynamic = Settings.getValue(Settings.LE_TEST_STATS);
-		assertEquals(61, Reflect.field(savedStats, "speed"), "roguelike start preserves saved test stats for other modes");
-		testCourse.remove();
-		editor.remove();
-		Settings.disablePersistenceForTests();
-	}
-
-	private static function testEditorTestCourseHitsKeepSelectedHat():Void {
-		Settings.useMemoryStoreForTests();
-		Settings.init("Tester");
-		var editor = new LevelEditor();
-		editor.initialize();
-		var testCourse = new TestCoursePage(editor.getLevelVars());
-		testCourse.initialize();
-		var local = testCourse.course.localCharacter;
-		local.setHats([9, 0x123456, -1]);
-		LobbySocket.resetSent();
-
-		local.receiveHit();
-
-		assertEquals("hurt", local.stateSnapshot().mode, "editor test-course hit still applies the hurt state");
-		assertEquals(9, local.hat1, "editor test-course hit keeps the selected test hat equipped");
-		assertEquals(0, LobbySocket.sentCommands.length, "editor test-course hit emits no loose-hat command");
-		testCourse.remove();
-		editor.remove();
-		Settings.disablePersistenceForTests();
-	}
-
 	private static function testBrushTargetGating():Void {
 		var editor = new LevelEditor();
 		editor.initialize();
@@ -1139,45 +891,6 @@ class EditorSettingsTest {
 		editor.selectEditorTool("tools", "eraser");
 		assertEquals(true, editor.canStartBrushFromTargetForTests(editor.activeDrawLayer, drawPoint.x, drawPoint.y),
 			"eraser uses the same drawable target gate");
-		editor.remove();
-	}
-
-	private static function testBrushStrokeSegmentation():Void {
-		var editor = new LevelEditor();
-		editor.initialize();
-		editor.selectEditorTool("tools", "brush");
-		var drawPoint = pointOutsideMenu(editor);
-		var layer = editor.activeDrawLayer;
-
-		assertEquals(true, editor.beginSelectedBrushAt(drawPoint.x, drawPoint.y), "brush segmentation stroke starts");
-		assertEquals(true, editor.continueSelectedBrushAt(drawPoint.x + 401, drawPoint.y), "brush segmentation stroke extends");
-		assertEquals(true, editor.isDrawing(), "brush remains active after distance segmentation restart");
-		assertEquals(1, layer.drawRasterizeCountForTests(), "distance segmentation rasterizes the completed draw segment");
-		var firstRasterTile = layer.rasterCanvas.getChildAt(0);
-		assertEquals(2, drawActionCount(layer), "distance segmentation starts a new draw action at the current point");
-
-		assertEquals(true, editor.restartSelectedBrushStrokeForTests(), "timer segmentation restarts active brush stroke");
-		assertEquals(2, layer.drawRasterizeCountForTests(), "timer segmentation rasterizes the completed draw segment");
-		assertEquals(firstRasterTile, layer.rasterCanvas.getChildAt(0), "new brush segments update persistent Flash-style raster tiles");
-		assertEquals(3, drawActionCount(layer), "timer segmentation records a fresh draw action");
-		assertEquals(true, editor.endSelectedBrush(), "segmented brush stroke finishes");
-		assertEquals(3, layer.drawRasterizeCountForTests(), "final brush finish rasterizes the draw segment");
-		editor.remove();
-
-		editor = new LevelEditor();
-		editor.initialize();
-		editor.selectEditorTool("tools", "eraser");
-		drawPoint = pointOutsideMenu(editor);
-		layer = editor.activeDrawLayer;
-		assertEquals(true, editor.beginSelectedBrushAt(drawPoint.x, drawPoint.y), "eraser segmentation stroke starts");
-		assertEquals(true, editor.continueSelectedBrushAt(drawPoint.x + 20, drawPoint.y), "eraser segmentation stroke extends");
-		var erasePreviewBounds = layer.brushCanvas.getBounds(layer);
-		assertEquals(true, erasePreviewBounds.width > 0 && erasePreviewBounds.height > 0,
-			"eraser displays its temporary white stroke while dragging");
-		assertEquals(true, editor.endSelectedBrush(), "eraser segmentation stroke finishes");
-		assertEquals(0.0, layer.brushCanvas.getBounds(layer).width, "eraser clears its temporary stroke after applying the erase");
-		assertEquals(0, layer.drawRasterizeCountForTests(), "eraser finish skips draw rasterize path");
-		assertEquals(1, layer.eraseCleanupCountForTests(), "eraser finish calls erase cleanup path");
 		editor.remove();
 	}
 

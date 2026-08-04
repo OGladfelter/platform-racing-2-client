@@ -39,18 +39,18 @@ class NativePresentationFoundationTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testTypedAssetIds();
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testTypedAssetIds", testTypedAssetIds);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("NativePresentationFoundationTest")) return;
-		testAnimationPlayback();
-		testAnimationCompositionAndOwnership();
-		testControlParityContracts();
-		testFocusKeyboardAndTeardown();
-		testFlashTabOrdering();
-		testTypedViewOwnership();
-		testConfirmDialogAuthoredContract();
-		testPopupStackLifecycle();
-		testNativeLoginPopupRoots();
-		testMessagePopupAuthoredContract();
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testAnimationPlayback", testAnimationPlayback);
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testAnimationCompositionAndOwnership", testAnimationCompositionAndOwnership);
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testControlParityContracts", testControlParityContracts);
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testFocusKeyboardAndTeardown", testFocusKeyboardAndTeardown);
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testFlashTabOrdering", testFlashTabOrdering);
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testTypedViewOwnership", testTypedViewOwnership);
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testConfirmDialogAuthoredContract", testConfirmDialogAuthoredContract);
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testPopupStackLifecycle", testPopupStackLifecycle);
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testNativeLoginPopupRoots", testNativeLoginPopupRoots);
+		pr2.DeterministicTestMode.runTest("NativePresentationFoundationTest.testMessagePopupAuthoredContract", testMessagePopupAuthoredContract);
 		trace('NativePresentationFoundationTest passed $assertions assertions');
 	}
 

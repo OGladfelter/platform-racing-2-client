@@ -9,11 +9,11 @@ class RaceChatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testAuthoredInputAndSubmitCallback();
+		pr2.DeterministicTestMode.runTest("RaceChatTest.testAuthoredInputAndSubmitCallback", testAuthoredInputAndSubmitCallback);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("RaceChatTest")) return;
-		testIncomingChatFormatting();
-		testMessageWindow();
-		testPopupTextAreaEnterGuard();
+		pr2.DeterministicTestMode.runTest("RaceChatTest.testIncomingChatFormatting", testIncomingChatFormatting);
+		pr2.DeterministicTestMode.runTest("RaceChatTest.testMessageWindow", testMessageWindow);
+		pr2.DeterministicTestMode.runTest("RaceChatTest.testPopupTextAreaEnterGuard", testPopupTextAreaEnterGuard);
 		trace('RaceChatTest passed $assertions assertions');
 	}
 

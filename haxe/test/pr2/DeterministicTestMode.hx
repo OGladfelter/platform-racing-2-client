@@ -2,9 +2,12 @@ package pr2;
 
 /** Runtime switch used to keep the default deterministic run broad and fast. */
 class DeterministicTestMode {
+	private static inline var MAX_TEST_MILLISECONDS:Float = 250;
 	private static var cachedSmoke:Null<Bool>;
 	private static var cachedGroups:Null<Array<String>>;
 	private static var selectedSuites:Int = 0;
+	private static var timedTests:Int = 0;
+	private static var slowTests:Array<String> = [];
 
 	public static function isSmoke():Bool {
 		if (cachedSmoke == null) {
@@ -32,11 +35,46 @@ class DeterministicTestMode {
 			if (!matches) return;
 		}
 		selectedSuites++;
+		var testsBeforeSuite = timedTests;
+		var startedAt = haxe.Timer.stamp();
 		callback();
+		if (timedTests == testsBeforeSuite) {
+			reportTestTime('$name.main', haxe.Timer.stamp() - startedAt);
+		}
+	}
+
+	public static function runTest(name:String, callback:Void->Void):Void {
+		var startedAt = haxe.Timer.stamp();
+		callback();
+		reportTestTime(name, haxe.Timer.stamp() - startedAt);
+	}
+
+	private static function reportTestTime(name:String, elapsedSeconds:Float):Void {
+		timedTests++;
+		var elapsedMilliseconds = elapsedSeconds * 1000;
+		var formattedMilliseconds = formatMilliseconds(elapsedMilliseconds);
+		Sys.println('TEST_TIME\t$name\t$formattedMilliseconds ms');
+		if (elapsedMilliseconds > MAX_TEST_MILLISECONDS) {
+			slowTests.push('$name took $formattedMilliseconds ms');
+		}
+	}
+
+	public static function failIfTestsAreTooSlow():Void {
+		if (slowTests.length == 0) return;
+		throw 'Tests exceeded the ${MAX_TEST_MILLISECONDS} ms limit:\n- ${slowTests.join("\n- ")}\n'
+			+ "Slow coverage may be better suited to on-demand end-to-end (E2E) tests.";
+	}
+
+	private static function formatMilliseconds(value:Float):String {
+		return Std.string(Math.round(value * 1000) / 1000);
 	}
 
 	public static function hasGroupSelection():Bool {
 		return groups().length > 0;
+	}
+
+	public static function selectedSuiteCount():Int {
+		return selectedSuites;
 	}
 
 	public static function selectionSummary():String {

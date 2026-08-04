@@ -13,14 +13,14 @@ class ParticleEmitterTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testArrowEffectDriftsFadesAndRemoves();
+		pr2.DeterministicTestMode.runTest("ParticleEmitterTest.testArrowEffectDriftsFadesAndRemoves", testArrowEffectDriftsFadesAndRemoves);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ParticleEmitterTest")) return;
-		testBaseParticleEmitterCreatesStarEffect();
-		testArrowSparkleEmitterCreatesColoredArrowEffect();
-		testRainbowStarEmitterCreatesColoredRotatedStarEffect();
-		testPhysicsParticleAppliesRandomizedMotionAndLifetime();
-		testPositionedParticleEmitterCreatesPhysicsParticleAtTargetPoint();
-		testDynamicParticlesRunOnlyOnSimulationFrames();
+		pr2.DeterministicTestMode.runTest("ParticleEmitterTest.testBaseParticleEmitterCreatesStarEffect", testBaseParticleEmitterCreatesStarEffect);
+		pr2.DeterministicTestMode.runTest("ParticleEmitterTest.testArrowSparkleEmitterCreatesColoredArrowEffect", testArrowSparkleEmitterCreatesColoredArrowEffect);
+		pr2.DeterministicTestMode.runTest("ParticleEmitterTest.testRainbowStarEmitterCreatesColoredRotatedStarEffect", testRainbowStarEmitterCreatesColoredRotatedStarEffect);
+		pr2.DeterministicTestMode.runTest("ParticleEmitterTest.testPhysicsParticleAppliesRandomizedMotionAndLifetime", testPhysicsParticleAppliesRandomizedMotionAndLifetime);
+		pr2.DeterministicTestMode.runTest("ParticleEmitterTest.testPositionedParticleEmitterCreatesPhysicsParticleAtTargetPoint", testPositionedParticleEmitterCreatesPhysicsParticleAtTargetPoint);
+		pr2.DeterministicTestMode.runTest("ParticleEmitterTest.testDynamicParticlesRunOnlyOnSimulationFrames", testDynamicParticlesRunOnlyOnSimulationFrames);
 		trace('ParticleEmitterTest passed $assertions assertions');
 	}
 

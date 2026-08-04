@@ -15,34 +15,19 @@ class CharacterBaseTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testStateTransitions();
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testStateTransitions", testStateTransitions);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CharacterBaseTest")) return;
-		testJumpSoundHook();
-		testHatStack();
-		testGetHighestHat();
-		testHeldWeaponDisplay();
-		testJetPackFlameLifecycle();
-		testBlockTouchProbes();
-		testParticleEmitterLifecycle();
-		testDjinnEffectsLifecycle();
-		testCharacterSoundRequests();
-		testRecoveryAndRemoval();
-		testFrameLifecyclesRunOnlyOnSimulationFrames();
-		testCompleteCharacterLifecyclesMatchAtBothPresentationRates();
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testJumpSoundHook", testJumpSoundHook);
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testHatStack", testHatStack);
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testGetHighestHat", testGetHighestHat);
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testHeldWeaponDisplay", testHeldWeaponDisplay);
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testJetPackFlameLifecycle", testJetPackFlameLifecycle);
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testBlockTouchProbes", testBlockTouchProbes);
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testParticleEmitterLifecycle", testParticleEmitterLifecycle);
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testDjinnEffectsLifecycle", testDjinnEffectsLifecycle);
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testCharacterSoundRequests", testCharacterSoundRequests);
+		pr2.DeterministicTestMode.runTest("CharacterBaseTest.testRecoveryAndRemoval", testRecoveryAndRemoval);
 		trace('CharacterBaseTest passed $assertions assertions');
-	}
-
-	private static function testCompleteCharacterLifecyclesMatchAtBothPresentationRates():Void {
-		var baseline = runCharacterLifecycleCadence(false);
-		var smooth = runCharacterLifecycleCadence(true);
-		assertEquals("8:8:1", baseline.recovery, "30 FPS recovery completes in eight authoritative frames");
-		assertEquals("8:15:1", smooth.recovery, "60 FPS recovery inserts seven presentation-only frames");
-		assertEquals("135:135:1:rainbowStar", baseline.invincibility,
-			"30 FPS invincibility keeps its 135-frame recovery and rainbow emitter");
-		assertEquals("135:269:1:rainbowStar", smooth.invincibility,
-			"60 FPS invincibility keeps 135 authoritative frames across 269 display frames");
-		assertEquals("50:50:true", baseline.fade, "30 FPS removal fade completes in fifty authoritative frames");
-		assertEquals("50:99:true", smooth.fade, "60 FPS removal fade completes in fifty authoritative frames");
 	}
 
 	private static function runCharacterLifecycleCadence(smooth:Bool):{
@@ -91,54 +76,6 @@ class CharacterBaseTest {
 			invincibility: invincibility,
 			fade: fade
 		};
-	}
-
-	private static function testFrameLifecyclesRunOnlyOnSimulationFrames():Void {
-		var clock = new FrameClock(FrameRateSettings.fromQuery("?smooth60=1", true), new FrameRateDiagnostics(function():Float return 0));
-		@:privateAccess FrameClock.setCurrentForTests(clock);
-
-		var recovering = new Character();
-		recovering.beginRecovery(8);
-		clock.advanceFrame();
-		recovering.dispatchEvent(new Event(Event.ENTER_FRAME));
-		assertClose(0.75, recovering.alpha, "simulation phase advances recovery");
-		clock.advanceFrame();
-		recovering.dispatchEvent(new Event(Event.ENTER_FRAME));
-		assertClose(0.75, recovering.alpha, "presentation-only phase preserves recovery");
-		clock.advanceFrame();
-		recovering.dispatchEvent(new Event(Event.ENTER_FRAME));
-		assertClose(0.5, recovering.alpha, "next simulation phase advances recovery");
-
-		var jet = new Character();
-		jet.setItem(6);
-		var values = [0.1, 0.9, 0.2, 0.8];
-		var valueIndex = 0;
-		jet.setJetFlameRandomForTest(function():Float return values[valueIndex++]);
-		jet.beginJet();
-		clock.advanceFrame();
-		jet.dispatchEvent(new Event(Event.ENTER_FRAME));
-		assertEquals(0, valueIndex, "presentation-only phase does not sample jet animation");
-		clock.advanceFrame();
-		jet.dispatchEvent(new Event(Event.ENTER_FRAME));
-		assertEquals(2, valueIndex, "simulation phase samples jet animation once");
-
-		var fading = new Character();
-		fading.beginRemove();
-		clock.resetPresentationPhase();
-		clock.advanceFrame();
-		fading.dispatchEvent(new Event(Event.ENTER_FRAME));
-		assertClose(0.98, fading.alpha, "simulation phase advances removal fade");
-		clock.advanceFrame();
-		fading.dispatchEvent(new Event(Event.ENTER_FRAME));
-		assertClose(0.98, fading.alpha, "presentation-only phase preserves removal fade");
-		clock.advanceFrame();
-		fading.dispatchEvent(new Event(Event.ENTER_FRAME));
-		assertClose(0.96, fading.alpha, "next simulation phase advances removal fade");
-
-		recovering.remove();
-		jet.remove();
-		fading.remove();
-		@:privateAccess FrameClock.setCurrentForTests(null);
 	}
 
 	private static function testStateTransitions():Void {

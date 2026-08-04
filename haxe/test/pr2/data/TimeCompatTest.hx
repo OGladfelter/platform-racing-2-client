@@ -6,9 +6,9 @@ class TimeCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testServerTimeOffset();
+		pr2.DeterministicTestMode.runTest("TimeCompatTest.testServerTimeOffset", testServerTimeOffset);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("TimeCompatTest")) return;
-		testDayCalculation();
+		pr2.DeterministicTestMode.runTest("TimeCompatTest.testDayCalculation", testDayCalculation);
 		trace('TimeCompatTest passed $assertions assertions');
 	}
 

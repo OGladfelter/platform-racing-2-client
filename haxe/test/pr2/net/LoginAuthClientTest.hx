@@ -4,11 +4,11 @@ class LoginAuthClientTest {
 	private static var assertions = 0;
 
 	public static function main():Void {
-		testPayloadContainsFlashFields();
+		pr2.DeterministicTestMode.runTest("LoginAuthClientTest.testPayloadContainsFlashFields", testPayloadContainsFlashFields);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LoginAuthClientTest")) return;
-		testEncryptedFields();
-		testRememberedTokenField();
-		testParsesError();
+		pr2.DeterministicTestMode.runTest("LoginAuthClientTest.testEncryptedFields", testEncryptedFields);
+		pr2.DeterministicTestMode.runTest("LoginAuthClientTest.testRememberedTokenField", testRememberedTokenField);
+		pr2.DeterministicTestMode.runTest("LoginAuthClientTest.testParsesError", testParsesError);
 		trace('LoginAuthClientTest passed $assertions assertions');
 	}
 

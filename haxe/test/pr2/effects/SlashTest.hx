@@ -10,12 +10,12 @@ class SlashTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testRightSlashAnimationProbesSoundAndRemoval();
-		testExactMineFrames();
-		testExactMinePieceFrames();
-		testExactBlockPieceFrames();
+		pr2.DeterministicTestMode.runTest("SlashTest.testRightSlashAnimationProbesSoundAndRemoval", testRightSlashAnimationProbesSoundAndRemoval);
+		pr2.DeterministicTestMode.runTest("SlashTest.testExactMineFrames", testExactMineFrames);
+		pr2.DeterministicTestMode.runTest("SlashTest.testExactMinePieceFrames", testExactMinePieceFrames);
+		pr2.DeterministicTestMode.runTest("SlashTest.testExactBlockPieceFrames", testExactBlockPieceFrames);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SlashTest")) return;
-		testLeftSlashShooterFilteringAndScale();
+		pr2.DeterministicTestMode.runTest("SlashTest.testLeftSlashShooterFilteringAndScale", testLeftSlashShooterFilteringAndScale);
 		trace('SlashTest passed $assertions assertions');
 	}
 

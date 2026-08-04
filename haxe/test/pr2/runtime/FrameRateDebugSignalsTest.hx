@@ -5,10 +5,10 @@ class FrameRateDebugSignalsTest {
 	private static var now:Float = 0;
 
 	public static function main():Void {
-		testInitialAndMeasuredSignals();
+		pr2.DeterministicTestMode.runTest("FrameRateDebugSignalsTest.testInitialAndMeasuredSignals", testInitialAndMeasuredSignals);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("FrameRateDebugSignalsTest")) return;
-		testDisabledFlag();
-		testUnchangedValuesAreNotRepublished();
+		pr2.DeterministicTestMode.runTest("FrameRateDebugSignalsTest.testDisabledFlag", testDisabledFlag);
+		pr2.DeterministicTestMode.runTest("FrameRateDebugSignalsTest.testUnchangedValuesAreNotRepublished", testUnchangedValuesAreNotRepublished);
 		trace('FrameRateDebugSignalsTest passed $assertions assertions');
 	}
 

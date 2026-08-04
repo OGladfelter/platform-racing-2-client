@@ -12,11 +12,11 @@ class IceWaveLifecycleTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testAuthoredSpawnAndTravel();
+		pr2.DeterministicTestMode.runTest("IceWaveLifecycleTest.testAuthoredSpawnAndTravel", testAuthoredSpawnAndTravel);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("IceWaveLifecycleTest")) return;
-		testBranchingAndLifetimeInheritance();
-		testBranchBoundsAndActiveGuard();
-		testIceBlocksAndTeardown();
+		pr2.DeterministicTestMode.runTest("IceWaveLifecycleTest.testBranchingAndLifetimeInheritance", testBranchingAndLifetimeInheritance);
+		pr2.DeterministicTestMode.runTest("IceWaveLifecycleTest.testBranchBoundsAndActiveGuard", testBranchBoundsAndActiveGuard);
+		pr2.DeterministicTestMode.runTest("IceWaveLifecycleTest.testIceBlocksAndTeardown", testIceBlocksAndTeardown);
 		trace('IceWaveLifecycleTest passed $assertions assertions');
 	}
 

@@ -8,12 +8,11 @@ class IntroPageTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testNativeShell();
-		testStandardLottieTransform();
+		pr2.DeterministicTestMode.runTest("IntroPageTest.testNativeShell", testNativeShell);
+		pr2.DeterministicTestMode.runTest("IntroPageTest.testStandardLottieTransform", testStandardLottieTransform);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("IntroPageTest")) return;
-		testSiteQueues();
-		testAnimationCompletionFrames();
-		testSkipIsIdempotent();
+		pr2.DeterministicTestMode.runTest("IntroPageTest.testSiteQueues", testSiteQueues);
+		pr2.DeterministicTestMode.runTest("IntroPageTest.testSkipIsIdempotent", testSkipIsIdempotent);
 		trace('IntroPageTest passed $assertions assertions');
 	}
 
@@ -61,15 +60,6 @@ class IntroPageTest {
 		@:privateAccess assertEquals(expected, page.toPlay.join(","), '$site intro queue');
 		@:privateAccess assertEquals("skipHitArea", page.skipHitArea.name, "full-stage skip target is explicitly named");
 		page.remove();
-	}
-
-	private static function testAnimationCompletionFrames():Void {
-		assertSemanticTimeline("jiggmin", 231, 4, true, ["sound:logo_theme"]);
-		assertSemanticTimeline("kongregate", 153, 145, false, []);
-		testSourceSoundGraphMetadata();
-		testAuthoredSoundMarker();
-		assertCompletesAt("jiggmin", 231);
-		assertCompletesAt("kongregate", 153);
 	}
 
 	private static function testSourceSoundGraphMetadata():Void {

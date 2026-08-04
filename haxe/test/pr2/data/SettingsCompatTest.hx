@@ -6,11 +6,11 @@ class SettingsCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testStoreNameAndRawLoad();
+		pr2.DeterministicTestMode.runTest("SettingsCompatTest.testStoreNameAndRawLoad", testStoreNameAndRawLoad);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SettingsCompatTest")) return;
-		testDefaultsPopulateSessionData();
-		testPartialControlsAndStatsPersist();
-		testNoUserOrBlockedCookiesDoNotThrow();
+		pr2.DeterministicTestMode.runTest("SettingsCompatTest.testDefaultsPopulateSessionData", testDefaultsPopulateSessionData);
+		pr2.DeterministicTestMode.runTest("SettingsCompatTest.testPartialControlsAndStatsPersist", testPartialControlsAndStatsPersist);
+		pr2.DeterministicTestMode.runTest("SettingsCompatTest.testNoUserOrBlockedCookiesDoNotThrow", testNoUserOrBlockedCookiesDoNotThrow);
 		Settings.disablePersistenceForTests();
 		trace('SettingsCompatTest passed $assertions assertions');
 	}

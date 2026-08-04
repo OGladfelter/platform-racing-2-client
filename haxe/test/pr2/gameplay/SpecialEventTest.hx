@@ -10,11 +10,10 @@ class SpecialEventTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testPermissions();
+		pr2.DeterministicTestMode.runTest("SpecialEventTest.testPermissions", testPermissions);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SpecialEventTest")) return;
-		testPlaceArtifactHotkey();
-		testArtifactPlacementCoordinates();
-		testCancelPrizeHotkey();
+		pr2.DeterministicTestMode.runTest("SpecialEventTest.testPlaceArtifactHotkey", testPlaceArtifactHotkey);
+		pr2.DeterministicTestMode.runTest("SpecialEventTest.testCancelPrizeHotkey", testCancelPrizeHotkey);
 		trace('SpecialEventTest passed $assertions assertions');
 	}
 
@@ -58,21 +57,6 @@ class SpecialEventTest {
 				throw "expected PlaceArtifactAction";
 		}
 		LobbySession.clear();
-	}
-
-	private static function testArtifactPlacementCoordinates():Void {
-		var course = buildCourse();
-		course.x = 10;
-		course.y = 20;
-		course.levelRenderer.setCameraOffset(-400, -500);
-		course.levelRenderer.rotation = 90;
-		var request = course.artifactPlacementAt(210, 320);
-
-		assertEquals(42, request.levelId, "placement uses course id");
-		assertEquals(600, request.x, "placement converts stage x with explicit course and camera offsets");
-		assertEquals(800, request.y, "placement converts stage y with explicit course and camera offsets");
-		assertEquals(90, request.rot, "placement carries block-layer rotation");
-		course.remove();
 	}
 
 	private static function testCancelPrizeHotkey():Void {

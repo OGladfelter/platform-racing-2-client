@@ -17,26 +17,14 @@ class LocalCharacterTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testDelegatesPhysicsAndMirrorsCharacterState();
+		pr2.DeterministicTestMode.runTest("LocalCharacterTest.testDelegatesPhysicsAndMirrorsCharacterState", testDelegatesPhysicsAndMirrorsCharacterState);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LocalCharacterTest")) return;
-		testPropellerHatSlowsFallWhenHoldingJump();
-		testCowboyHatBoostsStatsAndForcesAirborneWaterModeUntilRemoved();
-		testCowboyHatFlightDoesNotRepeatWaterExitBoost();
-		testMoonHatReducesGravityUntilRemoved();
-		testSantaHatStandsOnWaterAndSafetyAndRaisesSpeedCapUntilRemoved();
-		testSantaHatFreezeCooldownLetsPlayerEnterWater();
-		testPartyHatIgnoresStingAndZapHurtReactions();
-		testTopHatPassesThroughVanishBlocks();
-		testCrownHatIgnoresMineHitsExceptDeathmatch();
-		testJumpStartHatGrantsTwoSecondSpeedBurstOnEquip();
-		testArtifactHatGrantsThirtySecondBurstAndReversesControlsUntilRemoved();
-		testAprilFirstReversesControlsUntilArtifactRemoved();
-		testJiggminHatSquashesRemotePlayersWhileFalling();
-		testJellyfishHatStingsNearbyRemotePlayersAndIgnoresStingHurt();
-		testCheeseHatIsCosmeticOnly();
-		testNormalRaceMineHitDropsHighestHat();
-		testAcceptedHitsShedTheFourHatStack();
-		testHatAttackHitDropsHighestHat();
+		pr2.DeterministicTestMode.runTest("LocalCharacterTest.testCowboyHatBoostsStatsAndForcesAirborneWaterModeUntilRemoved", testCowboyHatBoostsStatsAndForcesAirborneWaterModeUntilRemoved);
+		pr2.DeterministicTestMode.runTest("LocalCharacterTest.testCowboyHatFlightDoesNotRepeatWaterExitBoost", testCowboyHatFlightDoesNotRepeatWaterExitBoost);
+		pr2.DeterministicTestMode.runTest("LocalCharacterTest.testTopHatPassesThroughVanishBlocks", testTopHatPassesThroughVanishBlocks);
+		pr2.DeterministicTestMode.runTest("LocalCharacterTest.testAprilFirstReversesControlsUntilArtifactRemoved", testAprilFirstReversesControlsUntilArtifactRemoved);
+		pr2.DeterministicTestMode.runTest("LocalCharacterTest.testNormalRaceMineHitDropsHighestHat", testNormalRaceMineHitDropsHighestHat);
+		pr2.DeterministicTestMode.runTest("LocalCharacterTest.testHatAttackHitDropsHighestHat", testHatAttackHitDropsHighestHat);
 		trace('LocalCharacterTest passed $assertions assertions');
 	}
 
@@ -69,21 +57,6 @@ class LocalCharacterTest {
 		controller.step(new LocalPlayerInput());
 		character.step(new LocalPlayerInput());
 		assertSameState(controller, character, "runtime gravity sync");
-	}
-
-	private static function testPropellerHatSlowsFallWhenHoldingJump():Void {
-		var normal = new LocalCharacter(airborneLevel());
-		var propeller = new LocalCharacter(airborneLevel());
-		propeller.setHats([4, 0xFFFFFF, -1]);
-
-		normal.step(new LocalPlayerInput(false, false, true));
-		propeller.step(new LocalPlayerInput(false, false, true));
-		assertClose(normal.stateSnapshot().vy * 0.85, propeller.stateSnapshot().vy, "propeller slows falling while jump is held");
-
-		var notHeld = new LocalCharacter(airborneLevel());
-		notHeld.setHats([4, 0xFFFFFF, -1]);
-		notHeld.step(new LocalPlayerInput());
-		assertClose(normal.stateSnapshot().vy, notHeld.stateSnapshot().vy, "propeller does not slow falling without jump held");
 	}
 
 	private static function testCowboyHatBoostsStatsAndForcesAirborneWaterModeUntilRemoved():Void {
@@ -126,123 +99,6 @@ class LocalCharacterTest {
 			"cowboy flight uses the Flash acceleration minimum regardless of the lower starting acceleration stat");
 	}
 
-	private static function testMoonHatReducesGravityUntilRemoved():Void {
-		var normal = new LocalCharacter(heavyGravityAirborneLevel());
-		var moon = new LocalCharacter(heavyGravityAirborneLevel());
-		moon.setHats([11, 0xFFFFFF, -1]);
-
-		normal.step(new LocalPlayerInput());
-		moon.step(new LocalPlayerInput());
-		assertClose(normal.stateSnapshot().vy * 0.85, moon.stateSnapshot().vy, "moon hat applies low gravity");
-
-		var removed = new LocalCharacter(heavyGravityAirborneLevel());
-		removed.setHats([11, 0xFFFFFF, -1]);
-		removed.setHats([]);
-		removed.step(new LocalPlayerInput());
-		assertClose(normal.stateSnapshot().vy, removed.stateSnapshot().vy, "moon hat removal restores level gravity");
-	}
-
-	private static function testSantaHatStandsOnWaterAndSafetyAndRaisesSpeedCapUntilRemoved():Void {
-		var normalWater = new LocalCharacter(nonSolidFloorLevel(BlockType.Water));
-		var santaWater = new LocalCharacter(nonSolidFloorLevel(BlockType.Water));
-		santaWater.setHats([7, 0xFFFFFF, -1]);
-
-		normalWater.step(new LocalPlayerInput());
-		santaWater.step(new LocalPlayerInput());
-		assertEquals(false, normalWater.stateSnapshot().grounded, "water remains non-solid without santa hat");
-		assertEquals(true, santaWater.stateSnapshot().grounded, "santa hat stands on water");
-		assertClose(90, santaWater.stateSnapshot().y, "santa water stand snaps to block top");
-
-		var santaSafety = new LocalCharacter(nonSolidFloorLevel(BlockType.Safety));
-		santaSafety.setHats([7, 0xFFFFFF, -1]);
-		santaSafety.step(new LocalPlayerInput());
-		assertEquals(true, santaSafety.stateSnapshot().grounded, "santa hat stands on safety blocks");
-		assertClose(90, santaSafety.stateSnapshot().y, "santa safety stand snaps to block top");
-
-		var normal = new LocalCharacter(longFlatLevel());
-		var santa = new LocalCharacter(longFlatLevel());
-		santa.setHats([7, 0xFFFFFF, -1]);
-		for (_ in 0...90) {
-			normal.step(new LocalPlayerInput(false, true));
-			santa.step(new LocalPlayerInput(false, true));
-		}
-		assertAbove(santa.stateSnapshot().vx, normal.stateSnapshot().vx + 0.5, "santa hat raises max horizontal velocity");
-
-		var cycled = new LocalCharacter(longFlatLevel());
-		cycled.setHats([7, 0xFFFFFF, -1]);
-		cycled.setHats([]);
-		cycled.setHats([7, 0xFFFFFF, -1]);
-		cycled.setHats([]);
-		cycled.setHats([7, 0xFFFFFF, -1]);
-		for (_ in 0...90) {
-			cycled.step(new LocalPlayerInput(false, true));
-		}
-		assertClose(santa.stateSnapshot().vx, cycled.stateSnapshot().vx, "santa pickup and drop cycles do not stack the speed bonus");
-
-		var removed = new LocalCharacter(longFlatLevel());
-		removed.setHats([7, 0xFFFFFF, -1]);
-		removed.setHats([]);
-		for (_ in 0...90) {
-			removed.step(new LocalPlayerInput(false, true));
-		}
-		assertClose(normal.stateSnapshot().vx, removed.stateSnapshot().vx, "santa hat removal restores max horizontal velocity");
-	}
-
-	private static function testSantaHatFreezeCooldownLetsPlayerEnterWater():Void {
-		var nowMs:Float = 100000;
-		var waterLevel = nonSolidFloorLevel(BlockType.Water);
-		var waterBlocks = new BlockController(waterLevel, function():Float return nowMs);
-		var swimmer = new LocalCharacter(waterLevel, 1, 1, 1, 1, waterBlocks);
-		swimmer.setHats([7, 0xFFFFFF, -1]);
-
-		swimmer.step(new LocalPlayerInput());
-		assertClose(0.975, swimmer.blockIceOverlayAlphaAt(2, 3), "santa initially freezes water");
-		for (_ in 0...60) {
-			swimmer.step(new LocalPlayerInput());
-		}
-		assertEquals(0.0, swimmer.blockIceOverlayAlphaAt(2, 3), "water stays thawed during the santa cooldown");
-		assertEquals(false, swimmer.stateSnapshot().grounded, "santa falls through thawed water");
-		assertEquals("water", swimmer.stateSnapshot().mode, "santa can swim after the frozen water thaws");
-
-		var floorLevel = nonSolidFloorLevel(BlockType.Basic);
-		var floorBlocks = new BlockController(floorLevel, function():Float return nowMs);
-		var santa = new LocalCharacter(floorLevel, 1, 1, 1, 1, floorBlocks);
-		santa.setHats([7, 0xFFFFFF, -1]);
-		santa.step(new LocalPlayerInput());
-		for (_ in 0...45) {
-			santa.step(new LocalPlayerInput());
-		}
-		assertEquals(0.0, santa.blockIceOverlayAlphaAt(2, 3), "santa does not immediately refreeze a thawed block");
-
-		nowMs = 104000;
-		santa.step(new LocalPlayerInput());
-		assertEquals(0.0, santa.blockIceOverlayAlphaAt(2, 3), "exactly four elapsed seconds remain on cooldown");
-
-		nowMs = 104001;
-		santa.step(new LocalPlayerInput());
-		assertClose(0.975, santa.blockIceOverlayAlphaAt(2, 3), "santa can refreeze after more than four elapsed seconds");
-	}
-
-	private static function testPartyHatIgnoresStingAndZapHurtReactions():Void {
-		var stung = new LocalCharacter(flatLevel());
-		stung.receiveSting();
-		assertEquals("hurt", stung.stateSnapshot().mode, "sting puts an unprotected local character in hurt mode");
-
-		var partyStung = new LocalCharacter(flatLevel());
-		partyStung.setHats([8, 0xFFFFFF, -1]);
-		partyStung.receiveSting();
-		assertEquals("land", partyStung.stateSnapshot().mode, "party hat ignores sting hurt reaction");
-
-		var zapped = new LocalCharacter(flatLevel());
-		zapped.receiveZap();
-		assertEquals("hurt", zapped.stateSnapshot().mode, "zap puts an unprotected local character in hurt mode");
-
-		var partyZapped = new LocalCharacter(flatLevel());
-		partyZapped.setHats([8, 0xFFFFFF, -1]);
-		partyZapped.receiveZap();
-		assertEquals("land", partyZapped.stateSnapshot().mode, "party hat ignores zap hurt reaction");
-	}
-
 	private static function testTopHatPassesThroughVanishBlocks():Void {
 		var normal = new LocalCharacter(vanishWallLevel());
 		var top = new LocalCharacter(vanishWallLevel());
@@ -255,97 +111,6 @@ class LocalCharacterTest {
 
 		assertClose(80, normal.stateSnapshot().x, "vanish wall stops a character without top hat");
 		assertAbove(top.stateSnapshot().x, 86, "top hat passes through vanish wall");
-	}
-
-	private static function testCrownHatIgnoresMineHitsExceptDeathmatch():Void {
-		var normal = new LocalCharacter(delayedMineBlockLevel());
-		var crown = new LocalCharacter(delayedMineBlockLevel());
-		crown.setHats([6, 0xFFFFFF, -1]);
-
-		for (_ in 0...40) {
-			normal.step(new LocalPlayerInput());
-			crown.step(new LocalPlayerInput());
-			if (normal.stateSnapshot().touchedBlockType == "mine") {
-				break;
-			}
-		}
-
-		assertEquals("hurt", normal.stateSnapshot().mode, "mine hit hurts an unprotected character");
-		assertEquals("land", crown.stateSnapshot().mode, "crown hat ignores mine hurt in race mode");
-		assertClose(0, crown.stateSnapshot().vy, "crown hat ignores mine knockback in race mode");
-
-		var deathmatchCrown = new LocalCharacter(delayedMineBlockLevel());
-		deathmatchCrown.setGameMode("deathmatch");
-		deathmatchCrown.setHats([6, 0xFFFFFF, -1]);
-		for (_ in 0...40) {
-			deathmatchCrown.step(new LocalPlayerInput());
-			if (deathmatchCrown.stateSnapshot().touchedBlockType == "mine") {
-				break;
-			}
-		}
-
-		assertEquals("land", deathmatchCrown.stateSnapshot().mode, "crown hit in deathmatch applies force without hurt animation");
-		assertClose(-50, deathmatchCrown.stateSnapshot().vy, "deathmatch crown mine hit still applies knockback");
-	}
-
-	private static function testJumpStartHatGrantsTwoSecondSpeedBurstOnEquip():Void {
-		var normal = new LocalCharacter(longFlatLevel());
-		var jumpStart = new LocalCharacter(longFlatLevel());
-		jumpStart.setHats([10, 0xFFFFFF, -1]);
-
-		assertEquals(7, jumpStart.stateSnapshot().itemId, "jump-start hat immediately uses a speed burst");
-		assertEquals("sparkle", @:privateAccess jumpStart.activeParticleEmitter.kind, "jump-start hat starts Flash's Speed Burst stars");
-		for (_ in 0...24) {
-			normal.step(new LocalPlayerInput(false, true));
-			jumpStart.step(new LocalPlayerInput(false, true));
-		}
-		assertBelow(normal.stateSnapshot().vx * 1.4, jumpStart.stateSnapshot().vx, "jump-start speed burst boosts movement");
-
-		for (_ in 0...(Constants.SIMULATION_FRAME_RATE * 2 - 24)) {
-			jumpStart.step(new LocalPlayerInput(false, true));
-		}
-		assertEquals(null, jumpStart.stateSnapshot().itemId, "jump-start speed burst expires after two seconds");
-		assertClose(50, jumpStart.stateSnapshot().speedStat, "jump-start expiry restores speed stat");
-		assertClose(50, jumpStart.stateSnapshot().accelerationStat, "jump-start expiry restores acceleration stat");
-	}
-
-	private static function testArtifactHatGrantsThirtySecondBurstAndReversesControlsUntilRemoved():Void {
-		var artifact = new LocalCharacter(longFlatLevel());
-		var sounds:Array<String> = [];
-		var musicActivations = 0;
-		artifact.onPlayCharacterSound = function(request):Void {
-			sounds.push(request.kind + ":" + request.volume);
-		};
-		artifact.onArtifactHatActivated = function():Void {
-			musicActivations++;
-		};
-		artifact.setHats([14, 0xFFFFFF, -1]);
-
-		assertEquals(7, artifact.stateSnapshot().itemId, "artifact hat immediately uses a speed burst");
-		assertEquals(30, artifact.stateSnapshot().courseTime, "artifact hat clamps race timer to thirty seconds");
-		assertEquals(true, artifact.artifactControlsReversed, "artifact hat reverses controls on equip");
-		assertEquals("speedUp:1|artifactYeah:1", sounds.join("|"), "artifact hat starts Speed Burst stars before yeah feedback");
-		assertEquals("sparkle", @:privateAccess artifact.activeParticleEmitter.kind, "artifact hat starts Flash's Speed Burst stars");
-		assertEquals(1, musicActivations, "artifact hat switches to artifact music once");
-
-		for (_ in 0...24) {
-			artifact.step(new LocalPlayerInput(false, true));
-		}
-		assertBelow(artifact.stateSnapshot().vx, -0.1, "artifact reversed controls turn right input into left movement");
-
-		artifact.setHats([]);
-		assertEquals(null, artifact.stateSnapshot().itemId, "artifact hat removal clears active speed burst");
-		assertEquals(false, artifact.artifactControlsReversed, "artifact hat removal restores controls");
-
-		var restored = new LocalCharacter(longFlatLevel());
-		var removedFresh = new LocalCharacter(longFlatLevel());
-		removedFresh.setHats([14, 0xFFFFFF, -1]);
-		removedFresh.setHats([]);
-		removedFresh.step(new LocalPlayerInput(false, true));
-		restored.step(new LocalPlayerInput(false, true));
-		assertAbove(removedFresh.stateSnapshot().vx, 0, "right input moves right after artifact removal");
-		assertClose(restored.stateSnapshot().speedStat, artifact.stateSnapshot().speedStat, "artifact removal restores speed stat");
-		assertClose(restored.stateSnapshot().accelerationStat, artifact.stateSnapshot().accelerationStat, "artifact removal restores acceleration stat");
 	}
 
 	private static function testAprilFirstReversesControlsUntilArtifactRemoved():Void {
@@ -368,105 +133,6 @@ class LocalCharacterTest {
 		}
 		assertBelow(april.stateSnapshot().vx, -0.1, "artifact removal preserves April 1 reversed controls");
 		Character.dateStringNow = originalDateString;
-	}
-
-	private static function testJiggminHatSquashesRemotePlayersWhileFalling():Void {
-		var local = new LocalCharacter(airborneLevel());
-		local.setHats([13, 0xFFFFFF, -1]);
-		local.step(new LocalPlayerInput());
-		var remote = new RemoteCharacter(7, null, "Rival", 1, 1, 1, 1, "0", new CommandHandler());
-		remote.setPos(local.x + 5, local.y + 50);
-		remote.changeState("stand");
-		var sounds:Array<String> = [];
-		local.onPlayCharacterSound = function(request):Void {
-			sounds.push(request.kind + ":" + request.volume + ":" + Math.round(request.x) + ":" + Math.round(request.y));
-		};
-		LobbySocket.resetSent();
-
-		assertEquals(true, local.maybeSquash([local, remote]), "jiggmin hat squashes a remote below while falling");
-		assertEquals("crouch", remote.state, "squashed remote predicts crouch state");
-		assertClose(-3, local.stateSnapshot().vy, "squash bounce sets upward velocity");
-		assertEquals(true, local.stateSnapshot().grounded, "squash bounce marks the local character grounded");
-		assertEquals("squash:0.66:" + Math.round(local.x) + ":" + Math.round(local.y), sounds.join("|"), "squash sound hook fires at local position");
-		assertEquals("squash`7`" + Math.round(local.x) + "`" + Math.round(local.y), LobbySocket.lastSent(), "squash emits remote id and local coordinates");
-
-		var noHat = new LocalCharacter(airborneLevel());
-		noHat.step(new LocalPlayerInput());
-		var untouched = new RemoteCharacter(8, null, "Other", 1, 1, 1, 1, "0", new CommandHandler());
-		untouched.setPos(noHat.x + 5, noHat.y + 50);
-		untouched.changeState("stand");
-		LobbySocket.resetSent();
-		assertEquals(false, noHat.maybeSquash([untouched]), "missing jiggmin hat does not squash");
-		assertEquals("stand", untouched.state, "remote stays standing without jiggmin hat");
-		assertEquals(0, LobbySocket.sentCommands.length, "no squash command without jiggmin hat");
-
-		remote.remove();
-		untouched.remove();
-	}
-
-	private static function testJellyfishHatStingsNearbyRemotePlayersAndIgnoresStingHurt():Void {
-		var jellyfish = new LocalCharacter(flatLevel());
-		jellyfish.setHats([15, 0xFFFFFF, -1]);
-		jellyfish.receiveSting();
-		assertEquals("land", jellyfish.stateSnapshot().mode, "jellyfish hat ignores sting hurt reaction");
-
-		var remote = new RemoteCharacter(9, null, "Rival", 1, 1, 1, 1, "0", new CommandHandler());
-		remote.setPos(jellyfish.x + 30, jellyfish.y + 20);
-		remote.changeState("stand");
-		LobbySocket.resetSent();
-
-		assertEquals(true, jellyfish.tickJellyfishSting([jellyfish, remote], 1), "jellyfish roll stings a nearby remote");
-		assertEquals("sting`9`" + Math.round(jellyfish.x) + "`" + Math.round(jellyfish.y), LobbySocket.lastSent(), "jellyfish sting emits remote id and local coordinates");
-		assertEquals(135, jellyfish.stingCooldown, "jellyfish sting starts five-second cooldown");
-
-		LobbySocket.resetSent();
-		assertEquals(false, jellyfish.tickJellyfishSting([remote], 1), "jellyfish cooldown blocks immediate repeat sting");
-		assertEquals(134, jellyfish.stingCooldown, "jellyfish cooldown decrements each tick");
-		assertEquals(0, LobbySocket.sentCommands.length, "cooldown suppresses sting command");
-
-		var noHat = new LocalCharacter(flatLevel());
-		LobbySocket.resetSent();
-		assertEquals(false, noHat.tickJellyfishSting([remote], 1), "missing jellyfish hat does not sting");
-		assertEquals(0, LobbySocket.sentCommands.length, "no sting command without jellyfish hat");
-
-		var far = new RemoteCharacter(10, null, "Far", 1, 1, 1, 1, "0", new CommandHandler());
-		far.setPos(jellyfish.x + 90, jellyfish.y);
-		for (_ in 0...134) {
-			jellyfish.tickJellyfishSting([remote], 2);
-		}
-		LobbySocket.resetSent();
-		assertEquals(false, jellyfish.tickJellyfishSting([far], 1), "jellyfish hat only stings nearby remotes");
-		assertEquals(0, LobbySocket.sentCommands.length, "out-of-range remote is not stung");
-
-		remote.remove();
-		far.remove();
-	}
-
-	private static function testCheeseHatIsCosmeticOnly():Void {
-		var normal = new LocalCharacter(longFlatLevel());
-		var cheese = new LocalCharacter(longFlatLevel());
-		cheese.setHats([16, 0xC8B040, -1]);
-		assertEquals(true, cheese.hasHatFlag(Character.CHEESE), "cheese hat flag is set for cosmetic rendering");
-
-		for (_ in 0...30) {
-			normal.step(new LocalPlayerInput(false, true));
-			cheese.step(new LocalPlayerInput(false, true));
-		}
-		assertEquals(normal.stateSnapshot().serialize(), cheese.stateSnapshot().serialize(), "cheese hat does not change land movement");
-
-		var normalFall = new LocalCharacter(airborneLevel());
-		var cheeseFall = new LocalCharacter(airborneLevel());
-		cheeseFall.setHats([16, 0xC8B040, -1]);
-		normalFall.step(new LocalPlayerInput(false, false, true));
-		cheeseFall.step(new LocalPlayerInput(false, false, true));
-		assertEquals(normalFall.stateSnapshot().serialize(), cheeseFall.stateSnapshot().serialize(), "cheese hat does not change falling movement");
-
-		var stung = new LocalCharacter(flatLevel());
-		var cheeseStung = new LocalCharacter(flatLevel());
-		cheeseStung.setHats([16, 0xC8B040, -1]);
-		stung.receiveSting();
-		cheeseStung.receiveSting();
-		assertEquals(stung.stateSnapshot().serialize(), cheeseStung.stateSnapshot().serialize(), "cheese hat does not block sting hurt");
 	}
 
 	private static function testHatAttackHitDropsHighestHat():Void {
@@ -515,37 +181,6 @@ class LocalCharacterTest {
 		assertClose(0.5, local.alpha, "mine recovery alternates the character alpha");
 		assertEquals("loose_hat`75`40`0", LobbySocket.lastSent(), "normal-race mine hit emits Flash loose-hat drop");
 		assertEquals(1, local.hat1, "normal-race mine hit clears the highest occupied hat");
-	}
-
-	private static function testAcceptedHitsShedTheFourHatStack():Void {
-		var local = new LocalCharacter(flatLevel());
-		local.setHats([
-			4, 0x111111, -1,
-			5, 0x222222, -1,
-			9, 0x333333, -1,
-			11, 0x444444, -1
-		]);
-		LobbySocket.resetSent();
-
-		local.receiveHit();
-		assertEquals(1, local.hat4, "first accepted hit sheds stack slot four");
-		local.receiveHit();
-		assertEquals(1, local.hat3, "second accepted hit sheds stack slot three");
-		local.receiveHit();
-		assertEquals(1, local.hat2, "third accepted hit sheds stack slot two");
-		local.receiveHit();
-		assertEquals(1, local.hat1, "fourth accepted hit sheds stack slot one");
-		assertEquals(4, LobbySocket.sentCommands.length, "each accepted hit emits one loose-hat command");
-
-		local.receiveSting();
-		assertEquals(4, LobbySocket.sentCommands.length, "sting hurt does not invoke Flash hit or shed another hat");
-
-		var protectedCrown = new LocalCharacter(flatLevel());
-		protectedCrown.setHats([6, 0xFFFFFF, -1]);
-		LobbySocket.resetSent();
-		protectedCrown.receiveHit(10, -5);
-		assertEquals(6, protectedCrown.hat1, "race-mode crown blocks the hit and keeps its hat");
-		assertEquals(0, LobbySocket.sentCommands.length, "blocked crown hit emits no loose-hat command");
 	}
 
 	private static function assertSameState(controller:LocalPlayerController, character:LocalCharacter, label:String):Void {

@@ -5,21 +5,21 @@ class FrameClockTest {
 	private static var now:Float = 0;
 
 	public static function main():Void {
-		testDefaultFramesAreSimulationFrames();
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testDefaultFramesAreSimulationFrames", testDefaultFramesAreSimulationFrames);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("FrameClockTest")) return;
-		testSmoothStartupRunsExactlyOneSimulationFrame();
-		testSmoothFramesAlternate();
-		testFrameCallbackObservesUpdatedPhase();
-		testResetRebasesWithoutSynthesizingTicks();
-		testLongRunCadence();
-		testRepeatedPhaseResets();
-		testSmoothAlternationAt57Fps();
-		testSmoothAlternationAt55Fps();
-		testSmoothDoesNotProtectLowFrameRates();
-		testSmoothClockReliesOn60HzBrowserPacer();
-		testFixedNominalCadence();
-		testFixedCatchUpAndRemainder();
-		testFixedPresentationPolicies();
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testSmoothStartupRunsExactlyOneSimulationFrame", testSmoothStartupRunsExactlyOneSimulationFrame);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testSmoothFramesAlternate", testSmoothFramesAlternate);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testFrameCallbackObservesUpdatedPhase", testFrameCallbackObservesUpdatedPhase);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testResetRebasesWithoutSynthesizingTicks", testResetRebasesWithoutSynthesizingTicks);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testLongRunCadence", testLongRunCadence);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testRepeatedPhaseResets", testRepeatedPhaseResets);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testSmoothAlternationAt57Fps", testSmoothAlternationAt57Fps);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testSmoothAlternationAt55Fps", testSmoothAlternationAt55Fps);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testSmoothDoesNotProtectLowFrameRates", testSmoothDoesNotProtectLowFrameRates);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testSmoothClockReliesOn60HzBrowserPacer", testSmoothClockReliesOn60HzBrowserPacer);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testFixedNominalCadence", testFixedNominalCadence);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testFixedCatchUpAndRemainder", testFixedCatchUpAndRemainder);
+		pr2.DeterministicTestMode.runTest("FrameClockTest.testFixedPresentationPolicies", testFixedPresentationPolicies);
 		trace('FrameClockTest passed $assertions assertions');
 	}
 

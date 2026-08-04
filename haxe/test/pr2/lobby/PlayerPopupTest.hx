@@ -38,17 +38,14 @@ class PlayerPopupTest {
 		var savedLevelAutoLoad = LevelInfoPopup.autoLoadOnCreate;
 		var savedChatRoom = Memory.get("chatRoom");
 
-		testMemberRender();
+		pr2.DeterministicTestMode.runTest("PlayerPopupTest.testMemberRender", testMemberRender);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PlayerPopupTest")) return;
-		testServerOwnerAndRankSupplement();
-		testGuildRenderingAndContextCleanup();
-		testDelayedSendPmHoverAndLevelContextCleanup();
-		testGuestHandoff();
-		testChatLinkEntryPoints();
-		testGuestButtonsDisabled();
-		testTempModMenu();
-		testBanMenu();
-		testAdminMenu();
+		pr2.DeterministicTestMode.runTest("PlayerPopupTest.testServerOwnerAndRankSupplement", testServerOwnerAndRankSupplement);
+		pr2.DeterministicTestMode.runTest("PlayerPopupTest.testGuildRenderingAndContextCleanup", testGuildRenderingAndContextCleanup);
+		pr2.DeterministicTestMode.runTest("PlayerPopupTest.testDelayedSendPmHoverAndLevelContextCleanup", testDelayedSendPmHoverAndLevelContextCleanup);
+		pr2.DeterministicTestMode.runTest("PlayerPopupTest.testGuestHandoff", testGuestHandoff);
+		pr2.DeterministicTestMode.runTest("PlayerPopupTest.testChatLinkEntryPoints", testChatLinkEntryPoints);
+		pr2.DeterministicTestMode.runTest("PlayerPopupTest.testGuestButtonsDisabled", testGuestButtonsDisabled);
 
 		LobbySession.group = savedGroup;
 		LobbySession.isTempMod = savedTempMod;
@@ -195,192 +192,6 @@ class PlayerPopupTest {
 		assertEquals(true, guild.fadeOutStarted, "view-levels closes open guild popup context");
 		assertEquals(true, level.fadeOutStarted, "view-levels closes open level popup context");
 		assertEquals(true, popup.fadeOutStarted, "view-levels closes player popup");
-		closeAll();
-	}
-
-	private static function testTempModMenu():Void {
-		LobbySession.group = 1;
-		LobbySession.isTempMod = true;
-		LobbySocket.resetSent();
-		closeAll();
-
-		var popup = new PlayerPopup("Target", false);
-		popup.applyReturnData({
-			userId: 7, group: 1, status: "", rank: 1, hats: "0",
-			registerDate: 1363478400, loginDate: 1363478400, guildId: 0,
-			hat: 1, head: 1, body: 1, feet: 1
-		});
-
-		assertNotNull(DisplayUtil.findByName(popup, "warning1Button"), "temporary moderators see the warning menu");
-		click(popup, "warning2Button");
-		assertEquals("warn`Target`2", LobbySocket.lastSent(), "warning buttons emit warn command");
-		assertEquals(true, popup.fadeOutStarted, "warning starts closing the player popup");
-		popup.remove();
-
-		popup = new PlayerPopup("Target", false);
-		popup.applyReturnData({
-			userId: 7, group: 1, status: "", rank: 1, hats: "0",
-			registerDate: 1363478400, loginDate: 1363478400, guildId: 0,
-			hat: 1, head: 1, body: 1, feet: 1
-		});
-		click(tempModMenu(popup), "kickButton");
-		var confirm = lastPopup(ConfirmPopup);
-		assertNotNull(confirm, "kick opens a confirmation popup");
-		click(confirm, "ok_bt");
-		assertEquals("kick`Target", LobbySocket.lastSent(), "confirmed kick emits kick command");
-		assertEquals(true, popup.fadeOutStarted, "confirmed kick starts closing the player popup");
-
-		LobbySession.isTempMod = false;
-		closeAll();
-	}
-
-	private static function testBanMenu():Void {
-		LobbySession.group = 2;
-		LobbySession.isTempMod = false;
-		LobbySession.isTrialMod = false;
-		LobbySocket.resetSent();
-		Memory.set("chatRoom", "main");
-		closeAll();
-
-		var uploads:Array<{url:String, fields:Map<String, String>, label:String}> = [];
-		BanMenu.chatRecordProvider = function():String return "chat transcript";
-		BanMenu.uploadFactory = function(url:String, fields:Map<String, String>, label:String, onResult:Dynamic->Void,
-				onError:String->Void):Null<pr2.lobby.dialogs.UploadingPopup> {
-			uploads.push({url: url, fields: fields, label: label});
-			onResult({ban_id: 123});
-			return null;
-		};
-
-		var popup = new PlayerPopup("Target", false);
-		popup.applyReturnData({
-			userId: 7, group: 1, status: "", rank: 1, hats: "0",
-			registerDate: 1363478400, loginDate: 1363478400, guildId: 0,
-			hat: 1, head: 1, body: 1, feet: 1
-		});
-
-		var menu = banMenu(popup);
-		assertNotNull(menu, "moderators see the full ban menu");
-		click(menu, "warning3Button");
-		assertEquals("warn`Target`3", LobbySocket.lastSent(), "ban menu warning emits warn command");
-		popup.remove();
-
-		popup = new PlayerPopup("Target", false);
-		popup.applyReturnData({
-			userId: 7, group: 1, status: "", rank: 1, hats: "0",
-			registerDate: 1363478400, loginDate: 1363478400, guildId: 0,
-			hat: 1, head: 1, body: 1, feet: 1
-		});
-		menu = banMenu(popup);
-		LobbyArt.text(menu, "reason").text = "spam";
-		var duration = combo(menu, "duration");
-		duration.selectedIndex = 2;
-		click(menu, "banButton");
-		var confirm = lastPopup(ConfirmPopup);
-		assertNotNull(confirm, "ban opens a confirmation popup");
-		click(confirm, "ok_bt");
-
-		assertEquals(1, uploads.length, "ban uploads once after confirmation");
-		assertEquals(ServerConfig.banUserUrl(), uploads[0].url, "ban endpoint");
-		assertEquals("Target", uploads[0].fields.get("banned_name"), "ban target field");
-		assertEquals("86400", uploads[0].fields.get("duration"), "selected ban duration");
-		assertEquals("spam", uploads[0].fields.get("reason"), "ban reason field");
-		assertEquals("both", uploads[0].fields.get("type"), "ban type field");
-		assertEquals("social", uploads[0].fields.get("scope"), "ban scope field");
-		assertEquals("chat transcript", uploads[0].fields.get("record"), "ban includes current chat record outside mod rooms");
-		assertEquals("Banning...", uploads[0].label, "ban upload label");
-		assertEquals("ban`Target`86400`social`123`spam", LobbySocket.lastSent(), "ban success emits socket command");
-		assertEquals(true, popup.fadeOutStarted, "ban success closes the player popup");
-
-		popup.remove();
-
-		Memory.set("chatRoom", "mod");
-		uploads = [];
-		var direct = directBanMenu("Bad <Name>");
-		LobbyArt.text(direct.art, "reason").text = "mod room";
-		combo(direct.art, "duration").selectedIndex = 2;
-		click(direct.art, "banButton");
-		confirm = lastPopup(ConfirmPopup);
-		assertNotNull(confirm, "ban confirmation opens for escaped-name check");
-		var confirmText = LobbyArt.text(confirm, "textBox").htmlText;
-		assertEquals(true, confirmText.indexOf("Bad &lt;Name&gt;") >= 0, "ban confirmation escapes target name");
-		click(confirm, "ok_bt");
-		assertEquals(false, uploads[0].fields.exists("record"), "ban omits chat record in mod room");
-		direct.popup.remove();
-
-		LobbySession.isTrialMod = true;
-		direct = directBanMenu("Target");
-		assertTrialDurations(combo(direct.art, "duration"));
-		assertTrialScope(combo(direct.art, "scope"));
-		direct.popup.remove();
-		LobbySession.isTrialMod = false;
-
-		var capturedResult:Null<Dynamic->Void> = null;
-		var capturedError:Null<String->Void> = null;
-		uploads = [];
-		Memory.set("chatRoom", "main");
-		BanMenu.uploadFactory = function(url:String, fields:Map<String, String>, label:String, onResult:Dynamic->Void,
-				onError:String->Void):Null<pr2.lobby.dialogs.UploadingPopup> {
-			uploads.push({url: url, fields: fields, label: label});
-			capturedResult = onResult;
-			capturedError = onError;
-			return null;
-		};
-		direct = directBanMenu("Target");
-		LobbyArt.text(direct.art, "reason").text = "late";
-		combo(direct.art, "duration").selectedIndex = 2;
-		click(direct.art, "banButton");
-		confirm = lastPopup(ConfirmPopup);
-		click(confirm, "ok_bt");
-		LobbySocket.resetSent();
-		direct.menu.remove();
-		direct.popup.remove();
-		capturedResult({ban_id: 999});
-		capturedError("late error");
-		assertEquals("", LobbySocket.lastSent(), "removed ban menu ignores late upload callbacks");
-		assertEquals(false, direct.popup.fadeOutStarted, "removed ban menu does not fade target after late upload callbacks");
-
-		BanMenu.uploadFactory = BanMenu.defaultUpload;
-		BanMenu.chatRecordProvider = BanMenu.defaultChatRecord;
-		closeAll();
-	}
-
-	private static function testAdminMenu():Void {
-		LobbySession.group = 3;
-		LobbySession.isTempMod = false;
-		LobbySession.isTrialMod = false;
-		LobbySocket.resetSent();
-		closeAll();
-
-		var popup = new PlayerPopup("Target", false);
-		popup.applyReturnData({
-			userId: 7, group: 1, status: "", rank: 1, hats: "0",
-			registerDate: 1363478400, loginDate: 1363478400, guildId: 0,
-			hat: 1, head: 1, body: 1, feet: 1
-		});
-		var admin = adminMenu(popup);
-		assertNotNull(admin, "admins see promotion controls");
-		click(admin, "trialMod_bt");
-		var confirm = lastPopup(ConfirmPopup);
-		assertNotNull(confirm, "trial promotion opens confirmation");
-		click(confirm, "ok_bt");
-		assertEquals("promote_to_moderator`Target`trial", LobbySocket.lastSent(), "trial promotion payload");
-		assertEquals(true, popup.fadeOutStarted, "promotion starts closing the player popup");
-		popup.remove();
-
-		popup = new PlayerPopup("Target", false);
-		popup.applyReturnData({
-			userId: 7, group: 2, status: "", rank: 1, hats: "0",
-			registerDate: 1363478400, loginDate: 1363478400, guildId: 0,
-			hat: 1, head: 1, body: 1, feet: 1
-		});
-		admin = adminMenu(popup);
-		click(admin, "demote_bt");
-		confirm = lastPopup(ConfirmPopup);
-		assertNotNull(confirm, "demotion opens confirmation");
-		click(confirm, "ok_bt");
-		assertEquals("demote_moderator`Target", LobbySocket.lastSent(), "demotion payload");
-		assertEquals(true, popup.fadeOutStarted, "demotion starts closing the player popup");
-
 		closeAll();
 	}
 

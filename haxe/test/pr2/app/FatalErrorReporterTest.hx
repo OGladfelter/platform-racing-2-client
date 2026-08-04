@@ -4,9 +4,9 @@ class FatalErrorReporterTest {
 	private static var assertions = 0;
 
 	public static function main():Void {
-		testFormatEscapesMessageAndDebugLog();
+		pr2.DeterministicTestMode.runTest("FatalErrorReporterTest.testFormatEscapesMessageAndDebugLog", testFormatEscapesMessageAndDebugLog);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("FatalErrorReporterTest")) return;
-		testReportPassesEscapedMessageToPopupFactory();
+		pr2.DeterministicTestMode.runTest("FatalErrorReporterTest.testReportPassesEscapedMessageToPopupFactory", testReportPassesEscapedMessageToPopupFactory);
 		trace('FatalErrorReporterTest passed $assertions assertions');
 	}
 

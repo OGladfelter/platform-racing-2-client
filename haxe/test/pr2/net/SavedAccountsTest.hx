@@ -4,12 +4,12 @@ class SavedAccountsTest {
 	private static var assertions = 0;
 
 	public static function main():Void {
-		testStoreIdMatchesFlashBaseUrl();
+		pr2.DeterministicTestMode.runTest("SavedAccountsTest.testStoreIdMatchesFlashBaseUrl", testStoreIdMatchesFlashBaseUrl);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SavedAccountsTest")) return;
-		testLoadsFlashArrayShape();
-		testAddUpdatesTokenAndMovesAccountFirst();
-		testDeleteByNameAndTokenMode();
-		testGetAllReturnsStaticAccountsArray();
+		pr2.DeterministicTestMode.runTest("SavedAccountsTest.testLoadsFlashArrayShape", testLoadsFlashArrayShape);
+		pr2.DeterministicTestMode.runTest("SavedAccountsTest.testAddUpdatesTokenAndMovesAccountFirst", testAddUpdatesTokenAndMovesAccountFirst);
+		pr2.DeterministicTestMode.runTest("SavedAccountsTest.testDeleteByNameAndTokenMode", testDeleteByNameAndTokenMode);
+		pr2.DeterministicTestMode.runTest("SavedAccountsTest.testGetAllReturnsStaticAccountsArray", testGetAllReturnsStaticAccountsArray);
 		SavedAccounts.disablePersistenceForTests();
 		trace('SavedAccountsTest passed $assertions assertions');
 	}

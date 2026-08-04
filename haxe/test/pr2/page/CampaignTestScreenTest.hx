@@ -6,11 +6,11 @@ class CampaignTestScreenTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testParsesCampaignQueryValues();
+		pr2.DeterministicTestMode.runTest("CampaignTestScreenTest.testParsesCampaignQueryValues", testParsesCampaignQueryValues);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CampaignTestScreenTest")) return;
-		testSelectsRequestedLevelFromCampaignPage();
-		testDebugTextHiddenByDefault();
-		testDebugChatCommandTogglesOverlay();
+		pr2.DeterministicTestMode.runTest("CampaignTestScreenTest.testSelectsRequestedLevelFromCampaignPage", testSelectsRequestedLevelFromCampaignPage);
+		pr2.DeterministicTestMode.runTest("CampaignTestScreenTest.testDebugTextHiddenByDefault", testDebugTextHiddenByDefault);
+		pr2.DeterministicTestMode.runTest("CampaignTestScreenTest.testDebugChatCommandTogglesOverlay", testDebugChatCommandTogglesOverlay);
 		trace('CampaignTestScreenTest passed $assertions assertions');
 	}
 

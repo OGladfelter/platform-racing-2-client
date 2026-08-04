@@ -8,10 +8,10 @@ class ARC4CompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testStreamVectorAndInterfaces();
+		pr2.DeterministicTestMode.runTest("ARC4CompatTest.testStreamVectorAndInterfaces", testStreamVectorAndInterfaces);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ARC4CompatTest")) return;
-		testMutableBlockEncryptDecrypt();
-		testDisposeWipesState();
+		pr2.DeterministicTestMode.runTest("ARC4CompatTest.testMutableBlockEncryptDecrypt", testMutableBlockEncryptDecrypt);
+		pr2.DeterministicTestMode.runTest("ARC4CompatTest.testDisposeWipesState", testDisposeWipesState);
 		trace('ARC4CompatTest passed $assertions assertions');
 	}
 

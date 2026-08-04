@@ -4,10 +4,10 @@ class LobbySessionTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testAccountStateDispatch();
+		pr2.DeterministicTestMode.runTest("LobbySessionTest.testAccountStateDispatch", testAccountStateDispatch);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LobbySessionTest")) return;
-		testGuildStateHelpers();
-		testRememberMeAccountGate();
+		pr2.DeterministicTestMode.runTest("LobbySessionTest.testGuildStateHelpers", testGuildStateHelpers);
+		pr2.DeterministicTestMode.runTest("LobbySessionTest.testRememberMeAccountGate", testRememberMeAccountGate);
 		LobbySession.clear();
 		trace('LobbySessionTest passed $assertions assertions');
 	}

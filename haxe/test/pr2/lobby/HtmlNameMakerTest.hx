@@ -10,11 +10,11 @@ class HtmlNameMakerTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testGroupColors();
+		pr2.DeterministicTestMode.runTest("HtmlNameMakerTest.testGroupColors", testGroupColors);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("HtmlNameMakerTest")) return;
-		testHtmlRendering();
-		testInviteAndDiscordRoutes();
-		testRemoveUnregistersEveryField();
+		pr2.DeterministicTestMode.runTest("HtmlNameMakerTest.testHtmlRendering", testHtmlRendering);
+		pr2.DeterministicTestMode.runTest("HtmlNameMakerTest.testInviteAndDiscordRoutes", testInviteAndDiscordRoutes);
+		pr2.DeterministicTestMode.runTest("HtmlNameMakerTest.testRemoveUnregistersEveryField", testRemoveUnregistersEveryField);
 		trace('HtmlNameMakerTest passed $assertions assertions');
 	}
 

@@ -21,10 +21,10 @@ class LogoutPassPopupTest {
 	public static function main():Void {
 		var savedUploadFactory = LogoutPassPopup.uploadFactory;
 		ServerConfig.setHost("http://example.test");
-		testValidationAndCancel();
+		pr2.DeterministicTestMode.runTest("LogoutPassPopupTest.testValidationAndCancel", testValidationAndCancel);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LogoutPassPopupTest")) return;
-		testEncryptedUploadFromEnterKey();
-		testPasswordErrorDoesNotClearSession();
+		pr2.DeterministicTestMode.runTest("LogoutPassPopupTest.testEncryptedUploadFromEnterKey", testEncryptedUploadFromEnterKey);
+		pr2.DeterministicTestMode.runTest("LogoutPassPopupTest.testPasswordErrorDoesNotClearSession", testPasswordErrorDoesNotClearSession);
 		LogoutPassPopup.uploadFactory = savedUploadFactory;
 		ServerConfig.resetHost();
 		closeAll();

@@ -7,9 +7,9 @@ class PlayerDisplayPlacementTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testCrouchDoesNotSquashCharacterDisplay();
+		pr2.DeterministicTestMode.runTest("PlayerDisplayPlacementTest.testCrouchDoesNotSquashCharacterDisplay", testCrouchDoesNotSquashCharacterDisplay);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PlayerDisplayPlacementTest")) return;
-		testRotationUsesFeetPivot();
+		pr2.DeterministicTestMode.runTest("PlayerDisplayPlacementTest.testRotationUsesFeetPivot", testRotationUsesFeetPivot);
 		trace('PlayerDisplayPlacementTest passed $assertions assertions');
 	}
 

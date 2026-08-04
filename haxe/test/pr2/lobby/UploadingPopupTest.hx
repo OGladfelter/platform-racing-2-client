@@ -14,11 +14,11 @@ class UploadingPopupTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testStringMapConstructor();
+		pr2.DeterministicTestMode.runTest("UploadingPopupTest.testStringMapConstructor", testStringMapConstructor);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("UploadingPopupTest")) return;
-		testFlashUrlRequestConstructor();
-		testCallbackCanOwnMessages();
-		testIntermediateUploadProgress();
+		pr2.DeterministicTestMode.runTest("UploadingPopupTest.testFlashUrlRequestConstructor", testFlashUrlRequestConstructor);
+		pr2.DeterministicTestMode.runTest("UploadingPopupTest.testCallbackCanOwnMessages", testCallbackCanOwnMessages);
+		pr2.DeterministicTestMode.runTest("UploadingPopupTest.testIntermediateUploadProgress", testIntermediateUploadProgress);
 		SuperLoader.resetHooks();
 		LobbySession.token = "";
 		closeAll();

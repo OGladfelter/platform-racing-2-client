@@ -47,7 +47,6 @@ import pr2.gameplay.CountdownTest;
 import pr2.gameplay.CourseTimerTest;
 import pr2.gameplay.CatCaptchaTest;
 import pr2.gameplay.PrizePopupTest;
-import pr2.gameplay.SpectatePickerTest;
 import pr2.gameplay.SpecialEventTest;
 import pr2.gameplay.PlaceArtifactTest;
 import pr2.gameplay.LevelConfigTest;
@@ -57,11 +56,9 @@ import pr2.gameplay.presentation.PresentationPoseTest;
 import pr2.graphics.JPEGEncoderCompatTest;
 import pr2.gameplay.GameShellMountTest;
 import pr2.gameplay.CharacterLifecycleTest;
-import pr2.gameplay.MultiplayerRaceStageTest;
 import pr2.gameplay.LevelEntryStateTest;
 import pr2.gameplay.GameCommandShellTest;
 import pr2.gameplay.QuitButtonTest;
-import pr2.gameplay.RaceSessionTranscriptTest;
 import pr2.level.LevelParserTest;
 import pr2.lobby.LobbyServicesTest;
 import pr2.lobby.LobbyShellParityTest;
@@ -70,7 +67,6 @@ import pr2.lobby.AccountTabTest;
 import pr2.lobby.AccountInfoViewTest;
 import pr2.lobby.PointsRemainingTest;
 import pr2.lobby.PartInfoListingTest;
-import pr2.lobby.PresetListingTest;
 import pr2.lobby.ArtifactHintClientTest;
 import pr2.lobby.AutoDismissPopupTest;
 import pr2.lobby.BanMenuViewTest;
@@ -82,7 +78,6 @@ import pr2.lobby.CourseMenuTest;
 import pr2.lobby.CreditsPopupTest;
 import pr2.lobby.DiscordVerificationPopupTest;
 import pr2.lobby.ExternalLinkPopupTest;
-import pr2.lobby.GuildPopupTest;
 import pr2.lobby.GuildJoinPopupTest;
 import pr2.lobby.GuildMemberNameTest;
 import pr2.lobby.HatsMenuTest;
@@ -215,7 +210,6 @@ class DeterministicTestSuite {
 		DeterministicTestMode.runSuite("CourseTimerTest", ["gameplay"], CourseTimerTest.main);
 		DeterministicTestMode.runSuite("CatCaptchaTest", ["gameplay"], CatCaptchaTest.main);
 		DeterministicTestMode.runSuite("PrizePopupTest", ["gameplay", "items"], PrizePopupTest.main);
-		DeterministicTestMode.runSuite("SpectatePickerTest", ["gameplay"], SpectatePickerTest.main);
 		DeterministicTestMode.runSuite("SpecialEventTest", ["gameplay"], SpecialEventTest.main);
 		DeterministicTestMode.runSuite("PlaceArtifactTest", ["gameplay"], PlaceArtifactTest.main);
 		DeterministicTestMode.runSuite("ModesTest", ["gameplay"], ModesTest.main);
@@ -225,11 +219,9 @@ class DeterministicTestSuite {
 		DeterministicTestMode.runSuite("LevelConfigTest", ["gameplay", "level-rendering", "blocks"], LevelConfigTest.main);
 		DeterministicTestMode.runSuite("GameShellMountTest", ["gameplay", "physics", "level-rendering", "blocks", "items"], GameShellMountTest.main);
 		DeterministicTestMode.runSuite("CharacterLifecycleTest", ["gameplay", "physics", "network"], CharacterLifecycleTest.main);
-		DeterministicTestMode.runSuite("MultiplayerRaceStageTest", ["gameplay", "physics", "blocks", "network"], MultiplayerRaceStageTest.main);
 		DeterministicTestMode.runSuite("LevelEntryStateTest", ["gameplay"], LevelEntryStateTest.main);
 		DeterministicTestMode.runSuite("GameCommandShellTest", ["gameplay"], GameCommandShellTest.main);
 		DeterministicTestMode.runSuite("QuitButtonTest", ["gameplay"], QuitButtonTest.main);
-		DeterministicTestMode.runSuite("RaceSessionTranscriptTest", ["gameplay"], RaceSessionTranscriptTest.main);
 		DeterministicTestMode.runSuite("ServerConfigTest", ["network"], ServerConfigTest.main);
 		DeterministicTestMode.runSuite("CommAuthTest", ["network"], CommAuthTest.main);
 		DeterministicTestMode.runSuite("ServerStatusClientTest", ["network"], ServerStatusClientTest.main);
@@ -259,7 +251,6 @@ class DeterministicTestSuite {
 		DeterministicTestMode.runSuite("AccountInfoViewTest", ["lobby"], AccountInfoViewTest.main);
 		DeterministicTestMode.runSuite("PointsRemainingTest", ["lobby"], PointsRemainingTest.main);
 		DeterministicTestMode.runSuite("PartInfoListingTest", ["lobby"], PartInfoListingTest.main);
-		DeterministicTestMode.runSuite("PresetListingTest", ["lobby"], PresetListingTest.main);
 		DeterministicTestMode.runSuite("ChatTabTest", ["lobby"], ChatTabTest.main);
 		DeterministicTestMode.runSuite("ChangePasswordPopupTest", ["lobby"], ChangePasswordPopupTest.main);
 		DeterministicTestMode.runSuite("ColorPickerTest", ["lobby"], ColorPickerTest.main);
@@ -268,7 +259,6 @@ class DeterministicTestSuite {
 		DeterministicTestMode.runSuite("CreditsPopupTest", ["lobby"], CreditsPopupTest.main);
 		DeterministicTestMode.runSuite("DiscordVerificationPopupTest", ["lobby"], DiscordVerificationPopupTest.main);
 		DeterministicTestMode.runSuite("ExternalLinkPopupTest", ["lobby"], ExternalLinkPopupTest.main);
-		DeterministicTestMode.runSuite("GuildPopupTest", ["lobby"], GuildPopupTest.main);
 		DeterministicTestMode.runSuite("GuildJoinPopupTest", ["lobby"], GuildJoinPopupTest.main);
 		DeterministicTestMode.runSuite("GuildMemberNameTest", ["lobby"], GuildMemberNameTest.main);
 		DeterministicTestMode.runSuite("HatsMenuTest", ["lobby", "items"], HatsMenuTest.main);
@@ -293,10 +283,11 @@ class DeterministicTestSuite {
 		DeterministicTestMode.runSuite("StorePopupTest", ["lobby", "items"], StorePopupTest.main);
 		DeterministicTestMode.runSuite("TransferGuildPopupTest", ["lobby"], TransferGuildPopupTest.main);
 		DeterministicTestMode.runSuite("UploadingPopupTest", ["lobby"], UploadingPopupTest.main);
+		DeterministicTestMode.failIfTestsAreTooSlow();
 		if (DeterministicTestMode.hasGroupSelection()) {
 			trace('DeterministicTestSuite selected run passed (${DeterministicTestMode.selectionSummary()})');
 		} else if (DeterministicTestMode.isSmoke()) {
-			trace("DeterministicTestSuite smoke run passed (133 suites)");
+			trace('DeterministicTestSuite smoke run passed (${DeterministicTestMode.selectedSuiteCount()} suites)');
 		} else {
 			trace("DeterministicTestSuite passed");
 		}

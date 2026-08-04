@@ -14,10 +14,10 @@ class EmblemLoaderTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testLocalImageFitsUploadsAndAppliesFilename();
+		pr2.DeterministicTestMode.runTest("EmblemLoaderTest.testLocalImageFitsUploadsAndAppliesFilename", testLocalImageFitsUploadsAndAppliesFilename);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("EmblemLoaderTest")) return;
-		testUploadErrorFinishesWithoutChangingFilename();
-		testRemoveCleansUploadAndIgnoresLateCompletion();
+		pr2.DeterministicTestMode.runTest("EmblemLoaderTest.testUploadErrorFinishesWithoutChangingFilename", testUploadErrorFinishesWithoutChangingFilename);
+		pr2.DeterministicTestMode.runTest("EmblemLoaderTest.testRemoveCleansUploadAndIgnoresLateCompletion", testRemoveCleansUploadAndIgnoresLateCompletion);
 		SuperLoader.resetHooks();
 		LobbySession.token = "";
 		trace('EmblemLoaderTest passed $assertions assertions');

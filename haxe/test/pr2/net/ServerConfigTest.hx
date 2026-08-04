@@ -4,11 +4,11 @@ class ServerConfigTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testDefaultsToProductionHost();
+		pr2.DeterministicTestMode.runTest("ServerConfigTest.testDefaultsToProductionHost", testDefaultsToProductionHost);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ServerConfigTest")) return;
-		testProxyHostBuildsSameOriginUrls();
-		testLocalOverrideUsesExplicitEnvValue();
-		testBlankHostDoesNotReplaceCurrentHost();
+		pr2.DeterministicTestMode.runTest("ServerConfigTest.testProxyHostBuildsSameOriginUrls", testProxyHostBuildsSameOriginUrls);
+		pr2.DeterministicTestMode.runTest("ServerConfigTest.testLocalOverrideUsesExplicitEnvValue", testLocalOverrideUsesExplicitEnvValue);
+		pr2.DeterministicTestMode.runTest("ServerConfigTest.testBlankHostDoesNotReplaceCurrentHost", testBlankHostDoesNotReplaceCurrentHost);
 		trace('ServerConfigTest passed $assertions assertions');
 	}
 

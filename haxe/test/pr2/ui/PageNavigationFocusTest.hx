@@ -9,7 +9,7 @@ class PageNavigationFocusTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testLinkClickResetsFocus();
+		pr2.DeterministicTestMode.runTest("PageNavigationFocusTest.testLinkClickResetsFocus", testLinkClickResetsFocus);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PageNavigationFocusTest")) return;
 		StageFocus.resetHooks();
 		trace('PageNavigationFocusTest passed $assertions assertions');

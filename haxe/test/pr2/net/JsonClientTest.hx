@@ -5,9 +5,9 @@ class JsonClientTest {
 
 	public static function main():Void {
 		SuperLoader.showMessage = function(_:String):Void {};
-		testDecode();
+		pr2.DeterministicTestMode.runTest("JsonClientTest.testDecode", testDecode);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("JsonClientTest")) return;
-		testDecodeError();
+		pr2.DeterministicTestMode.runTest("JsonClientTest.testDecodeError", testDecodeError);
 		SuperLoader.resetHooks();
 		trace('JsonClientTest passed $assertions assertions');
 	}

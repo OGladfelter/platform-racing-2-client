@@ -12,9 +12,9 @@ class PMRFCodesPopupTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testReferenceLinksUseHtmlNameMakerPayloads();
+		pr2.DeterministicTestMode.runTest("PMRFCodesPopupTest.testReferenceLinksUseHtmlNameMakerPayloads", testReferenceLinksUseHtmlNameMakerPayloads);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PMRFCodesPopupTest")) return;
-		testRemoveUnregistersLinkListener();
+		pr2.DeterministicTestMode.runTest("PMRFCodesPopupTest.testRemoveUnregistersLinkListener", testRemoveUnregistersLinkListener);
 		trace('PMRFCodesPopupTest passed $assertions assertions');
 	}
 

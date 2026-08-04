@@ -7,10 +7,10 @@ class ExplicitBitmapCacheTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testCachePreservesLocalRegistrationAndTransform();
-		testInvalidateRefreshAndDisposeRestoreSource();
-		testSharedBitmapAndPreservedChildren();
-		testEmptyTargetAndInvalidScale();
+		pr2.DeterministicTestMode.runTest("ExplicitBitmapCacheTest.testCachePreservesLocalRegistrationAndTransform", testCachePreservesLocalRegistrationAndTransform);
+		pr2.DeterministicTestMode.runTest("ExplicitBitmapCacheTest.testInvalidateRefreshAndDisposeRestoreSource", testInvalidateRefreshAndDisposeRestoreSource);
+		pr2.DeterministicTestMode.runTest("ExplicitBitmapCacheTest.testSharedBitmapAndPreservedChildren", testSharedBitmapAndPreservedChildren);
+		pr2.DeterministicTestMode.runTest("ExplicitBitmapCacheTest.testEmptyTargetAndInvalidScale", testEmptyTargetAndInvalidScale);
 		trace('ExplicitBitmapCacheTest passed $assertions assertions');
 	}
 

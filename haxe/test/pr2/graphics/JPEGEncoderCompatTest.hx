@@ -9,11 +9,11 @@ class JPEGEncoderCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testQualityClampAndBitString();
+		pr2.DeterministicTestMode.runTest("JPEGEncoderCompatTest.testQualityClampAndBitString", testQualityClampAndBitString);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("JPEGEncoderCompatTest")) return;
-		testEncodeProducesJpegMarkers();
-		testEncodeNonNativeUsesOptionalOutput();
-		testEncodeAsyncGuardAndOutput();
+		pr2.DeterministicTestMode.runTest("JPEGEncoderCompatTest.testEncodeProducesJpegMarkers", testEncodeProducesJpegMarkers);
+		pr2.DeterministicTestMode.runTest("JPEGEncoderCompatTest.testEncodeNonNativeUsesOptionalOutput", testEncodeNonNativeUsesOptionalOutput);
+		pr2.DeterministicTestMode.runTest("JPEGEncoderCompatTest.testEncodeAsyncGuardAndOutput", testEncodeAsyncGuardAndOutput);
 		trace('JPEGEncoderCompatTest passed $assertions assertions');
 	}
 

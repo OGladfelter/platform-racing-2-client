@@ -10,11 +10,11 @@ class HurlantSymmetricCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testAesBlockVectors();
+		pr2.DeterministicTestMode.runTest("HurlantSymmetricCompatTest.testAesBlockVectors", testAesBlockVectors);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("HurlantSymmetricCompatTest")) return;
-		testCbcPkcs5WithForcedIV();
-		testCustomPaddingAndInterfaces();
-		testDecryptRequiresIVAndDispose();
+		pr2.DeterministicTestMode.runTest("HurlantSymmetricCompatTest.testCbcPkcs5WithForcedIV", testCbcPkcs5WithForcedIV);
+		pr2.DeterministicTestMode.runTest("HurlantSymmetricCompatTest.testCustomPaddingAndInterfaces", testCustomPaddingAndInterfaces);
+		pr2.DeterministicTestMode.runTest("HurlantSymmetricCompatTest.testDecryptRequiresIVAndDispose", testDecryptRequiresIVAndDispose);
 		trace('HurlantSymmetricCompatTest passed $assertions assertions');
 	}
 

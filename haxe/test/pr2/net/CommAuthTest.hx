@@ -6,7 +6,7 @@ class CommAuthTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testInitializesEncryptedTokens();
+		pr2.DeterministicTestMode.runTest("CommAuthTest.testInitializesEncryptedTokens", testInitializesEncryptedTokens);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CommAuthTest")) return;
 		trace('CommAuthTest passed $assertions assertions');
 	}

@@ -14,10 +14,10 @@ class CountdownTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testCountdownSequence();
+		pr2.DeterministicTestMode.runTest("CountdownTest.testCountdownSequence", testCountdownSequence);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CountdownTest")) return;
-		testCountdownSounds();
-		testCountdownUsesSimulationCadenceAtBothPresentationRates();
+		pr2.DeterministicTestMode.runTest("CountdownTest.testCountdownSounds", testCountdownSounds);
+		pr2.DeterministicTestMode.runTest("CountdownTest.testCountdownUsesSimulationCadenceAtBothPresentationRates", testCountdownUsesSimulationCadenceAtBothPresentationRates);
 		trace('CountdownTest passed $assertions assertions');
 	}
 

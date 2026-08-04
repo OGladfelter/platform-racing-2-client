@@ -10,11 +10,11 @@ class CourseTimerTest {
 	private static var nowMs:Float = 0;
 
 	public static function main():Void {
-		testCountdownModeUsesServerClockAndAddTime();
+		pr2.DeterministicTestMode.runTest("CourseTimerTest.testCountdownModeUsesServerClockAndAddTime", testCountdownModeUsesServerClockAndAddTime);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CourseTimerTest")) return;
-		testRacingModeCountsUpAndAddTimeMovesStartTime();
-		testUrgencyPauseAndTimeoutBehavior();
-		testTimeoutAndUrgencyPulseMatchAtBothPresentationRates();
+		pr2.DeterministicTestMode.runTest("CourseTimerTest.testRacingModeCountsUpAndAddTimeMovesStartTime", testRacingModeCountsUpAndAddTimeMovesStartTime);
+		pr2.DeterministicTestMode.runTest("CourseTimerTest.testUrgencyPauseAndTimeoutBehavior", testUrgencyPauseAndTimeoutBehavior);
+		pr2.DeterministicTestMode.runTest("CourseTimerTest.testTimeoutAndUrgencyPulseMatchAtBothPresentationRates", testTimeoutAndUrgencyPulseMatchAtBothPresentationRates);
 		trace('CourseTimerTest passed $assertions assertions');
 	}
 

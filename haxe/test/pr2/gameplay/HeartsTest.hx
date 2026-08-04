@@ -6,9 +6,9 @@ class HeartsTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testNumLimit();
+		pr2.DeterministicTestMode.runTest("HeartsTest.testNumLimit", testNumLimit);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("HeartsTest")) return;
-		testGrowAndShrink();
+		pr2.DeterministicTestMode.runTest("HeartsTest.testGrowAndShrink", testGrowAndShrink);
 		trace('HeartsTest passed $assertions assertions');
 	}
 

@@ -16,127 +16,121 @@ class LocalPlayerControllerTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testStartBlockHasNoCollision();
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testStartBlockHasNoCollision", testStartBlockHasNoCollision);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LocalPlayerControllerTest")) return;
-		testSideCollisionDoesNotFinishRace();
-		testBumpingFinishBlockFinishesRaceOnce();
-		testObjectiveModeCanBumpSubsequentFinishBlocks();
-		testJumpAndLandOnFlatFixture();
-		testGravityUsesFlashMultiplierAndSupportsRuntimeChanges();
-		testVelocityIntegrationOrderAndTerminalClamp();
-		testFacingFollowsPressedDirection();
-		testSnakeTrailAndDiggingInteractions();
-		testAnimationFollowsDirectionalInput();
-		testLowCeilingForcesCrouchAndBlocksJump();
-		testPressingUpUnderBlockBumpsIt();
-		testHoldingDownChargesAndLaunchesSuperJump();
-		testIceBlockReducesNextFrameAcceleration();
-		testSantaHatFreezesSafeStandBlock();
-		testSantaHatVisuallyFreezesArrowWithoutSuppressingImpulse();
-		testFrozenMineSuppressesHit();
-		testFrozenPushBlockSuppressesMovement();
-		testFrozenRotateBlockSuppressesRotation();
-		testFrozenSafetyBlockSuppressesReturn();
-		testFrozenSupplyBlockSuppressesUse();
-		testRecoveryAllowsStackedHitImpulses();
-		testArrowStandEffectsMatchAs3Deltas();
-		testPresentationDisplacementProjectsActiveContactNormals();
-		testPresentationPredictionMatchesNextMovement();
-		testFallingIntoWaterEntersSwimMode();
-		testWaterTouchEmitsRippleVisual();
-		testWaterDampsSinkingAndPaddlesUp();
-		testLeavingWaterReturnsToLand();
-		testSafetyAboveCurrentFloorIsIgnored();
-		testSafetyBlockReturnsPlayerToLastSafeSpot();
-		testSafetyBlockDoesNotEmitTeleportPoof();
-		testDeathmatchSafetyReturnRemovesLifeAndFinishesAtZero();
-		testFallingPastMapReturnsPlayerToLastSafeSpot();
-		testHighImpactFallBreaksCrumbleBlock();
-		testSettledCrumbleStandDoesNotEmitPieces();
-		testCheeseHatDoublesStandingCrumbleForce();
-		testCheeseHatForcesBumpCrumbleDamage();
-		testCheeseHatBreaksAdjacentHeadLevelCrumbleOnSideHit();
-		testStandingOnVanishBlockFallsThroughAfterFadeOut();
-		testVanishBlockReappearsAfterDelayWhenUnoccupied();
-		testVanishCeilingReappearsWhileChargingSuperJump();
-		testMineBlockLaunchesPlayerAndRemovesItself();
-		testDontMoveSpawnMarkerOverlapPreservesMineAndTeleport();
-		testDeathmatchMineHitRemovesLifeAndFinishesAtZero();
-		testBumpingItemBlockGrantsConfiguredItem();
-		testBumpingItemBlockEmitsStarSound();
-		testEmptyOptionsItemBlockGrantsAllowedItem();
-		testItemBlockUsesRuntimeRandom();
-		testItemBlockRandomnessDoesNotAffectMoveBlocks();
-		testRegularItemBlockDepletesAfterFirstUse();
-		testNewlyCollectedItemRequiresReleaseBeforeUse();
-		testDamageStunPreventsItemUse();
-		testSuperJumpItemLaunchesPlayerAndConsumesItem();
-		testSuperJumpItemClipsThroughBlockAboveWater();
-		testSuperJumpItemDoesNothingWhileCrouching();
-		testTeleportItemMovesPlayerForwardAndConsumesItem();
-		testTeleportItemBlockedBySolidDestination();
-		testSpeedBurstBoostsMovementThenExpires();
-		testReplacingSpeedBurstEndsItWithoutDeletingNewItem();
-		testJetPackLiftsPlayerThenExpires();
-		testReplacingActiveJetPackStopsJetState();
-		testGroundJumpStacksWithJetPackThrust();
-		testLaserGunReloadTiming();
-		testLaserGunShotAnimatesBlockFromSide();
-		testLaserGunDamageBreaksBrickBlock();
-		testLaserSkipsPreviouslyDestroyedBrick();
-		testTopHatLaserDamagesVanishBlock();
-		testMineItemPlacesMineAndConsumesItem();
-		testMineItemLeftFacingKeepsFlashWorldSpaceBias();
-		testMineItemBlockedByOccupiedTile();
-		testMineItemReusesDestroyedBrickTile();
-		testMineAppearSkipsPlacementWhenTileBecomesOccupied();
-		testLightningEmitsZapAndConsumesItem();
-		testReloadableItemReleaseGateThenHeldRefire();
-		testSwordReloadTiming();
-		testIceWaveReloadTiming();
-		testIceWaveShotAnimatesBlockFromSide();
-		testIceWaveDamageExplodesMineBlock();
-		testLaserGunDamageChipsCrumbleBlock();
-		testFrozenSolidDisablesMovementAndThaws();
-		testBumpingCustomStatsBlockAppliesConfiguredStats();
-		testBumpingResetCustomStatsBlockRestoresStartingStats();
-		testBumpingBrickBlockBreaksIt();
-		testBumpingHappyBlockRaisesStats();
-		testBumpingSadBlockLowersStats();
-		testBumpingHeartBlockAddsCappedLife();
-		testBumpingTimeBlockAddsTenSeconds();
-		testTeleportBlockMovesPlayerToNextSameColorBlock();
-		testRotatedTeleportBlockUsesRotatedDestinationDelta();
-		testTeleportBlockEmitsStartAndDestinationPops();
-		testCrouchingTeleportBlockBumpPreservesPreBumpY();
-		testTeleportCooldownPreventsImmediateReturn();
-		testTeleportCooldownTintsAndResetsSameColorBlocks();
-		testTeleportDefaultColorOptionsMatchEmptyOptions();
-		testPreRacePositionResetClearsConstructorTeleportCooldown();
-		testStandingOnPushBlockMovesItDown();
-		testPushBlockMovesIntoDestroyedBrickTile();
-		testPushBlockRetainsCollisionInDestroyedCrumbleTile();
-		testPushBlockRecursivelyMovesDestinationPushBlock();
-		testUnconfiguredMoveBlocksUseFlashRandomDirections();
-		testTimedMoveBlockPreviewDirections();
-		testTimedMoveBlockShiftsAfterPreview();
-		testTimedMoveBlockRecursivelyMovesDestinationPushBlock();
-		testTimedMoveBlockWaitsWhenDestinationBlocked();
-		testTimedMoveBlockWaitsWhenDestinationOccupied();
-		testBumpingRotateBlockPutsPlayerInFreezeState();
-		testWaterTouchDoesNotCancelRotation();
-		testExpiringWaterLingerRunsLandPhysicsDuringRotation();
-		testRotateRightCompletesCourseRotation();
-		testRotateLeftCompletesCourseRotation();
-		testRotationTweenMatchesCourseFrames();
-		testRotationMapsSafePosition();
-		testRotatedSafeSpotUsesDisplayedBlockPosition();
-		testRotatedSafetyAndMapReturnsUseRotatedSafeSpot();
-		testRotatedBlockBumpUsesCounterRotatedVisualImpulse();
-		testCollisionSnapsAgainstRotatedCeiling();
-		testCollisionStopsLeftMovementAfterRotation();
-		testArrowPushUsesRotatedCourseDirection();
-		testPushBlockUsesRotatedCourseDirection();
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSideCollisionDoesNotFinishRace", testSideCollisionDoesNotFinishRace);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingFinishBlockFinishesRaceOnce", testBumpingFinishBlockFinishesRaceOnce);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testObjectiveModeCanBumpSubsequentFinishBlocks", testObjectiveModeCanBumpSubsequentFinishBlocks);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testJumpAndLandOnFlatFixture", testJumpAndLandOnFlatFixture);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testGravityUsesFlashMultiplierAndSupportsRuntimeChanges", testGravityUsesFlashMultiplierAndSupportsRuntimeChanges);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testVelocityIntegrationOrderAndTerminalClamp", testVelocityIntegrationOrderAndTerminalClamp);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testFacingFollowsPressedDirection", testFacingFollowsPressedDirection);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSnakeTrailAndDiggingInteractions", testSnakeTrailAndDiggingInteractions);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testAnimationFollowsDirectionalInput", testAnimationFollowsDirectionalInput);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testLowCeilingForcesCrouchAndBlocksJump", testLowCeilingForcesCrouchAndBlocksJump);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testPressingUpUnderBlockBumpsIt", testPressingUpUnderBlockBumpsIt);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testHoldingDownChargesAndLaunchesSuperJump", testHoldingDownChargesAndLaunchesSuperJump);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testIceBlockReducesNextFrameAcceleration", testIceBlockReducesNextFrameAcceleration);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSantaHatFreezesSafeStandBlock", testSantaHatFreezesSafeStandBlock);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testFrozenMineSuppressesHit", testFrozenMineSuppressesHit);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testFrozenPushBlockSuppressesMovement", testFrozenPushBlockSuppressesMovement);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testFrozenRotateBlockSuppressesRotation", testFrozenRotateBlockSuppressesRotation);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testFrozenSafetyBlockSuppressesReturn", testFrozenSafetyBlockSuppressesReturn);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testFrozenSupplyBlockSuppressesUse", testFrozenSupplyBlockSuppressesUse);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRecoveryAllowsStackedHitImpulses", testRecoveryAllowsStackedHitImpulses);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testFallingIntoWaterEntersSwimMode", testFallingIntoWaterEntersSwimMode);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testWaterTouchEmitsRippleVisual", testWaterTouchEmitsRippleVisual);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testWaterDampsSinkingAndPaddlesUp", testWaterDampsSinkingAndPaddlesUp);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testLeavingWaterReturnsToLand", testLeavingWaterReturnsToLand);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSafetyAboveCurrentFloorIsIgnored", testSafetyAboveCurrentFloorIsIgnored);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSafetyBlockReturnsPlayerToLastSafeSpot", testSafetyBlockReturnsPlayerToLastSafeSpot);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSafetyBlockDoesNotEmitTeleportPoof", testSafetyBlockDoesNotEmitTeleportPoof);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testDeathmatchSafetyReturnRemovesLifeAndFinishesAtZero", testDeathmatchSafetyReturnRemovesLifeAndFinishesAtZero);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testFallingPastMapReturnsPlayerToLastSafeSpot", testFallingPastMapReturnsPlayerToLastSafeSpot);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testHighImpactFallBreaksCrumbleBlock", testHighImpactFallBreaksCrumbleBlock);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSettledCrumbleStandDoesNotEmitPieces", testSettledCrumbleStandDoesNotEmitPieces);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testCheeseHatDoublesStandingCrumbleForce", testCheeseHatDoublesStandingCrumbleForce);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testCheeseHatForcesBumpCrumbleDamage", testCheeseHatForcesBumpCrumbleDamage);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testCheeseHatBreaksAdjacentHeadLevelCrumbleOnSideHit", testCheeseHatBreaksAdjacentHeadLevelCrumbleOnSideHit);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testStandingOnVanishBlockFallsThroughAfterFadeOut", testStandingOnVanishBlockFallsThroughAfterFadeOut);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testVanishBlockReappearsAfterDelayWhenUnoccupied", testVanishBlockReappearsAfterDelayWhenUnoccupied);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testVanishCeilingReappearsWhileChargingSuperJump", testVanishCeilingReappearsWhileChargingSuperJump);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testMineBlockLaunchesPlayerAndRemovesItself", testMineBlockLaunchesPlayerAndRemovesItself);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testDontMoveSpawnMarkerOverlapPreservesMineAndTeleport", testDontMoveSpawnMarkerOverlapPreservesMineAndTeleport);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testDeathmatchMineHitRemovesLifeAndFinishesAtZero", testDeathmatchMineHitRemovesLifeAndFinishesAtZero);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingItemBlockGrantsConfiguredItem", testBumpingItemBlockGrantsConfiguredItem);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingItemBlockEmitsStarSound", testBumpingItemBlockEmitsStarSound);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testEmptyOptionsItemBlockGrantsAllowedItem", testEmptyOptionsItemBlockGrantsAllowedItem);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testItemBlockUsesRuntimeRandom", testItemBlockUsesRuntimeRandom);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRegularItemBlockDepletesAfterFirstUse", testRegularItemBlockDepletesAfterFirstUse);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testNewlyCollectedItemRequiresReleaseBeforeUse", testNewlyCollectedItemRequiresReleaseBeforeUse);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testDamageStunPreventsItemUse", testDamageStunPreventsItemUse);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSuperJumpItemLaunchesPlayerAndConsumesItem", testSuperJumpItemLaunchesPlayerAndConsumesItem);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSuperJumpItemClipsThroughBlockAboveWater", testSuperJumpItemClipsThroughBlockAboveWater);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSuperJumpItemDoesNothingWhileCrouching", testSuperJumpItemDoesNothingWhileCrouching);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTeleportItemMovesPlayerForwardAndConsumesItem", testTeleportItemMovesPlayerForwardAndConsumesItem);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTeleportItemBlockedBySolidDestination", testTeleportItemBlockedBySolidDestination);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSpeedBurstBoostsMovementThenExpires", testSpeedBurstBoostsMovementThenExpires);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testReplacingSpeedBurstEndsItWithoutDeletingNewItem", testReplacingSpeedBurstEndsItWithoutDeletingNewItem);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testReplacingActiveJetPackStopsJetState", testReplacingActiveJetPackStopsJetState);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testGroundJumpStacksWithJetPackThrust", testGroundJumpStacksWithJetPackThrust);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testLaserGunReloadTiming", testLaserGunReloadTiming);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testLaserGunShotAnimatesBlockFromSide", testLaserGunShotAnimatesBlockFromSide);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testLaserGunDamageBreaksBrickBlock", testLaserGunDamageBreaksBrickBlock);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testLaserSkipsPreviouslyDestroyedBrick", testLaserSkipsPreviouslyDestroyedBrick);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTopHatLaserDamagesVanishBlock", testTopHatLaserDamagesVanishBlock);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testMineItemPlacesMineAndConsumesItem", testMineItemPlacesMineAndConsumesItem);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testMineItemLeftFacingKeepsFlashWorldSpaceBias", testMineItemLeftFacingKeepsFlashWorldSpaceBias);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testMineItemBlockedByOccupiedTile", testMineItemBlockedByOccupiedTile);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testMineItemReusesDestroyedBrickTile", testMineItemReusesDestroyedBrickTile);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testMineAppearSkipsPlacementWhenTileBecomesOccupied", testMineAppearSkipsPlacementWhenTileBecomesOccupied);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testLightningEmitsZapAndConsumesItem", testLightningEmitsZapAndConsumesItem);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testReloadableItemReleaseGateThenHeldRefire", testReloadableItemReleaseGateThenHeldRefire);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testSwordReloadTiming", testSwordReloadTiming);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testIceWaveReloadTiming", testIceWaveReloadTiming);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testIceWaveShotAnimatesBlockFromSide", testIceWaveShotAnimatesBlockFromSide);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testIceWaveDamageExplodesMineBlock", testIceWaveDamageExplodesMineBlock);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testLaserGunDamageChipsCrumbleBlock", testLaserGunDamageChipsCrumbleBlock);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testFrozenSolidDisablesMovementAndThaws", testFrozenSolidDisablesMovementAndThaws);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingCustomStatsBlockAppliesConfiguredStats", testBumpingCustomStatsBlockAppliesConfiguredStats);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingResetCustomStatsBlockRestoresStartingStats", testBumpingResetCustomStatsBlockRestoresStartingStats);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingBrickBlockBreaksIt", testBumpingBrickBlockBreaksIt);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingHappyBlockRaisesStats", testBumpingHappyBlockRaisesStats);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingSadBlockLowersStats", testBumpingSadBlockLowersStats);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingHeartBlockAddsCappedLife", testBumpingHeartBlockAddsCappedLife);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingTimeBlockAddsTenSeconds", testBumpingTimeBlockAddsTenSeconds);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTeleportBlockMovesPlayerToNextSameColorBlock", testTeleportBlockMovesPlayerToNextSameColorBlock);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRotatedTeleportBlockUsesRotatedDestinationDelta", testRotatedTeleportBlockUsesRotatedDestinationDelta);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTeleportBlockEmitsStartAndDestinationPops", testTeleportBlockEmitsStartAndDestinationPops);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testCrouchingTeleportBlockBumpPreservesPreBumpY", testCrouchingTeleportBlockBumpPreservesPreBumpY);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTeleportCooldownPreventsImmediateReturn", testTeleportCooldownPreventsImmediateReturn);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTeleportCooldownTintsAndResetsSameColorBlocks", testTeleportCooldownTintsAndResetsSameColorBlocks);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTeleportDefaultColorOptionsMatchEmptyOptions", testTeleportDefaultColorOptionsMatchEmptyOptions);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testPreRacePositionResetClearsConstructorTeleportCooldown", testPreRacePositionResetClearsConstructorTeleportCooldown);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testStandingOnPushBlockMovesItDown", testStandingOnPushBlockMovesItDown);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testPushBlockMovesIntoDestroyedBrickTile", testPushBlockMovesIntoDestroyedBrickTile);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testPushBlockRetainsCollisionInDestroyedCrumbleTile", testPushBlockRetainsCollisionInDestroyedCrumbleTile);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testPushBlockRecursivelyMovesDestinationPushBlock", testPushBlockRecursivelyMovesDestinationPushBlock);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testUnconfiguredMoveBlocksUseFlashRandomDirections", testUnconfiguredMoveBlocksUseFlashRandomDirections);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTimedMoveBlockPreviewDirections", testTimedMoveBlockPreviewDirections);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTimedMoveBlockShiftsAfterPreview", testTimedMoveBlockShiftsAfterPreview);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTimedMoveBlockRecursivelyMovesDestinationPushBlock", testTimedMoveBlockRecursivelyMovesDestinationPushBlock);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTimedMoveBlockWaitsWhenDestinationBlocked", testTimedMoveBlockWaitsWhenDestinationBlocked);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testTimedMoveBlockWaitsWhenDestinationOccupied", testTimedMoveBlockWaitsWhenDestinationOccupied);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testBumpingRotateBlockPutsPlayerInFreezeState", testBumpingRotateBlockPutsPlayerInFreezeState);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testWaterTouchDoesNotCancelRotation", testWaterTouchDoesNotCancelRotation);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testExpiringWaterLingerRunsLandPhysicsDuringRotation", testExpiringWaterLingerRunsLandPhysicsDuringRotation);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRotateRightCompletesCourseRotation", testRotateRightCompletesCourseRotation);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRotateLeftCompletesCourseRotation", testRotateLeftCompletesCourseRotation);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRotationTweenMatchesCourseFrames", testRotationTweenMatchesCourseFrames);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRotationMapsSafePosition", testRotationMapsSafePosition);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRotatedSafeSpotUsesDisplayedBlockPosition", testRotatedSafeSpotUsesDisplayedBlockPosition);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRotatedSafetyAndMapReturnsUseRotatedSafeSpot", testRotatedSafetyAndMapReturnsUseRotatedSafeSpot);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testRotatedBlockBumpUsesCounterRotatedVisualImpulse", testRotatedBlockBumpUsesCounterRotatedVisualImpulse);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testCollisionSnapsAgainstRotatedCeiling", testCollisionSnapsAgainstRotatedCeiling);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testCollisionStopsLeftMovementAfterRotation", testCollisionStopsLeftMovementAfterRotation);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testArrowPushUsesRotatedCourseDirection", testArrowPushUsesRotatedCourseDirection);
+		pr2.DeterministicTestMode.runTest("LocalPlayerControllerTest.testPushBlockUsesRotatedCourseDirection", testPushBlockUsesRotatedCourseDirection);
 		trace('LocalPlayerControllerTest passed $assertions assertions');
 	}
 
@@ -465,32 +459,6 @@ class LocalPlayerControllerTest {
 		assertEquals(0.0, santa.controller.blockIceOverlayAlphaAt(2, 3), "santa ice overlay thaws after Flash fade");
 	}
 
-	private static function testSantaHatVisuallyFreezesArrowWithoutSuppressingImpulse():Void {
-		var samples = [
-			{type: BlockType.ArrowUp, expectedVx: 0.0, expectedVy: -10.0, label: "up"},
-			{type: BlockType.ArrowDown, expectedVx: 0.0, expectedVy: 5.0, label: "down"},
-			{type: BlockType.ArrowLeft, expectedVx: -3.0, expectedVy: 0.0, label: "left"},
-			{type: BlockType.ArrowRight, expectedVx: 3.0, expectedVy: 0.0, label: "right"}
-		];
-		for (sample in samples) {
-			var santa = new LocalCharacter(singleBlockLevel(sample.type));
-			santa.setHats([7, 0xFFFFFF, -1]);
-			var arrow = @:privateAccess santa.controller.level.blockAt(2, 3);
-			@:privateAccess santa.controller.vx = 0;
-			@:privateAccess santa.controller.vy = 0;
-			santa.consumeBlockVisualEvents();
-
-			@:privateAccess santa.controller.onStand(arrow, "levelEditorTest");
-
-			assertEquals(1.0, santa.controller.blockIceOverlayAlphaAt(2, 3), 'santa adds an ice overlay to the ${sample.label} arrow');
-			assertClose(sample.expectedVx, santa.stateSnapshot().vx, 'the visually frozen ${sample.label} arrow keeps its Flash x impulse');
-			assertClose(sample.expectedVy, santa.stateSnapshot().vy, 'the visually frozen ${sample.label} arrow keeps its Flash y impulse');
-			var events = santa.consumeBlockVisualEvents();
-			assertEquals(1, events.length, 'the visually frozen ${sample.label} arrow still animates when activated');
-			assertEquals("ArrowAnimate", Type.enumConstructor(events[0].kind), 'the frozen ${sample.label} arrow uses its normal authored animation');
-		}
-	}
-
 	private static function testFrozenMineSuppressesHit():Void {
 		var player = new LocalCharacter(delayedMineBlockLevel());
 		player.controller.freezeBlockForTest(2, 3);
@@ -587,113 +555,6 @@ class LocalPlayerControllerTest {
 
 		assertAbove(second.vx, first.vx, "hurt recovery still accepts stacked horizontal hit impulse");
 		assertEquals("hurt", second.mode, "player remains in hurt recovery");
-	}
-
-	private static function testArrowStandEffectsMatchAs3Deltas():Void {
-		var up = new LocalCharacter(singleBlockLevel(BlockType.ArrowUp));
-		assertClose(-10, up.stateSnapshot().vy, "up arrow stand launches upward");
-		var events = up.consumeBlockVisualEvents();
-		assertEquals(1, events.length, "arrow stand emits one visual activation");
-		assertEquals("ArrowAnimate", Type.enumConstructor(events[0].kind), "arrow stand emits authored animation event");
-		assertClose(5, new LocalCharacter(singleBlockLevel(BlockType.ArrowDown)).stateSnapshot().vy, "down arrow stand pushes down");
-		assertClose(-3, new LocalCharacter(singleBlockLevel(BlockType.ArrowLeft)).stateSnapshot().vx, "left arrow stand pushes left");
-		assertClose(3, new LocalCharacter(singleBlockLevel(BlockType.ArrowRight)).stateSnapshot().vx, "right arrow stand pushes right");
-	}
-
-	private static function testPresentationDisplacementProjectsActiveContactNormals():Void {
-		var downStand = new LocalCharacter(singleBlockLevel(BlockType.ArrowDown));
-		assertClose(5, downStand.stateSnapshot().vy, "down arrow retains authoritative inward floor velocity");
-		assertClose(0, downStand.controller.presentationDeltaY(), "floor contact projects inward presentation y displacement");
-
-		var upStand = new LocalCharacter(singleBlockLevel(BlockType.ArrowUp));
-		assertBelow(upStand.controller.presentationDeltaY(), 0, "floor contact preserves presentation displacement away from the floor");
-
-		var horizontalStand = new LocalCharacter(singleBlockLevel(BlockType.ArrowRight));
-		var horizontalBefore = horizontalStand.stateSnapshot();
-		var horizontalPredicted = horizontalStand.controller.presentationDeltaX();
-		horizontalStand.step(new LocalPlayerInput());
-		assertClose(horizontalStand.stateSnapshot().x - horizontalBefore.x, horizontalPredicted,
-			"arrow conveyor predicts the next applied horizontal displacement after damping");
-
-		var ceilingInto = new LocalCharacter(singleBlockLevel(BlockType.ArrowUp));
-		var ceilingIntoBlock = @:privateAccess ceilingInto.controller.level.blockAt(2, 3);
-		@:privateAccess ceilingInto.controller.clearPresentationContacts();
-		@:privateAccess ceilingInto.controller.vy = -2;
-		@:privateAccess ceilingInto.controller.onBump(ceilingIntoBlock, new LocalPlayerInput(), "presentationTest");
-		assertClose(-14, ceilingInto.stateSnapshot().vy, "up arrow retains authoritative inward ceiling velocity");
-		assertClose(0, ceilingInto.controller.presentationDeltaY(), "ceiling contact projects inward presentation y displacement");
-
-		var ceilingAway = new LocalCharacter(singleBlockLevel(BlockType.ArrowDown));
-		var ceilingAwayBlock = @:privateAccess ceilingAway.controller.level.blockAt(2, 3);
-		@:privateAccess ceilingAway.controller.clearPresentationContacts();
-		@:privateAccess ceilingAway.controller.vy = -2;
-		@:privateAccess ceilingAway.controller.onBump(ceilingAwayBlock, new LocalPlayerInput(), "presentationTest");
-		assertAbove(ceilingAway.controller.presentationDeltaY(), 0, "ceiling contact preserves presentation displacement away from the ceiling");
-
-		var rightWallInto = new LocalCharacter(singleBlockLevel(BlockType.ArrowRight));
-		var rightWallIntoBlock = @:privateAccess rightWallInto.controller.level.blockAt(2, 3);
-		@:privateAccess rightWallInto.controller.clearPresentationContacts();
-		@:privateAccess rightWallInto.controller.vx = 0;
-		@:privateAccess rightWallInto.controller.onLeftHit(rightWallIntoBlock, "presentationTest");
-		assertClose(3, rightWallInto.stateSnapshot().vx, "right arrow retains authoritative velocity into a right wall");
-		assertClose(0, rightWallInto.controller.presentationDeltaX(), "right wall contact projects inward presentation x displacement");
-
-		var rightWallAway = new LocalCharacter(singleBlockLevel(BlockType.ArrowLeft));
-		var rightWallAwayBlock = @:privateAccess rightWallAway.controller.level.blockAt(2, 3);
-		@:privateAccess rightWallAway.controller.clearPresentationContacts();
-		@:privateAccess rightWallAway.controller.vx = 0;
-		@:privateAccess rightWallAway.controller.onLeftHit(rightWallAwayBlock, "presentationTest");
-		assertBelow(rightWallAway.controller.presentationDeltaX(), 0, "right wall contact preserves presentation displacement away from the wall");
-
-		var leftWallInto = new LocalCharacter(singleBlockLevel(BlockType.ArrowLeft));
-		var leftWallIntoBlock = @:privateAccess leftWallInto.controller.level.blockAt(2, 3);
-		@:privateAccess leftWallInto.controller.clearPresentationContacts();
-		@:privateAccess leftWallInto.controller.vx = 0;
-		@:privateAccess leftWallInto.controller.onRightHit(leftWallIntoBlock, "presentationTest");
-		assertClose(-3, leftWallInto.stateSnapshot().vx, "left arrow retains authoritative velocity into a left wall");
-		assertClose(0, leftWallInto.controller.presentationDeltaX(), "left wall contact projects inward presentation x displacement");
-
-		var movedSupport = new LocalCharacter(pushBlockLevel());
-		@:privateAccess movedSupport.controller.vy = 5;
-		assertAbove(movedSupport.controller.presentationDeltaY(), 0, "a moved push block no longer constrains presentation displacement");
-	}
-
-	private static function testPresentationPredictionMatchesNextMovement():Void {
-		assertNextMovementPrediction(new LocalCharacter(singleBlockLevel(BlockType.ArrowRight)), new LocalPlayerInput(),
-			"neutral arrow conveyor");
-
-		var withConveyor = new LocalCharacter(singleBlockLevel(BlockType.ArrowRight));
-		var right = new LocalPlayerInput(false, true);
-		withConveyor.step(right);
-		assertNextMovementPrediction(withConveyor, right, "arrow conveyor with matching held input");
-
-		var againstConveyor = new LocalCharacter(singleBlockLevel(BlockType.ArrowRight));
-		var left = new LocalPlayerInput(true);
-		againstConveyor.step(left);
-		assertNextMovementPrediction(againstConveyor, left, "arrow conveyor with opposing held input");
-
-		var ordinaryGround = newPlayer();
-		ordinaryGround.step(right);
-		assertNextMovementPrediction(ordinaryGround, right, "ordinary held-input ground movement");
-
-		var fractional = new LocalCharacter(emptyLevel(0));
-		fractional.step(right);
-		fractional.controller.setPosition(75.37, 75.62);
-		@:privateAccess fractional.controller.vx = 1.25;
-		@:privateAccess fractional.controller.vy = -0.75;
-		assertNextMovementPrediction(fractional, right, "fractional Flash-coordinate movement");
-
-		var water = new LocalCharacter(waterPoolLevel());
-		for (_ in 0...40) {
-			water.step(new LocalPlayerInput());
-			if (water.stateSnapshot().mode == "water") {
-				break;
-			}
-		}
-		assertEquals("water", water.stateSnapshot().mode, "water prediction fixture enters water mode");
-		water.step(right);
-		assertEquals("water", water.stateSnapshot().mode, "water prediction fixture remains submerged with held input");
-		assertNextMovementPrediction(water, right, "held-input water movement");
 	}
 
 	private static function assertNextMovementPrediction(player:LocalCharacter, input:LocalPlayerInput, label:String):Void {
@@ -1251,29 +1112,6 @@ class LocalPlayerControllerTest {
 		assertEquals(4, highRoll.stateSnapshot().itemId, "high runtime random roll selects the second candidate");
 	}
 
-	private static function testItemBlockRandomnessDoesNotAffectMoveBlocks():Void {
-		var untouched = new LocalCharacter(itemAndRandomMoveBlockLevel());
-		var itemUser = new LocalCharacter(itemAndRandomMoveBlockLevel());
-
-		for (_ in 0...20) {
-			untouched.step(new LocalPlayerInput());
-			itemUser.step(new LocalPlayerInput());
-		}
-		itemUser.step(new LocalPlayerInput(false, false, true));
-		assertEquals(true, itemUser.stateSnapshot().itemId != null, "multi-candidate item block grants an item");
-
-		for (_ in 0...142) {
-			untouched.step(new LocalPlayerInput());
-			itemUser.step(new LocalPlayerInput());
-		}
-
-		var untouchedDirections = untouched.activeMoveBlockDirections();
-		var itemUserDirections = itemUser.activeMoveBlockDirections();
-		for (key in ["1,1", "2,1", "3,1", "4,1", "5,1"]) {
-			assertEquals(untouchedDirections.get(key), itemUserDirections.get(key), 'item random must not advance move random for $key');
-		}
-	}
-
 	private static function testRegularItemBlockDepletesAfterFirstUse():Void {
 		var player = new LocalCharacter(lowItemCeilingLevel(BlockType.Item, "3"));
 		for (_ in 0...20) {
@@ -1514,42 +1352,6 @@ class LocalPlayerControllerTest {
 		assertEquals(1, player.stateSnapshot().itemId, "cleared speed-burst timeout cannot delete the replacement item later");
 		assertClose(50, player.stateSnapshot().speedStat, "item replacement restores normal speed stats");
 		assertClose(50, player.stateSnapshot().accelerationStat, "item replacement restores normal acceleration stats");
-	}
-
-	private static function testJetPackLiftsPlayerThenExpires():Void {
-		var boosted = collectItem(jetPackItemLevel(), 6);
-		var normal = new LocalCharacter(jetPackComparisonLevel());
-
-		for (_ in 0...70) {
-			boosted.step(new LocalPlayerInput(false, true));
-			normal.step(new LocalPlayerInput(false, true));
-			if (boosted.stateSnapshot().x > 105) {
-				break;
-			}
-		}
-
-		boosted.step(new LocalPlayerInput(false, false, false, false, true));
-		assertEquals(6, boosted.stateSnapshot().itemId, "jet pack stays held while active");
-		assertEquals(3, boosted.stateSnapshot().itemUses, "jet pack starts with three fuel pips");
-
-		for (_ in 0...24) {
-			boosted.step(new LocalPlayerInput(false, false, false, false, true));
-			normal.step(new LocalPlayerInput());
-		}
-
-		assertBelow(boosted.stateSnapshot().y, normal.stateSnapshot().y - 20, "jet pack thrust lifts the player");
-		assertBelow(boosted.stateSnapshot().vy, normal.stateSnapshot().vy, "jet pack counters gravity while active");
-
-		for (_ in 0...42) {
-			boosted.step(new LocalPlayerInput(false, false, false, false, true));
-		}
-		assertEquals(2, boosted.stateSnapshot().itemUses, "jet pack ammo drops after one third of the fuel is spent");
-
-		for (_ in 0...133) {
-			boosted.step(new LocalPlayerInput(false, false, false, false, true));
-		}
-
-		assertEquals(null, boosted.stateSnapshot().itemId, "jet pack expires after 200 fuel frames");
 	}
 
 	private static function testReplacingActiveJetPackStopsJetState():Void {

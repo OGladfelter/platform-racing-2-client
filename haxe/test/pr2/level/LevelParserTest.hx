@@ -7,10 +7,10 @@ class LevelParserTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testFlatFixture();
+		pr2.DeterministicTestMode.runTest("LevelParserTest.testFlatFixture", testFlatFixture);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LevelParserTest")) return;
-		testValidationRejectsBadBlockTypes();
-		testValidationRejectsOutOfBoundsPositions();
+		pr2.DeterministicTestMode.runTest("LevelParserTest.testValidationRejectsBadBlockTypes", testValidationRejectsBadBlockTypes);
+		pr2.DeterministicTestMode.runTest("LevelParserTest.testValidationRejectsOutOfBoundsPositions", testValidationRejectsOutOfBoundsPositions);
 		trace('LevelParserTest passed $assertions assertions');
 	}
 

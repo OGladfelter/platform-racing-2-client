@@ -13,6 +13,7 @@ class PartInfoListingTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
+		pr2.DeterministicTestMode.runTest("PartInfoListingTest.testExactPartListing", function():Void {
 		var listing = new PartInfoListing("HEAD", 1, "Classic", "Rock it old school.", "Starter", true, true);
 		var bg = DisplayUtil.findByName(listing, "bg");
 		var guide = DisplayUtil.findByName(listing, "previewGuide");
@@ -45,7 +46,8 @@ class PartInfoListingTest {
 		cover.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_OUT));
 		assertEquals(false, bg.visible, "hover out hides authored listing background");
 		listing.remove();
-		testExactPartPopup();
+		});
+		pr2.DeterministicTestMode.runTest("PartInfoListingTest.testExactPartPopup", testExactPartPopup);
 		for (popup in Popup.getOpen().copy()) popup.remove();
 		trace('PartInfoListingTest passed $assertions assertions');
 	}

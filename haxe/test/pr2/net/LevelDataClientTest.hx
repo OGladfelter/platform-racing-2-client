@@ -6,11 +6,11 @@ class LevelDataClientTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testParsesAndVerifiesHash();
+		pr2.DeterministicTestMode.runTest("LevelDataClientTest.testParsesAndVerifiesHash", testParsesAndVerifiesHash);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LevelDataClientTest")) return;
-		testAndInsideValueRoundTrips();
-		testHashMismatchReported();
-		testEditorLoadRejectsBadOrEmptyPayloads();
+		pr2.DeterministicTestMode.runTest("LevelDataClientTest.testAndInsideValueRoundTrips", testAndInsideValueRoundTrips);
+		pr2.DeterministicTestMode.runTest("LevelDataClientTest.testHashMismatchReported", testHashMismatchReported);
+		pr2.DeterministicTestMode.runTest("LevelDataClientTest.testEditorLoadRejectsBadOrEmptyPayloads", testEditorLoadRejectsBadOrEmptyPayloads);
 		trace('LevelDataClientTest passed $assertions assertions');
 	}
 

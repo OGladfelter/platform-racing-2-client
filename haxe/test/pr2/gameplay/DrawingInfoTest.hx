@@ -11,11 +11,11 @@ class DrawingInfoTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testPlayerDrawingRows();
+		pr2.DeterministicTestMode.runTest("DrawingInfoTest.testPlayerDrawingRows", testPlayerDrawingRows);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("DrawingInfoTest")) return;
-		testFinishDrawingCommand();
-		testFinishTimesCommandAndRaceRows();
-		testObjectiveRowsAndKongStats();
+		pr2.DeterministicTestMode.runTest("DrawingInfoTest.testFinishDrawingCommand", testFinishDrawingCommand);
+		pr2.DeterministicTestMode.runTest("DrawingInfoTest.testFinishTimesCommandAndRaceRows", testFinishTimesCommandAndRaceRows);
+		pr2.DeterministicTestMode.runTest("DrawingInfoTest.testObjectiveRowsAndKongStats", testObjectiveRowsAndKongStats);
 		trace('DrawingInfoTest passed $assertions assertions');
 	}
 

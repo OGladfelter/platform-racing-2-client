@@ -27,18 +27,18 @@ class LevelInfoPopupTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testLinkRouteOpensAuthoredShell();
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testLinkRouteOpensAuthoredShell", testLinkRouteOpensAuthoredShell);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LevelInfoPopupTest")) return;
-		testLoadFailureFadesPopup();
-		testFlashDefaultsBeforeData();
-		testApplyReturnDataPopulatesAuthoredFields();
-		testRatingHoverShowsFlashCover();
-		testLevelInfoHoverPopups();
-		testActionButtonVisibilityShareAndTooltips();
-		testPlayRoutesThroughLobbyLookup();
-		testMemberReportFlow();
-		testModeratorLevelModerationFlow();
-		testSingletonFadeOut();
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testLoadFailureFadesPopup", testLoadFailureFadesPopup);
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testFlashDefaultsBeforeData", testFlashDefaultsBeforeData);
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testApplyReturnDataPopulatesAuthoredFields", testApplyReturnDataPopulatesAuthoredFields);
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testRatingHoverShowsFlashCover", testRatingHoverShowsFlashCover);
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testLevelInfoHoverPopups", testLevelInfoHoverPopups);
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testActionButtonVisibilityShareAndTooltips", testActionButtonVisibilityShareAndTooltips);
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testPlayRoutesThroughLobbyLookup", testPlayRoutesThroughLobbyLookup);
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testMemberReportFlow", testMemberReportFlow);
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testModeratorLevelModerationFlow", testModeratorLevelModerationFlow);
+		pr2.DeterministicTestMode.runTest("LevelInfoPopupTest.testSingletonFadeOut", testSingletonFadeOut);
 		closeAll();
 		restoreHooks();
 		trace('LevelInfoPopupTest passed $assertions assertions');

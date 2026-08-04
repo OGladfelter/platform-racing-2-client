@@ -6,10 +6,10 @@ class MobileLobbyLayoutTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testNarrowPhone();
+		pr2.DeterministicTestMode.runTest("MobileLobbyLayoutTest.testNarrowPhone", testNarrowPhone);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("MobileLobbyLayoutTest")) return;
-		testWidePhone();
-		testTablet();
+		pr2.DeterministicTestMode.runTest("MobileLobbyLayoutTest.testWidePhone", testWidePhone);
+		pr2.DeterministicTestMode.runTest("MobileLobbyLayoutTest.testTablet", testTablet);
 		trace('MobileLobbyLayoutTest passed $assertions assertions');
 	}
 

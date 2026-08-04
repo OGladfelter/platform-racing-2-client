@@ -6,13 +6,13 @@ class SWFStatsTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testAverageStartsAfterThirtySamples();
+		pr2.DeterministicTestMode.runTest("SWFStatsTest.testAverageStartsAfterThirtySamples", testAverageStartsAfterThirtySamples);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SWFStatsTest")) return;
-		testFrameRateDriftResetsBeforeFullWindow();
-		testFastThirtySampleAverageResetsFrameRate();
-		testNormalAverageDoesNotResetFrameRate();
-		testConfiguredSixtyFrameTarget();
-		testRuntimeFallbackTarget();
+		pr2.DeterministicTestMode.runTest("SWFStatsTest.testFrameRateDriftResetsBeforeFullWindow", testFrameRateDriftResetsBeforeFullWindow);
+		pr2.DeterministicTestMode.runTest("SWFStatsTest.testFastThirtySampleAverageResetsFrameRate", testFastThirtySampleAverageResetsFrameRate);
+		pr2.DeterministicTestMode.runTest("SWFStatsTest.testNormalAverageDoesNotResetFrameRate", testNormalAverageDoesNotResetFrameRate);
+		pr2.DeterministicTestMode.runTest("SWFStatsTest.testConfiguredSixtyFrameTarget", testConfiguredSixtyFrameTarget);
+		pr2.DeterministicTestMode.runTest("SWFStatsTest.testRuntimeFallbackTarget", testRuntimeFallbackTarget);
 		trace('SWFStatsTest passed $assertions assertions');
 	}
 

@@ -17,16 +17,16 @@ class RemoteCharacterConsumeTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testRegistersAndTearsDownTempCommands();
+		pr2.DeterministicTestMode.runTest("RemoteCharacterConsumeTest.testRegistersAndTearsDownTempCommands", testRegistersAndTearsDownTempCommands);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("RemoteCharacterConsumeTest")) return;
-		testConsumesPositionVarsAndExactPosition();
-		testCatchupClampAndBlockTouches();
-		testRemoteBlockTouchesActivateRealMapEffects();
-		testRemoteAnimationAdvancesEachStageFrame();
-		testRemoteQueueConsumesOnlySimulationFrames();
-		testRemotePresentationPolicySelection();
-		testSpectateSnapSurvivesSimulationPhase();
-		testHeartStingAndHatCommands();
+		pr2.DeterministicTestMode.runTest("RemoteCharacterConsumeTest.testConsumesPositionVarsAndExactPosition", testConsumesPositionVarsAndExactPosition);
+		pr2.DeterministicTestMode.runTest("RemoteCharacterConsumeTest.testCatchupClampAndBlockTouches", testCatchupClampAndBlockTouches);
+		pr2.DeterministicTestMode.runTest("RemoteCharacterConsumeTest.testRemoteBlockTouchesActivateRealMapEffects", testRemoteBlockTouchesActivateRealMapEffects);
+		pr2.DeterministicTestMode.runTest("RemoteCharacterConsumeTest.testRemoteAnimationAdvancesEachStageFrame", testRemoteAnimationAdvancesEachStageFrame);
+		pr2.DeterministicTestMode.runTest("RemoteCharacterConsumeTest.testRemoteQueueConsumesOnlySimulationFrames", testRemoteQueueConsumesOnlySimulationFrames);
+		pr2.DeterministicTestMode.runTest("RemoteCharacterConsumeTest.testRemotePresentationPolicySelection", testRemotePresentationPolicySelection);
+		pr2.DeterministicTestMode.runTest("RemoteCharacterConsumeTest.testSpectateSnapSurvivesSimulationPhase", testSpectateSnapSurvivesSimulationPhase);
+		pr2.DeterministicTestMode.runTest("RemoteCharacterConsumeTest.testHeartStingAndHatCommands", testHeartStingAndHatCommands);
 		trace('RemoteCharacterConsumeTest passed $assertions assertions');
 	}
 

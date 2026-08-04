@@ -8,15 +8,15 @@ class MiniMapTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testNumLimit();
+		pr2.DeterministicTestMode.runTest("MiniMapTest.testNumLimit", testNumLimit);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("MiniMapTest")) return;
-		testRasterizeScale();
-		testFitScale();
-		testDotLabels();
-		testDotColors();
-		testNativeMarkerStates();
-		testDotHoverSuppressedUntilConfigured();
-		testDotHoverCleanup();
+		pr2.DeterministicTestMode.runTest("MiniMapTest.testRasterizeScale", testRasterizeScale);
+		pr2.DeterministicTestMode.runTest("MiniMapTest.testFitScale", testFitScale);
+		pr2.DeterministicTestMode.runTest("MiniMapTest.testDotLabels", testDotLabels);
+		pr2.DeterministicTestMode.runTest("MiniMapTest.testDotColors", testDotColors);
+		pr2.DeterministicTestMode.runTest("MiniMapTest.testNativeMarkerStates", testNativeMarkerStates);
+		pr2.DeterministicTestMode.runTest("MiniMapTest.testDotHoverSuppressedUntilConfigured", testDotHoverSuppressedUntilConfigured);
+		pr2.DeterministicTestMode.runTest("MiniMapTest.testDotHoverCleanup", testDotHoverCleanup);
 		trace('MiniMapTest passed $assertions assertions');
 	}
 

@@ -4,7 +4,7 @@ class StatsDisplayTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testStatsAndHoverContent();
+		pr2.DeterministicTestMode.runTest("StatsDisplayTest.testStatsAndHoverContent", testStatsAndHoverContent);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("StatsDisplayTest")) return;
 		trace('StatsDisplayTest passed $assertions assertions');
 	}

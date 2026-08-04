@@ -12,16 +12,16 @@ class LevelConfigTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testDefaults();
+		pr2.DeterministicTestMode.runTest("LevelConfigTest.testDefaults", testDefaults);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LevelConfigTest")) return;
-		testItems();
-		testItemRuntimeSurface();
-		testBadHats();
-		testGameMode();
-		testCowboyChance();
-		testCredits();
-		testSetVariables();
-		testFromServerData();
+		pr2.DeterministicTestMode.runTest("LevelConfigTest.testItems", testItems);
+		pr2.DeterministicTestMode.runTest("LevelConfigTest.testItemRuntimeSurface", testItemRuntimeSurface);
+		pr2.DeterministicTestMode.runTest("LevelConfigTest.testBadHats", testBadHats);
+		pr2.DeterministicTestMode.runTest("LevelConfigTest.testGameMode", testGameMode);
+		pr2.DeterministicTestMode.runTest("LevelConfigTest.testCowboyChance", testCowboyChance);
+		pr2.DeterministicTestMode.runTest("LevelConfigTest.testCredits", testCredits);
+		pr2.DeterministicTestMode.runTest("LevelConfigTest.testSetVariables", testSetVariables);
+		pr2.DeterministicTestMode.runTest("LevelConfigTest.testFromServerData", testFromServerData);
 		trace('LevelConfigTest passed $assertions assertions');
 	}
 

@@ -6,12 +6,12 @@ class FrameRateSettingsTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testDisabledValues();
+		pr2.DeterministicTestMode.runTest("FrameRateSettingsTest.testDisabledValues", testDisabledValues);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("FrameRateSettingsTest")) return;
-		testExactOptIn();
-		testExplicitStrategies();
-		testNormalQueryParsing();
-		testHtml5PresentationPacing();
+		pr2.DeterministicTestMode.runTest("FrameRateSettingsTest.testExactOptIn", testExactOptIn);
+		pr2.DeterministicTestMode.runTest("FrameRateSettingsTest.testExplicitStrategies", testExplicitStrategies);
+		pr2.DeterministicTestMode.runTest("FrameRateSettingsTest.testNormalQueryParsing", testNormalQueryParsing);
+		pr2.DeterministicTestMode.runTest("FrameRateSettingsTest.testHtml5PresentationPacing", testHtml5PresentationPacing);
 		trace('FrameRateSettingsTest passed $assertions assertions');
 	}
 

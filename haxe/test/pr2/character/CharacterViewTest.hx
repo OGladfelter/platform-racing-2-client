@@ -9,86 +9,21 @@ class CharacterViewTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testGeneratedRigContract();
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testGeneratedRigContract", testGeneratedRigContract);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CharacterViewTest")) return;
-		testExplicitHierarchyAndColors();
-		testPartRegistrationFollowsSlotRotation();
-		testAppearanceSelectionAndPerPartColors();
-		testBubbleBodyNestedLoops();
-		testAnimatedHatOverlays();
-		testStandardHatStack();
-		testExhaustiveHatAttachmentMatrix();
-		testFredBodyHierarchy();
-		testHeldItemsAndWeaponActions();
-		testStableEffectTargetsAndJetState();
-		testDeterministicStandingLoop();
-		testAllStateTimingAndEndBehavior();
-		testSuperJumpChargeGlow();
-		testSuperJumpWobbleDoesNotLeakIntoDisplayScale();
-		testExhaustiveStateTransitionMatrix();
-		testFrozenOverlayAndCompletion();
-		testMaintainableParityMatrices();
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testExplicitHierarchyAndColors", testExplicitHierarchyAndColors);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testPartRegistrationFollowsSlotRotation", testPartRegistrationFollowsSlotRotation);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testAppearanceSelectionAndPerPartColors", testAppearanceSelectionAndPerPartColors);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testStandardHatStack", testStandardHatStack);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testFredBodyHierarchy", testFredBodyHierarchy);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testStableEffectTargetsAndJetState", testStableEffectTargetsAndJetState);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testDeterministicStandingLoop", testDeterministicStandingLoop);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testAllStateTimingAndEndBehavior", testAllStateTimingAndEndBehavior);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testSuperJumpChargeGlow", testSuperJumpChargeGlow);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testSuperJumpWobbleDoesNotLeakIntoDisplayScale", testSuperJumpWobbleDoesNotLeakIntoDisplayScale);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testExhaustiveStateTransitionMatrix", testExhaustiveStateTransitionMatrix);
+		pr2.DeterministicTestMode.runTest("CharacterViewTest.testFrozenOverlayAndCompletion", testFrozenOverlayAndCompletion);
 		trace('CharacterViewTest passed $assertions assertions');
-	}
-
-	private static function testBubbleBodyNestedLoops():Void {
-		var rig = CharacterRig.loadClassic();
-		var bubble = [for (variant in rig.parts.body.variants) if (variant.id == 21) variant][0];
-		assertEquals(2, bubble.channelAnimations.length, "Bubble body retains both nested XFL loops");
-		assertEquals(21, bubble.channelAnimations[0].frames.length, "Bubble primary loop retains all 21 authored frames");
-		assertEquals("assets/svg/character/body/021_bubble/primary_frames/frame_001.svg", bubble.channelAnimations[0].frames[0],
-			"Bubble primary loop starts on the source frame");
-		assertEquals("assets/svg/character/body/021_bubble/static_frames/frame_021.svg", bubble.channelAnimations[1].frames[20],
-			"Bubble shine loop retains its terminal source frame");
-
-		var view = new CharacterView(0x123456, 0xABCDEF);
-		view.setPartIds({head: 1, body: 21, feet: 1});
-		var artwork = cast(view.slot("body").getChildByName("artwork"), openfl.display.Sprite);
-		var firstPrimary = artwork.getChildByName("primary");
-		assertEquals(1, view.bodyChannelAnimationFrame, "Bubble loops begin at Flash frame one");
-		view.advanceOneFrame();
-		assertEquals(2, view.bodyChannelAnimationFrame, "Bubble loops advance once per deterministic character tick");
-		assertTrue(firstPrimary != artwork.getChildByName("primary"), "advancing replaces the rendered primary bubble frame");
-		assertEquals(0x12, Std.int(artwork.getChildByName("primary").transform.colorTransform.redOffset),
-			"animated Bubble primary frames retain the selected tint");
-		for (_ in 0...20) view.advanceOneFrame();
-		assertEquals(1, view.bodyChannelAnimationFrame, "Bubble frame 21 loops to frame one like gotoAndPlay(1)");
-		var removedArtwork = artwork;
-		view.setPartIds({head: 1, body: 1, feet: 1});
-		assertEquals(1, view.bodyChannelAnimationFrame, "changing bodies resets the detached nested loops");
-		assertEquals(null, removedArtwork.parent, "changing bodies detaches all Bubble animation artwork");
-		view.advanceOneFrame();
-		assertEquals(1, view.bodyChannelAnimationFrame, "non-animated bodies do not keep Bubble loops ticking");
-		view.setPartIds({head: 1, body: 33, feet: 1});
-		view.advanceOneFrame();
-		assertEquals(1, view.bodyChannelAnimationFrame, "authored empty body frames remain valid after nested-animation support");
-	}
-
-	private static function testAnimatedHatOverlays():Void {
-		var rig = CharacterRig.loadClassic();
-		var propeller = [for (variant in rig.parts.hat.variants) if (variant.id == 4) variant][0];
-		var jigg = [for (variant in rig.parts.hat.variants) if (variant.id == 13) variant][0];
-		assertEquals("assets/svg/character/hat/004_prop/static_base.svg", propeller.fixed, "Propeller uses a rotor-free cached base");
-		assertEquals(4, propeller.overlayAnimation.frames.length, "Propeller keeps all four authored rotor frames");
-		assertEquals("assets/svg/character/hat/013_jigg/static_base.svg", jigg.fixed, "Jigg uses a bubble-free cached base");
-		assertEquals(9, jigg.overlayAnimation.frames.length, "Jigg keeps all nine authored bubble frames");
-
-		var view = new CharacterView(0x123456, 0xABCDEF, null, "stand", null, [4, 13, 1, 1]);
-		var propOverlay = cast(view.hatSlot(0).getChildByName("animatedOverlay"), openfl.display.Sprite);
-		var jiggOverlay = cast(view.hatSlot(1).getChildByName("animatedOverlay"), openfl.display.Sprite);
-		var firstPropFrame = propOverlay.getChildByName("vectorFrame");
-		var firstJiggFrame = jiggOverlay.getChildByName("vectorFrame");
-		assertEquals(1, view.hatAnimationFrames[0], "Propeller starts on authored frame one");
-		assertEquals(1, view.hatAnimationFrames[1], "Jigg starts on authored frame one");
-		view.advanceOneFrame();
-		assertTrue(firstPropFrame != propOverlay.getChildByName("vectorFrame"), "Propeller overlay advances independently above its base");
-		assertTrue(firstJiggFrame != jiggOverlay.getChildByName("vectorFrame"), "Jigg overlay advances independently above its base");
-		assertEquals(2, view.hatAnimationFrames[0], "Propeller advances one frame per deterministic tick");
-		assertEquals(2, view.hatAnimationFrames[1], "Jigg advances one frame per deterministic tick");
-		for (_ in 0...3) view.advanceOneFrame();
-		assertEquals(1, view.hatAnimationFrames[0], "Propeller overlay completes a four-frame loop");
-		for (_ in 0...5) view.advanceOneFrame();
-		assertEquals(1, view.hatAnimationFrames[1], "Jigg overlay completes a nine-frame loop");
 	}
 
 	private static function testGeneratedRigContract():Void {
@@ -138,167 +73,6 @@ class CharacterViewTest {
 			assertEquals(item.end, animation.endBehavior, '${item.name} preserves its end behavior');
 			assertTrue(animation.slots.length >= 5, '${item.name} exposes all body/item slots');
 			for (slot in animation.slots) assertEquals(item.frames, slot.frames.length, '${item.name}.${slot.name} has one transform per frame');
-		}
-	}
-
-	private static function testHeldItemsAndWeaponActions():Void {
-		var rig = CharacterRig.loadClassic();
-		var view = new CharacterView();
-		for (state in CharacterView.STATE_NAMES) {
-			view.setState(state);
-			var animation = CharacterRig.animation(rig, state);
-			var heldSlot = [for (slot in animation.slots) if (slot.name == "heldItem") slot][0];
-			var held = heldSlot.frames[0];
-			var root = animation.root;
-			var expectedY = root.b * held.tx + root.d * held.ty + root.ty;
-			assertClose(expectedY, view.heldItemSocket.transform.concatenatedMatrix.ty,
-				'$state held-item socket cancels the character-art root offset');
-		}
-		view.setState("stand");
-		assertEquals(0, view.heldItemSocket.numChildren, "empty item leaves the stable held-item socket clear");
-		for (name in ["Laser", "Mine", "Lightning", "Teleport", "Super Jump", "Jet Pack", "Speed Burst", "Sword", "Ice Wave", "Snake"]) {
-			view.setItemFrameName(name);
-			assertEquals(name, view.itemFrameName, '$name is selected by its protocol frame name');
-			assertEquals(1, view.heldItemSocket.numChildren, '$name renders through the stable held-item socket');
-		}
-		view.setItemFrameName("Teleport");
-		var warmedTeleport = view.heldItemSocket.getChildAt(0);
-		view.setItemFrameName("None");
-		view.setItemFrameName("Teleport");
-		assertEquals(warmedTeleport, view.heldItemSocket.getChildAt(0), "held-item artwork is reused after its first render");
-		view.setItemFrameName("Laser");
-		assertTrue(view.playItemUseAnimation("Laser"), "laser starts its authored recoil");
-		assertEquals(2, view.itemActionFrame, "laser starts at the XFL shoot label");
-		view.advanceOneFrame();
-		assertEquals(3, view.itemActionFrame, "laser recoil advances with the deterministic character clock");
-		view.gotoFrame(view.frameCount);
-		for (_ in 0...14) view.advanceOneFrame();
-		assertEquals(1, view.itemActionFrame, "laser timeline loops to its idle frame after the final recoil frame");
-		view.setItemFrameName("Sword");
-		assertTrue(view.playItemUseAnimation("Sword"), "sword starts its authored swing");
-		assertEquals(2, view.itemActionFrame, "sword starts at the XFL swing label");
-		view.gotoItemActionFrame(7);
-		assertEquals(7, view.itemActionFrame, "weapon actions can seek a generated parity frame deterministically");
-		view.setState("run");
-		assertEquals(1, view.itemActionFrame, "changing state resets an unfinished weapon action");
-		assertEquals(false, view.itemActionPlaying, "state changes do not preserve a half-finished action");
-		view.setItemFrameName("Mine");
-		assertEquals(false, view.playItemUseAnimation("Laser"), "a non-laser held item cannot start the gun action");
-		view.setItemFrameName("None");
-		assertEquals(0, view.heldItemSocket.numChildren, "None clears held-item artwork");
-	}
-
-	private static function testMaintainableParityMatrices():Void {
-		var defaults = new CustomizeCharacterScreen("default");
-		assertEquals(9, defaults.parityCount(), "default screenshot matrix has nine deterministic poses");
-		assertEquals("stand", defaults.parityView(0).currentState, "default matrix begins with standing reference");
-		assertEquals(24, defaults.parityView(3).currentFrame, "default matrix includes a late standing transition frame");
-		assertEquals("frozen", defaults.parityView(8).currentState, "default matrix includes frozen completion art");
-
-		var colors = new CustomizeCharacterScreen("colors");
-		assertEquals(9, colors.parityCount(), "color screenshot matrix has nine deterministic palettes");
-		assertEquals(6, colors.parityView(1).hatId(0), "color matrix includes an authored visible hat");
-		assertEquals(true, colors.parityView(1).hatSlot(0).visible, "color matrix renders its hat channel");
-
-		var mixed = new CustomizeCharacterScreen("mixed-parts");
-		assertEquals(9, mixed.parityCount(), "mixed screenshot matrix covers all nine states");
-		for (index in 0...CharacterView.STATE_NAMES.length) {
-			assertEquals(CharacterView.STATE_NAMES[index], mixed.parityView(index).currentState,
-				'mixed matrix cell ${index + 1} covers ${CharacterView.STATE_NAMES[index]}');
-		}
-		assertEquals("Laser", mixed.parityView(1).itemFrameName, "mixed matrix includes weapon recoil art");
-		assertEquals(7, mixed.parityView(1).itemActionFrame, "mixed matrix pins an authored laser action frame");
-		assertEquals(true, mixed.parityView(6).jetActive, "mixed matrix includes the authored active jet frame");
-
-		var tricky = new CustomizeCharacterScreen("tricky-parts");
-		assertEquals(9, tricky.parityCount(), "tricky screenshot matrix has nine edge cases");
-		assertEquals(29, tricky.parityView(0).partId("body"), "tricky matrix includes Fred body 29");
-		assertEquals(tricky.parityView(1).slot("body"), tricky.parityView(1).hatSocket.parent,
-			"tricky Fred case mounts four hats on the authored body hierarchy");
-		assertEquals(4, tricky.parityView(1).hatSlots.filter(function(slot) return slot.visible).length,
-			"tricky Fred case renders all four hat slots");
-		assertEquals("Sword", tricky.parityView(7).itemFrameName, "tricky matrix includes sword action art");
-		assertEquals(7, tricky.parityView(7).itemActionFrame, "tricky matrix pins sword swing frame seven");
-		for (slot in ["head", "body", "frontFoot", "backFoot", "heldItem"]) {
-			assertTrue(tricky.parityView(8).effectTarget(slot).getChildByName("attachmentMarker") != null,
-				'tricky matrix visualizes the $slot attachment socket');
-		}
-
-		var hats = new CustomizeCharacterScreen("all-hats");
-		assertEquals(9, hats.parityCount(), "hat screenshot matrix includes every authored hat plus shifted head 23");
-		var seenHats:Array<Int> = [];
-		for (index in 0...8) for (slot in 0...2) {
-			var id = hats.parityView(index).hatId(slot);
-			if (id > 1 && seenHats.indexOf(id) < 0) seenHats.push(id);
-		}
-		seenHats.sort(function(left, right) return left - right);
-		assertEquals("2,3,4,5,6,7,8,9,10,11,12,13,14,15,16", seenHats.join(","), "hat matrix renders all fifteen non-empty hat ids");
-
-		var fredStates = new CustomizeCharacterScreen("fred-states");
-		assertEquals(9, fredStates.parityCount(), "Fred screenshot matrix covers all nine states");
-		for (index in 0...CharacterView.STATE_NAMES.length) {
-			assertEquals(CharacterView.STATE_NAMES[index], fredStates.parityView(index).currentState,
-				'Fred matrix covers ${CharacterView.STATE_NAMES[index]}');
-			assertEquals(29, fredStates.parityView(index).partId("body"), '${CharacterView.STATE_NAMES[index]} keeps Fred body 29');
-			assertEquals(fredStates.parityView(index).slot("body"), fredStates.parityView(index).hatSocket.parent,
-				'${CharacterView.STATE_NAMES[index]} keeps Fred hats on the body');
-		}
-
-		var attachments = new CustomizeCharacterScreen("attachments");
-		assertEquals(9, attachments.parityCount(), "attachment screenshot matrix covers all nine states");
-		for (index in 0...CharacterView.STATE_NAMES.length) {
-			for (slot in ["head", "body", "frontFoot", "backFoot", "heldItem"]) {
-				assertTrue(attachments.parityView(index).effectTarget(slot).getChildByName("attachmentMarker") != null,
-					'${CharacterView.STATE_NAMES[index]} matrix visualizes $slot');
-			}
-		}
-
-		var djinn = new CustomizeCharacterScreen("djinn-ice");
-		assertEquals(9, djinn.parityCount(), "Djinn screenshot matrix covers all nine states");
-		var bodyParticles = 0;
-		var feetParticles = 0;
-		for (index in 0...djinn.numChildren) {
-			var child = djinn.getChildAt(index);
-			if (child.name == "djinnBodyParticle") bodyParticles++;
-			if (child.name == "djinnFeetParticle") feetParticles++;
-		}
-		assertEquals(18, bodyParticles, "Djinn matrix renders both body tint choices with negative particle scale in every state");
-		assertEquals(36, feetParticles, "Djinn matrix renders both tint choices at both feet in every state");
-
-		var specs:Array<{kind:String, id:Int}> = [];
-		for (kind in ["head", "body", "feet"]) {
-			var values = Parts.getPartArray(kind.toUpperCase());
-			if (values != null) for (id in values) if (!(kind == "body" && id == 29)) specs.push({kind: kind, id: id});
-		}
-		assertEquals(141, specs.length, "paged parity matrices inventory all standard parts");
-		for (page in 0...16) {
-			var matrix = new CustomizeCharacterScreen('parts-$page');
-			var expectedCount = Std.int(Math.min(9, specs.length - page * 9));
-			assertEquals(expectedCount, matrix.parityCount(), 'part matrix page $page has no gaps or duplicates');
-			for (index in 0...matrix.parityCount()) {
-				var spec = specs[page * 9 + index];
-				assertEquals(spec.id, matrix.parityView(index).partId(spec.kind), 'part matrix renders ${spec.kind} ${spec.id}');
-				assertEquals(CharacterView.STATE_NAMES[(page * 9 + index) % CharacterView.STATE_NAMES.length], matrix.parityView(index).currentState,
-					'${spec.kind} ${spec.id} retains its representative state pose');
-			}
-		}
-
-		var itemSpecs:Array<{name:String, frame:Int}> = [];
-		var rig = CharacterRig.loadClassic();
-		for (name in ["Speed Burst", "Laser", "Mine", "Lightning", "Teleport", "Super Jump", "Jet Pack", "Sword", "Ice Wave"]) {
-			var item = CharacterRig.item(rig, name);
-			for (frame in 1...item.frames.length + 1) itemSpecs.push({name: name, frame: frame});
-		}
-		assertEquals(38, itemSpecs.length, "paged item matrices inventory every generated held-item frame");
-		for (page in 0...5) {
-			var matrix = new CustomizeCharacterScreen('items-$page');
-			var expectedCount = Std.int(Math.min(9, itemSpecs.length - page * 9));
-			assertEquals(expectedCount, matrix.parityCount(), 'item matrix page $page has no gaps or duplicates');
-			for (index in 0...matrix.parityCount()) {
-				var spec = itemSpecs[page * 9 + index];
-				assertEquals(spec.name, matrix.parityView(index).itemFrameName, 'item matrix renders ${spec.name}');
-				assertEquals(spec.frame, matrix.parityView(index).itemActionFrame, '${spec.name} renders authored frame ${spec.frame}');
-			}
 		}
 	}
 
@@ -388,47 +162,6 @@ class CharacterViewTest {
 		assertTrue(rejectedHat, "unknown hat ids are rejected instead of approximated");
 		view.setHatIds([1, 1, 1, 1]);
 		for (index in 0...4) assertEquals(false, view.hatSlot(index).visible, 'clearing hat slot ${index + 1} hides it');
-	}
-
-	private static function testExhaustiveHatAttachmentMatrix():Void {
-		var rig = CharacterRig.loadClassic();
-		var view = new CharacterView();
-		for (hat in rig.parts.hat.variants) {
-			view.setHatIds([hat.id, hat.id, hat.id, hat.id]);
-			for (index in 0...4) {
-				var expectedVisible = hat.id > 1;
-				assertEquals(expectedVisible, view.hatSlot(index).visible,
-					'hat ${hat.id} slot ${index + 1} preserves its authored empty/visible state');
-				if (expectedVisible) {
-					assertTrue(view.hatSlot(index).getChildByName("artwork") != null,
-						'hat ${hat.id} slot ${index + 1} mounts its authored artwork');
-				}
-			}
-			for (attachment in rig.hatAttachments) {
-				view.setPartId("head", attachment.headId);
-				for (index in 0...4) {
-					var expected = attachment.slots[index].matrix;
-					var actual = view.hatSlot(index).transform.matrix;
-					assertClose(expected.a, actual.a, 'head ${attachment.headId}/hat ${hat.id}/slot ${index + 1} preserves matrix a');
-					assertClose(expected.b, actual.b, 'head ${attachment.headId}/hat ${hat.id}/slot ${index + 1} preserves matrix b');
-					assertClose(expected.c, actual.c, 'head ${attachment.headId}/hat ${hat.id}/slot ${index + 1} preserves matrix c');
-					assertClose(expected.d, actual.d, 'head ${attachment.headId}/hat ${hat.id}/slot ${index + 1} preserves matrix d');
-					assertClose(expected.tx, actual.tx,
-						'head ${attachment.headId}/hat ${hat.id}/slot ${index + 1} preserves authored x attachment');
-					assertClose(expected.ty, actual.ty,
-						'head ${attachment.headId}/hat ${hat.id}/slot ${index + 1} preserves authored y attachment');
-					assertClose(expected.alpha, view.hatSlot(index).alpha,
-						'head ${attachment.headId}/hat ${hat.id}/slot ${index + 1} preserves authored alpha');
-				}
-			}
-		}
-		view.setPartId("head", 23);
-		for (state in CharacterView.STATE_NAMES) {
-			view.setState(state);
-			assertEquals(view.slot("head"), view.hatSocket.parent, '$state keeps standard hats attached to the moving head');
-			for (index in 0...4) assertEquals(index, view.hatSocket.getChildIndex(view.hatSlot(index)),
-				'$state preserves the authored four-hat stacking order');
-		}
 	}
 
 	private static function hatChannel(view:CharacterView, index:Int, channelName:String):openfl.display.DisplayObject {

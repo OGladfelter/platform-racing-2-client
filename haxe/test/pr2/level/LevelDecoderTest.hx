@@ -6,13 +6,13 @@ class LevelDecoderTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testM3RelativeWalk();
+		pr2.DeterministicTestMode.runTest("LevelDecoderTest.testM3RelativeWalk", testM3RelativeWalk);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LevelDecoderTest")) return;
-		testM3ArtBackgroundAndLayers();
-		testM2SegMultOne();
-		testM4Options();
-		testM1HexAbsolute();
-		testUnsupportedModeThrows();
+		pr2.DeterministicTestMode.runTest("LevelDecoderTest.testM3ArtBackgroundAndLayers", testM3ArtBackgroundAndLayers);
+		pr2.DeterministicTestMode.runTest("LevelDecoderTest.testM2SegMultOne", testM2SegMultOne);
+		pr2.DeterministicTestMode.runTest("LevelDecoderTest.testM4Options", testM4Options);
+		pr2.DeterministicTestMode.runTest("LevelDecoderTest.testM1HexAbsolute", testM1HexAbsolute);
+		pr2.DeterministicTestMode.runTest("LevelDecoderTest.testUnsupportedModeThrows", testUnsupportedModeThrows);
 		trace('LevelDecoderTest passed $assertions assertions');
 	}
 

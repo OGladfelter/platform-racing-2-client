@@ -9,12 +9,12 @@ class PR2EncryptorTest {
 	private static var assertions = 0;
 
 	public static function main():Void {
-		testOpenSslFixture();
+		pr2.DeterministicTestMode.runTest("PR2EncryptorTest.testOpenSslFixture", testOpenSslFixture);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PR2EncryptorTest")) return;
-		testDecryptRoundTrip();
-		testAESPadCompatibility();
-		testEncryptorWrapper();
-		testEncryptorCleanup();
+		pr2.DeterministicTestMode.runTest("PR2EncryptorTest.testDecryptRoundTrip", testDecryptRoundTrip);
+		pr2.DeterministicTestMode.runTest("PR2EncryptorTest.testAESPadCompatibility", testAESPadCompatibility);
+		pr2.DeterministicTestMode.runTest("PR2EncryptorTest.testEncryptorWrapper", testEncryptorWrapper);
+		pr2.DeterministicTestMode.runTest("PR2EncryptorTest.testEncryptorCleanup", testEncryptorCleanup);
 		trace('PR2EncryptorTest passed $assertions assertions');
 	}
 

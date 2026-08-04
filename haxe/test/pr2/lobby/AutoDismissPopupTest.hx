@@ -9,10 +9,10 @@ class AutoDismissPopupTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testHitTestDismissal();
+		pr2.DeterministicTestMode.runTest("AutoDismissPopupTest.testHitTestDismissal", testHitTestDismissal);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("AutoDismissPopupTest")) return;
-		testCleanupIsIdempotent();
-		testPopupRemoveResetsFocus();
+		pr2.DeterministicTestMode.runTest("AutoDismissPopupTest.testCleanupIsIdempotent", testCleanupIsIdempotent);
+		pr2.DeterministicTestMode.runTest("AutoDismissPopupTest.testPopupRemoveResetsFocus", testPopupRemoveResetsFocus);
 		StageFocus.resetHooks();
 		trace('AutoDismissPopupTest passed $assertions assertions');
 	}

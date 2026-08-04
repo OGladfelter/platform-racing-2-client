@@ -4,11 +4,11 @@ class ForgotPasswordClientTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testBuildsFlashCompatibleFields();
+		pr2.DeterministicTestMode.runTest("ForgotPasswordClientTest.testBuildsFlashCompatibleFields", testBuildsFlashCompatibleFields);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ForgotPasswordClientTest")) return;
-		testParsesSuccessMessage();
-		testParsesServerError();
-		testRejectsFailedResponseWithoutError();
+		pr2.DeterministicTestMode.runTest("ForgotPasswordClientTest.testParsesSuccessMessage", testParsesSuccessMessage);
+		pr2.DeterministicTestMode.runTest("ForgotPasswordClientTest.testParsesServerError", testParsesServerError);
+		pr2.DeterministicTestMode.runTest("ForgotPasswordClientTest.testRejectsFailedResponseWithoutError", testRejectsFailedResponseWithoutError);
 		trace('ForgotPasswordClientTest passed $assertions assertions');
 	}
 

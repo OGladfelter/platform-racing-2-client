@@ -19,12 +19,12 @@ class LevelEntryStateTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testSelectionHandoff();
+		pr2.DeterministicTestMode.runTest("LevelEntryStateTest.testSelectionHandoff", testSelectionHandoff);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LevelEntryStateTest")) return;
-		testReadyEnablesSpectate();
-		testDownloadCorruptionError();
-		testEmptyPayloadError();
-		testTooShortPayloadIsDownloadError();
+		pr2.DeterministicTestMode.runTest("LevelEntryStateTest.testReadyEnablesSpectate", testReadyEnablesSpectate);
+		pr2.DeterministicTestMode.runTest("LevelEntryStateTest.testDownloadCorruptionError", testDownloadCorruptionError);
+		pr2.DeterministicTestMode.runTest("LevelEntryStateTest.testEmptyPayloadError", testEmptyPayloadError);
+		pr2.DeterministicTestMode.runTest("LevelEntryStateTest.testTooShortPayloadIsDownloadError", testTooShortPayloadIsDownloadError);
 		trace('LevelEntryStateTest passed $assertions assertions');
 	}
 

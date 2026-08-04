@@ -14,9 +14,9 @@ class CatCaptchaTest {
 	private static final originalImage = CatCaptcha.imageFactory;
 
 	public static function main():Void {
-		testChallengeShowsTwoAnswers();
+		pr2.DeterministicTestMode.runTest("CatCaptchaTest.testChallengeShowsTwoAnswers", testChallengeShowsTwoAnswers);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CatCaptchaTest")) return;
-		testClickSubmitsAndFades();
+		pr2.DeterministicTestMode.runTest("CatCaptchaTest.testClickSubmitsAndFades", testClickSubmitsAndFades);
 		restoreFactories();
 		trace('CatCaptchaTest passed $assertions assertions');
 	}

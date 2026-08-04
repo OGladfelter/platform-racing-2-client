@@ -24,10 +24,10 @@ class ChangePasswordPopupTest {
 		ServerConfig.setHost("http://example.test");
 		LobbySession.userName = "Password Tester";
 
-		testValidation();
+		pr2.DeterministicTestMode.runTest("ChangePasswordPopupTest.testValidation", testValidation);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ChangePasswordPopupTest")) return;
-		testEncryptedUploadFromEnterKey();
-		testCancel();
+		pr2.DeterministicTestMode.runTest("ChangePasswordPopupTest.testEncryptedUploadFromEnterKey", testEncryptedUploadFromEnterKey);
+		pr2.DeterministicTestMode.runTest("ChangePasswordPopupTest.testCancel", testCancel);
 
 		LobbySession.userName = savedUserName;
 		ChangePasswordPopup.uploadFactory = savedUploadFactory;

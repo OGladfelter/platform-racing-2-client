@@ -12,12 +12,12 @@ class LocalCharacterEmitTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testInitAndCadenceGatedPositionEmission();
+		pr2.DeterministicTestMode.runTest("LocalCharacterEmitTest.testInitAndCadenceGatedPositionEmission", testInitAndCadenceGatedPositionEmission);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LocalCharacterEmitTest")) return;
-		testFallbackCadenceWithoutRemotePlayers();
-		testPeriodicExactPositionResync();
-		testTrackedVarAndEventEmission();
-		testHeartBlockGainEmitsLocalHeartProtocol();
+		pr2.DeterministicTestMode.runTest("LocalCharacterEmitTest.testFallbackCadenceWithoutRemotePlayers", testFallbackCadenceWithoutRemotePlayers);
+		pr2.DeterministicTestMode.runTest("LocalCharacterEmitTest.testPeriodicExactPositionResync", testPeriodicExactPositionResync);
+		pr2.DeterministicTestMode.runTest("LocalCharacterEmitTest.testTrackedVarAndEventEmission", testTrackedVarAndEventEmission);
+		pr2.DeterministicTestMode.runTest("LocalCharacterEmitTest.testHeartBlockGainEmitsLocalHeartProtocol", testHeartBlockGainEmitsLocalHeartProtocol);
 		trace('LocalCharacterEmitTest passed $assertions assertions');
 	}
 

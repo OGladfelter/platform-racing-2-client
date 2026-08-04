@@ -8,11 +8,11 @@ class JiggminRandomCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testSeedAndPublicSequence();
+		pr2.DeterministicTestMode.runTest("JiggminRandomCompatTest.testSeedAndPublicSequence", testSeedAndPublicSequence);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("JiggminRandomCompatTest")) return;
-		testNextBytes();
-		testRangeErrors();
-		testFlashRandomWrapper();
+		pr2.DeterministicTestMode.runTest("JiggminRandomCompatTest.testNextBytes", testNextBytes);
+		pr2.DeterministicTestMode.runTest("JiggminRandomCompatTest.testRangeErrors", testRangeErrors);
+		pr2.DeterministicTestMode.runTest("JiggminRandomCompatTest.testFlashRandomWrapper", testFlashRandomWrapper);
 		trace('JiggminRandomCompatTest passed $assertions assertions');
 	}
 

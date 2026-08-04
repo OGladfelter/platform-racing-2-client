@@ -14,15 +14,15 @@ class SuperLoaderTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testPrepareFields();
+		pr2.DeterministicTestMode.runTest("SuperLoaderTest.testPrepareFields", testPrepareFields);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SuperLoaderTest")) return;
-		testAppendQueryFields();
-		testDecodeJsonMessagesAndErrors();
-		testDecodeUrlVariables();
-		testFormatIoError();
-		testEventedJsonLoad();
-		testPostDecorationAndRawData();
-		testErrorEventAndCancellationCleanup();
+		pr2.DeterministicTestMode.runTest("SuperLoaderTest.testAppendQueryFields", testAppendQueryFields);
+		pr2.DeterministicTestMode.runTest("SuperLoaderTest.testDecodeJsonMessagesAndErrors", testDecodeJsonMessagesAndErrors);
+		pr2.DeterministicTestMode.runTest("SuperLoaderTest.testDecodeUrlVariables", testDecodeUrlVariables);
+		pr2.DeterministicTestMode.runTest("SuperLoaderTest.testFormatIoError", testFormatIoError);
+		pr2.DeterministicTestMode.runTest("SuperLoaderTest.testEventedJsonLoad", testEventedJsonLoad);
+		pr2.DeterministicTestMode.runTest("SuperLoaderTest.testPostDecorationAndRawData", testPostDecorationAndRawData);
+		pr2.DeterministicTestMode.runTest("SuperLoaderTest.testErrorEventAndCancellationCleanup", testErrorEventAndCancellationCleanup);
 		SuperLoader.resetHooks();
 		LobbySession.token = "";
 		trace('SuperLoaderTest passed $assertions assertions');

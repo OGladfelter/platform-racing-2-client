@@ -8,7 +8,7 @@ class SelectableButtonTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testHoverAndSelectedFrameState();
+		pr2.DeterministicTestMode.runTest("SelectableButtonTest.testHoverAndSelectedFrameState", testHoverAndSelectedFrameState);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SelectableButtonTest")) return;
 		trace('SelectableButtonTest passed $assertions assertions');
 	}

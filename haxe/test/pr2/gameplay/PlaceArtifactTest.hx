@@ -13,13 +13,13 @@ class PlaceArtifactTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testInitialTimeSelection();
+		pr2.DeterministicTestMode.runTest("PlaceArtifactTest.testInitialTimeSelection", testInitialTimeSelection);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PlaceArtifactTest")) return;
-		testVariableMonthLengths();
-		testTextValidationAndSetTime();
-		testPlaceNowDisablesDateControls();
-		testPlaceConfirmationUploadsFields();
-		testScheduledResponsePromptsOverrideUpload();
+		pr2.DeterministicTestMode.runTest("PlaceArtifactTest.testVariableMonthLengths", testVariableMonthLengths);
+		pr2.DeterministicTestMode.runTest("PlaceArtifactTest.testTextValidationAndSetTime", testTextValidationAndSetTime);
+		pr2.DeterministicTestMode.runTest("PlaceArtifactTest.testPlaceNowDisablesDateControls", testPlaceNowDisablesDateControls);
+		pr2.DeterministicTestMode.runTest("PlaceArtifactTest.testPlaceConfirmationUploadsFields", testPlaceConfirmationUploadsFields);
+		pr2.DeterministicTestMode.runTest("PlaceArtifactTest.testScheduledResponsePromptsOverrideUpload", testScheduledResponsePromptsOverrideUpload);
 		closeAll();
 		trace('PlaceArtifactTest passed $assertions assertions');
 	}

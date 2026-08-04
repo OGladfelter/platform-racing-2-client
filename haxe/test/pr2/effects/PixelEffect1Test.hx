@@ -8,10 +8,10 @@ class PixelEffect1Test {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testSegmentGridCoversPartialEdges();
+		pr2.DeterministicTestMode.runTest("PixelEffect1Test.testSegmentGridCoversPartialEdges", testSegmentGridCoversPartialEdges);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("PixelEffect1Test")) return;
-		testDrawPixelConsumesSegmentsAndUsesConfiguredBackground();
-		testSegPixelSettlesIntoProductAndRemovesItself();
+		pr2.DeterministicTestMode.runTest("PixelEffect1Test.testDrawPixelConsumesSegmentsAndUsesConfiguredBackground", testDrawPixelConsumesSegmentsAndUsesConfiguredBackground);
+		pr2.DeterministicTestMode.runTest("PixelEffect1Test.testSegPixelSettlesIntoProductAndRemovesItself", testSegPixelSettlesIntoProductAndRemovesItself);
 		trace('PixelEffect1Test passed $assertions assertions');
 	}
 

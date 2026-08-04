@@ -7,13 +7,13 @@ class LevelTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testDecodedWorldCoordinates();
+		pr2.DeterministicTestMode.runTest("LevelTest.testDecodedWorldCoordinates", testDecodedWorldCoordinates);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LevelTest")) return;
-		testNegativeWorldCoordinates();
-		testRotationUsesWorldOrigin();
-		testOptionsAndOverlappingMarkers();
-		testOverlappingRuntimeBlocksUseLastLoadedBlock();
-		testBlockTypeMapping();
+		pr2.DeterministicTestMode.runTest("LevelTest.testNegativeWorldCoordinates", testNegativeWorldCoordinates);
+		pr2.DeterministicTestMode.runTest("LevelTest.testRotationUsesWorldOrigin", testRotationUsesWorldOrigin);
+		pr2.DeterministicTestMode.runTest("LevelTest.testOptionsAndOverlappingMarkers", testOptionsAndOverlappingMarkers);
+		pr2.DeterministicTestMode.runTest("LevelTest.testOverlappingRuntimeBlocksUseLastLoadedBlock", testOverlappingRuntimeBlocksUseLastLoadedBlock);
+		pr2.DeterministicTestMode.runTest("LevelTest.testBlockTypeMapping", testBlockTypeMapping);
 		trace('LevelTest passed $assertions assertions');
 	}
 

@@ -9,10 +9,10 @@ class MD5CompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testAdobeMd5Surface();
+		pr2.DeterministicTestMode.runTest("MD5CompatTest.testAdobeMd5Surface", testAdobeMd5Surface);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("MD5CompatTest")) return;
-		testHurlantMd5Surface();
-		testIntUtilEndianAndRotates();
+		pr2.DeterministicTestMode.runTest("MD5CompatTest.testHurlantMd5Surface", testHurlantMd5Surface);
+		pr2.DeterministicTestMode.runTest("MD5CompatTest.testIntUtilEndianAndRotates", testIntUtilEndianAndRotates);
 		trace('MD5CompatTest passed $assertions assertions');
 	}
 

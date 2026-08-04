@@ -16,13 +16,13 @@ class FinishedPageTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testAwardsAndExpTotal();
+		pr2.DeterministicTestMode.runTest("FinishedPageTest.testAwardsAndExpTotal", testAwardsAndExpTotal);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("FinishedPageTest")) return;
-		testExpGainAnimation();
-		testExpGainClamp();
-		testRatingFromOffset();
-		testNativeRatingMeter();
-		testPreparedAssetsAreReused();
+		pr2.DeterministicTestMode.runTest("FinishedPageTest.testExpGainAnimation", testExpGainAnimation);
+		pr2.DeterministicTestMode.runTest("FinishedPageTest.testExpGainClamp", testExpGainClamp);
+		pr2.DeterministicTestMode.runTest("FinishedPageTest.testRatingFromOffset", testRatingFromOffset);
+		pr2.DeterministicTestMode.runTest("FinishedPageTest.testNativeRatingMeter", testNativeRatingMeter);
+		pr2.DeterministicTestMode.runTest("FinishedPageTest.testPreparedAssetsAreReused", testPreparedAssetsAreReused);
 		closeAll();
 		trace('FinishedPageTest passed $assertions assertions');
 	}

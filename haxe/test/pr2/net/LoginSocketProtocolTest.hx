@@ -6,12 +6,12 @@ class LoginSocketProtocolTest {
 	private static var assertions = 0;
 
 	public static function main():Void {
-		testBuildsLoginIdRequestFrame();
+		pr2.DeterministicTestMode.runTest("LoginSocketProtocolTest.testBuildsLoginIdRequestFrame", testBuildsLoginIdRequestFrame);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LoginSocketProtocolTest")) return;
-		testUsesServerTenSocketToken();
-		testSkipsSendNumberTwelve();
-		testParsesBufferedLoginId();
-		testParsesLoginResponses();
+		pr2.DeterministicTestMode.runTest("LoginSocketProtocolTest.testUsesServerTenSocketToken", testUsesServerTenSocketToken);
+		pr2.DeterministicTestMode.runTest("LoginSocketProtocolTest.testSkipsSendNumberTwelve", testSkipsSendNumberTwelve);
+		pr2.DeterministicTestMode.runTest("LoginSocketProtocolTest.testParsesBufferedLoginId", testParsesBufferedLoginId);
+		pr2.DeterministicTestMode.runTest("LoginSocketProtocolTest.testParsesLoginResponses", testParsesLoginResponses);
 		trace('LoginSocketProtocolTest passed $assertions assertions');
 	}
 

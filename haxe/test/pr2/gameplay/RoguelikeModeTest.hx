@@ -12,12 +12,12 @@ class RoguelikeModeTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testInitialStateAndHeartCap();
+		pr2.DeterministicTestMode.runTest("RoguelikeModeTest.testInitialStateAndHeartCap", testInitialStateAndHeartCap);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("RoguelikeModeTest")) return;
-		testConfigurationBansEveryHat();
-		testNinthFinishWinsBeforeLastHeartDeath();
-		testDeathResetsProgressionResources();
-		testCombatDamageRestartsRun();
+		pr2.DeterministicTestMode.runTest("RoguelikeModeTest.testConfigurationBansEveryHat", testConfigurationBansEveryHat);
+		pr2.DeterministicTestMode.runTest("RoguelikeModeTest.testNinthFinishWinsBeforeLastHeartDeath", testNinthFinishWinsBeforeLastHeartDeath);
+		pr2.DeterministicTestMode.runTest("RoguelikeModeTest.testDeathResetsProgressionResources", testDeathResetsProgressionResources);
+		pr2.DeterministicTestMode.runTest("RoguelikeModeTest.testCombatDamageRestartsRun", testCombatDamageRestartsRun);
 		trace('RoguelikeModeTest passed $assertions assertions');
 	}
 

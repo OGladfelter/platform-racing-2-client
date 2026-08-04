@@ -7,10 +7,10 @@ class DataCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testStringAndNumberHelpers();
+		pr2.DeterministicTestMode.runTest("DataCompatTest.testStringAndNumberHelpers", testStringAndNumberHelpers);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("DataCompatTest")) return;
-		testParseLinks();
-		testGeometryAndRandomHelpers();
+		pr2.DeterministicTestMode.runTest("DataCompatTest.testParseLinks", testParseLinks);
+		pr2.DeterministicTestMode.runTest("DataCompatTest.testGeometryAndRandomHelpers", testGeometryAndRandomHelpers);
 		trace('DataCompatTest passed $assertions assertions');
 	}
 

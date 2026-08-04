@@ -4,13 +4,13 @@ class ServerStatusClientTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testParsesServerList();
+		pr2.DeterministicTestMode.runTest("ServerStatusClientTest.testParsesServerList", testParsesServerList);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ServerStatusClientTest")) return;
-		testFlashLabels();
-		testOrdersAndSelectsServers();
-		testBetaAndInvalidFiltering();
-		testDuplicateServerIdsAreSkipped();
-		testFallbackSelectionUsesFirstSortedServer();
+		pr2.DeterministicTestMode.runTest("ServerStatusClientTest.testFlashLabels", testFlashLabels);
+		pr2.DeterministicTestMode.runTest("ServerStatusClientTest.testOrdersAndSelectsServers", testOrdersAndSelectsServers);
+		pr2.DeterministicTestMode.runTest("ServerStatusClientTest.testBetaAndInvalidFiltering", testBetaAndInvalidFiltering);
+		pr2.DeterministicTestMode.runTest("ServerStatusClientTest.testDuplicateServerIdsAreSkipped", testDuplicateServerIdsAreSkipped);
+		pr2.DeterministicTestMode.runTest("ServerStatusClientTest.testFallbackSelectionUsesFirstSortedServer", testFallbackSelectionUsesFirstSortedServer);
 		trace('ServerStatusClientTest passed $assertions assertions');
 	}
 

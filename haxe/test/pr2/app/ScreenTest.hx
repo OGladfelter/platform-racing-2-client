@@ -6,11 +6,11 @@ class ScreenTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testCampaignHarnessRequiresDebugFlag();
-		testCharacterPartCacheVisualRoute();
+		pr2.DeterministicTestMode.runTest("ScreenTest.testCampaignHarnessRequiresDebugFlag", testCampaignHarnessRequiresDebugFlag);
+		pr2.DeterministicTestMode.runTest("ScreenTest.testCharacterPartCacheVisualRoute", testCharacterPartCacheVisualRoute);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ScreenTest")) return;
-		testSiteModeMatchesFlashDomainRules();
-		testLoginPageAssetMatchesSiteMode();
+		pr2.DeterministicTestMode.runTest("ScreenTest.testSiteModeMatchesFlashDomainRules", testSiteModeMatchesFlashDomainRules);
+		pr2.DeterministicTestMode.runTest("ScreenTest.testLoginPageAssetMatchesSiteMode", testLoginPageAssetMatchesSiteMode);
 		trace('ScreenTest passed $assertions assertions');
 	}
 

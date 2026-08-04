@@ -17,18 +17,18 @@ class ColorPickerTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testColorUtilCompatibility();
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testColorUtilCompatibility", testColorUtilCompatibility);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ColorPickerTest")) return;
-		testColorChoicesPalette();
-		testColorPickerEventsAndRecents();
-		testAccountPartSelectorPickerSize();
-		testPopupOrientationAndDirection();
-		testPopupTextPaletteAndCancel();
-		testPopupSpectrumAndHue();
-		testAuthoredPickerArtRegistration();
-		testExactPopupShell();
-		testCursorEyedropperSamplingAndExclusions();
-		testPopupRestoresPriorCustomCursor();
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testColorChoicesPalette", testColorChoicesPalette);
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testColorPickerEventsAndRecents", testColorPickerEventsAndRecents);
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testAccountPartSelectorPickerSize", testAccountPartSelectorPickerSize);
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testPopupOrientationAndDirection", testPopupOrientationAndDirection);
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testPopupTextPaletteAndCancel", testPopupTextPaletteAndCancel);
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testPopupSpectrumAndHue", testPopupSpectrumAndHue);
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testAuthoredPickerArtRegistration", testAuthoredPickerArtRegistration);
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testExactPopupShell", testExactPopupShell);
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testCursorEyedropperSamplingAndExclusions", testCursorEyedropperSamplingAndExclusions);
+		pr2.DeterministicTestMode.runTest("ColorPickerTest.testPopupRestoresPriorCustomCursor", testPopupRestoresPriorCustomCursor);
 		trace('ColorPickerTest passed $assertions assertions');
 	}
 

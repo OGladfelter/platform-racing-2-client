@@ -4,9 +4,9 @@ class AsyncRemovalGuardTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testWrapNoopsAfterRemove();
+		pr2.DeterministicTestMode.runTest("AsyncRemovalGuardTest.testWrapNoopsAfterRemove", testWrapNoopsAfterRemove);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("AsyncRemovalGuardTest")) return;
-		testWatchRemovesTrackedResources();
+		pr2.DeterministicTestMode.runTest("AsyncRemovalGuardTest.testWatchRemovesTrackedResources", testWatchRemovesTrackedResources);
 		trace('AsyncRemovalGuardTest passed $assertions assertions');
 	}
 

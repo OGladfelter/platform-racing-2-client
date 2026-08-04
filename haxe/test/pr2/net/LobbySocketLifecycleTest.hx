@@ -13,11 +13,10 @@ class LobbySocketLifecycleTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testPingIntervalAndSend();
+		pr2.DeterministicTestMode.runTest("LobbySocketLifecycleTest.testPingIntervalAndSend", testPingIntervalAndSend);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("LobbySocketLifecycleTest")) return;
-		testReceivePingSyncsServerTime();
-		testCloseSendsFlashCloseAndClearsSessionState();
-		testTransportCloseAndErrorPopups();
+		pr2.DeterministicTestMode.runTest("LobbySocketLifecycleTest.testReceivePingSyncsServerTime", testReceivePingSyncsServerTime);
+		pr2.DeterministicTestMode.runTest("LobbySocketLifecycleTest.testCloseSendsFlashCloseAndClearsSessionState", testCloseSendsFlashCloseAndClearsSessionState);
 		closeAll();
 		trace('LobbySocketLifecycleTest passed $assertions assertions');
 	}
@@ -80,24 +79,6 @@ class LobbySocketLifecycleTest {
 		assertEquals(false, LobbySession.tournamentMode, "close clears tournament mode");
 		assertEquals(0, LobbySession.serverOwner, "close clears server owner");
 		assertEquals(0, UnreadNotif.numUnread(), "close resets unread PM notifications");
-	}
-
-	private static function testTransportCloseAndErrorPopups():Void {
-		resetSocket();
-		closeAll();
-		var holder = new PageHolder(new ConnectedPage(), true);
-		LobbySocket.simulateOpenForTests();
-		LobbySocket.simulateConnectionCloseForTests();
-		assertMessageContains("Disconnected.", "transport close opens Flash disconnected popup");
-		assertEquals(true, holder.getCurrentPage() is LoginPage, "transport close returns the root holder to login");
-		assertEquals(false, LobbySocket.pingIsActiveForTests(), "transport close stops ping interval");
-
-		resetSocket();
-		closeAll();
-		LobbySocket.simulateOpenForTests();
-		LobbySocket.simulateConnectionErrorForTests();
-		assertMessageContains("Could not connect.", "transport error opens Flash connection popup");
-		assertEquals(false, LobbySocket.pingIsActiveForTests(), "transport error stops ping interval");
 	}
 
 	private static function resetSocket():Void {

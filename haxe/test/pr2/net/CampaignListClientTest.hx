@@ -7,9 +7,9 @@ class CampaignListClientTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testParsesCampaignListAndValidatesHash();
+		pr2.DeterministicTestMode.runTest("CampaignListClientTest.testParsesCampaignListAndValidatesHash", testParsesCampaignListAndValidatesHash);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CampaignListClientTest")) return;
-		testRejectsMissingLevels();
+		pr2.DeterministicTestMode.runTest("CampaignListClientTest.testRejectsMissingLevels", testRejectsMissingLevels);
 		trace('CampaignListClientTest passed $assertions assertions');
 	}
 

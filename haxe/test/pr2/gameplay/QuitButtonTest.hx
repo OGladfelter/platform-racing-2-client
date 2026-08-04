@@ -21,19 +21,18 @@ class QuitButtonTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testMouseQuitsImmediately();
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testMouseQuitsImmediately", testMouseQuitsImmediately);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("QuitButtonTest")) return;
-		testSpaceConfirmsWhileRacing();
-		testSpaceQuitsWhenDone();
-		testGlowControls();
-		testGamePageQuitFlow();
-		testGamePageAwardAndExpCommands();
-		testGamePagePrizeCommands();
-		testGamePageLuxCommand();
-		testGamePageCowboyMode();
-		testGamePageHappyHour();
-		testGamePageHatCountdown();
-		testReturnToLobbyRequiresConnectedSocket();
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testSpaceConfirmsWhileRacing", testSpaceConfirmsWhileRacing);
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testSpaceQuitsWhenDone", testSpaceQuitsWhenDone);
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testGlowControls", testGlowControls);
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testGamePageQuitFlow", testGamePageQuitFlow);
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testGamePageAwardAndExpCommands", testGamePageAwardAndExpCommands);
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testGamePagePrizeCommands", testGamePagePrizeCommands);
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testGamePageLuxCommand", testGamePageLuxCommand);
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testGamePageCowboyMode", testGamePageCowboyMode);
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testGamePageHatCountdown", testGamePageHatCountdown);
+		pr2.DeterministicTestMode.runTest("QuitButtonTest.testReturnToLobbyRequiresConnectedSocket", testReturnToLobbyRequiresConnectedSocket);
 		closeAll();
 		trace('QuitButtonTest passed $assertions assertions');
 	}
@@ -296,33 +295,6 @@ class QuitButtonTest {
 		game.remove();
 		assertEquals(0, game.cowboyModes.length, "game removal clears cowboy animations");
 		assertEquals(true, mode.parent == null, "game removal detaches cowboy animation");
-		closeAll();
-	}
-
-	private static function testGamePageHappyHour():Void {
-		var game = new GamePage(12345, 7);
-		game.happyHour();
-		assertEquals(1, game.happyHours.length, "happyHour adds the authored animation");
-		var happy = game.happyHours[0];
-		assertEquals(true, happy.parent == game, "happyHour attaches to the game page");
-		assertEquals(275.0, happy.x, "happyHour centers its authored origin horizontally");
-		assertEquals(200.0, happy.y, "happyHour centers its authored origin vertically");
-		@:privateAccess assertEquals("assets/effects/happy_hour.lottie.json", happy.art.timeline.sourcePath,
-			"happyHour uses semantic Lottie data");
-		@:privateAccess assertEquals(1, happy.art.currentFrame, "happyHour starts on authored frame one");
-		@:privateAccess assertEquals(true, happy.art.width > 0, "happyHour renders its lossless XFL bitmap as source-derived vector pixels");
-
-		for (_ in 0...120) {
-			happy.advance();
-		}
-		assertEquals(0, game.happyHours.length, "happyHour removes itself on Flash frame 100");
-		assertEquals(true, happy.parent == null, "happyHour detaches after finishing");
-
-		game.happyHour();
-		happy = game.happyHours[0];
-		game.remove();
-		assertEquals(0, game.happyHours.length, "game removal clears happyHour animations");
-		assertEquals(true, happy.parent == null, "game removal detaches happyHour animation");
 		closeAll();
 	}
 

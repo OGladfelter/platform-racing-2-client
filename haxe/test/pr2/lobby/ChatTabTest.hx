@@ -15,10 +15,10 @@ class ChatTabTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testChatRoomInfoPopupCommandLifecycle();
+		pr2.DeterministicTestMode.runTest("ChatTabTest.testChatRoomInfoPopupCommandLifecycle", testChatRoomInfoPopupCommandLifecycle);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ChatTabTest")) return;
-		testChatTabInfoHoverLifecycle();
-		testArtifactHintCommandLifecycle();
+		pr2.DeterministicTestMode.runTest("ChatTabTest.testChatTabInfoHoverLifecycle", testChatTabInfoHoverLifecycle);
+		pr2.DeterministicTestMode.runTest("ChatTabTest.testArtifactHintCommandLifecycle", testArtifactHintCommandLifecycle);
 		trace('ChatTabTest passed $assertions assertions');
 	}
 

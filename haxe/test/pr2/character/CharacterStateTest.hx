@@ -4,9 +4,9 @@ class CharacterStateTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testFromMotionPriorities();
+		pr2.DeterministicTestMode.runTest("CharacterStateTest.testFromMotionPriorities", testFromMotionPriorities);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("CharacterStateTest")) return;
-		testClipNames();
+		pr2.DeterministicTestMode.runTest("CharacterStateTest.testClipNames", testClipNames);
 		trace('CharacterStateTest passed $assertions assertions');
 	}
 

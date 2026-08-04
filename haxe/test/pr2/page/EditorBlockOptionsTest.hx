@@ -26,8 +26,11 @@ class EditorBlockOptionsTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testItemBlockHasOptions", function():Void {
 		assertEquals(true, EditorBlockOptions.hasOptions(BlockType.Item), "item blocks expose options");
+		});
 		if (pr2.DeterministicTestMode.finishSmokeSuite("EditorBlockOptionsTest")) return;
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testOptionSerialization", function():Void {
 		assertEquals(true, EditorBlockOptions.hasOptions(BlockType.InfiniteItem), "infinite item blocks expose options");
 		assertEquals(true, EditorBlockOptions.hasOptions(BlockType.Teleport), "teleport blocks expose options");
 		assertEquals(true, EditorBlockOptions.hasOptions(BlockType.Happy), "happy blocks expose options");
@@ -60,14 +63,15 @@ class EditorBlockOptionsTest {
 		assertArrayEquals([50, 50, 50], EditorBlockOptions.customStats(""), "empty custom stats load defaults");
 		assertArrayEquals([50, 50, 50], EditorBlockOptions.customStats("reset"), "reset custom stats keep slider defaults");
 		assertArrayEquals([100, 75, 100], EditorBlockOptions.customStats("105-75-140"), "custom stats load clamped values");
-		testEditorEggBlockUsesAuthoredGraphic();
-		testAuthoredBlockOptionsViews();
-		testAuthoredTestCourseViews();
-		testAuthoredLevelListRows();
-		testAuthoredGetLevelsView();
-		testAuthoredSaveLevelView();
-		testAuthoredEditorStatusViews();
-		testAuthoredHandleReportView();
+		});
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testEditorEggBlockUsesAuthoredGraphic", testEditorEggBlockUsesAuthoredGraphic);
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredBlockOptionsViews", testAuthoredBlockOptionsViews);
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredTestCourseViews", testAuthoredTestCourseViews);
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredLevelListRows", testAuthoredLevelListRows);
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredGetLevelsView", testAuthoredGetLevelsView);
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredSaveLevelView", testAuthoredSaveLevelView);
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredEditorStatusViews", testAuthoredEditorStatusViews);
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredHandleReportView", testAuthoredHandleReportView);
 
 		trace('EditorBlockOptionsTest passed $assertions assertions');
 	}

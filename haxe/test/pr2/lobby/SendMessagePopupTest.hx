@@ -19,10 +19,10 @@ class SendMessagePopupTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testEntryPoint();
+		pr2.DeterministicTestMode.runTest("SendMessagePopupTest.testEntryPoint", testEntryPoint);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SendMessagePopupTest")) return;
-		testExactViewAndNestedCodes();
-		testValidationAndUploadFlows();
+		pr2.DeterministicTestMode.runTest("SendMessagePopupTest.testExactViewAndNestedCodes", testExactViewAndNestedCodes);
+		pr2.DeterministicTestMode.runTest("SendMessagePopupTest.testValidationAndUploadFlows", testValidationAndUploadFlows);
 		closeAll();
 		trace('SendMessagePopupTest passed $assertions assertions');
 	}

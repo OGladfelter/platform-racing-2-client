@@ -16,12 +16,12 @@ class MusicSelectionTest {
 
 	public static function main():Void {
 		Settings.disablePersistenceForTests();
-		testLevelSongSelection();
+		pr2.DeterministicTestMode.runTest("MusicSelectionTest.testLevelSongSelection", testLevelSongSelection);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("MusicSelectionTest")) return;
-		testUserSongSwitching();
-		testStreamingEndpoint();
-		testPendingStreamCannotOutlivePlayer();
-		testArtifactSong();
+		pr2.DeterministicTestMode.runTest("MusicSelectionTest.testUserSongSwitching", testUserSongSwitching);
+		pr2.DeterministicTestMode.runTest("MusicSelectionTest.testStreamingEndpoint", testStreamingEndpoint);
+		pr2.DeterministicTestMode.runTest("MusicSelectionTest.testPendingStreamCannotOutlivePlayer", testPendingStreamCannotOutlivePlayer);
+		pr2.DeterministicTestMode.runTest("MusicSelectionTest.testArtifactSong", testArtifactSong);
 		trace('MusicSelectionTest passed $assertions assertions');
 	}
 

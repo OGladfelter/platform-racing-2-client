@@ -8,9 +8,9 @@ class ItemMenuTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testAllAndBlankParsing();
+		pr2.DeterministicTestMode.runTest("ItemMenuTest.testAllAndBlankParsing", testAllAndBlankParsing);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("ItemMenuTest")) return;
-		testNumericAndNamedParsing();
+		pr2.DeterministicTestMode.runTest("ItemMenuTest.testNumericAndNamedParsing", testNumericAndNamedParsing);
 		trace('ItemMenuTest passed $assertions assertions');
 	}
 

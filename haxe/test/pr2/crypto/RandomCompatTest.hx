@@ -7,11 +7,11 @@ class RandomCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testConstructorAndSeedSurface();
+		pr2.DeterministicTestMode.runTest("RandomCompatTest.testConstructorAndSeedSurface", testConstructorAndSeedSurface);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("RandomCompatTest")) return;
-		testLazyInitAndNextBytes();
-		testAutoSeedAndDispose();
-		testDefaultArc4ToString();
+		pr2.DeterministicTestMode.runTest("RandomCompatTest.testLazyInitAndNextBytes", testLazyInitAndNextBytes);
+		pr2.DeterministicTestMode.runTest("RandomCompatTest.testAutoSeedAndDispose", testAutoSeedAndDispose);
+		pr2.DeterministicTestMode.runTest("RandomCompatTest.testDefaultArc4ToString", testDefaultArc4ToString);
 		trace('RandomCompatTest passed $assertions assertions');
 	}
 

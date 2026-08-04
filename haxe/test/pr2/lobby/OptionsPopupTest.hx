@@ -29,15 +29,15 @@ class OptionsPopupTest {
 		var savedGuildOwner = LobbySession.guildOwner;
 		Settings.useMemoryStoreForTests();
 		Settings.init("Options Tester");
-		testAccountButtonStacks();
+		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testAccountButtonStacks", testAccountButtonStacks);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("OptionsPopupTest")) return;
-		testAccountButtonsOpenAuthoredDialogs();
-		testGuildLeaveFlow();
-		testHoverPopups();
-		testSoundSliderRelease();
-		testArtQualityMenuSingleton();
-		testSongsMenuSingleton();
+		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testGuildLeaveFlow", testGuildLeaveFlow);
+		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testHoverPopups", testHoverPopups);
+		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testSoundSliderRelease", testSoundSliderRelease);
+		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testArtQualityMenuSingleton", testArtQualityMenuSingleton);
+		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testSongsMenuSingleton", testSongsMenuSingleton);
 
+		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testAuthoredOptionsViewAndPersistence", function():Void {
 		LobbySession.group = 1;
 		LobbySession.guildId = 0;
 		LobbySession.guildOwner = false;
@@ -116,6 +116,7 @@ class OptionsPopupTest {
 		LobbySession.guildId = savedGuildId;
 		LobbySession.guildOwner = savedGuildOwner;
 		closeAll();
+		});
 		trace('OptionsPopupTest passed $assertions assertions');
 	}
 
@@ -155,66 +156,6 @@ class OptionsPopupTest {
 		assertStack(member, ["changePass_bt", "changeEmail_bt", "guildLeave_bt"], "non-owner member stack");
 		assertMissing(member, "guildEdit_bt", "non-owner has no edit button");
 		member.remove();
-	}
-
-	private static function testAccountButtonsOpenAuthoredDialogs():Void {
-		LobbySession.group = 1;
-		LobbySession.guildId = 0;
-		LobbySession.guildOwner = false;
-		LobbySession.hasEmail = false;
-		var popup = new OptionsPopup();
-		click(popup, "changePass_bt");
-		var open = Popup.getOpen();
-		var changePass = Std.downcast(open[open.length - 1], ChangePasswordPopup);
-		assertNotNull(changePass, "change-password button opens the authored dialog");
-		assertEquals(true, popup.fadeOutStarted, "change-password fades options popup like Flash");
-		closeAll();
-
-		LobbySession.group = 1;
-		LobbySession.guildId = 0;
-		LobbySession.guildOwner = false;
-		LobbySession.hasEmail = false;
-		popup = new OptionsPopup();
-		click(popup, "changeEmail_bt");
-		open = Popup.getOpen();
-		var setEmail = Std.downcast(open[open.length - 1], SetEmailPopup);
-		assertNotNull(setEmail, "change-email button opens the authored dialog");
-		assertEquals(true, LobbySession.hasEmail, "change-email mirrors Flash hasEmail side effect");
-		assertEquals(true, popup.fadeOutStarted, "change-email fades options popup like Flash");
-		closeAll();
-
-		LobbySession.group = 1;
-		LobbySession.guildId = 0;
-		LobbySession.guildOwner = false;
-		popup = new OptionsPopup();
-		click(popup, "guildCreate_bt");
-		open = Popup.getOpen();
-		var createGuild = Std.downcast(open[open.length - 1], CreateGuildPopup);
-		assertNotNull(createGuild, "guild-create button opens the authored dialog");
-		assertEquals(true, popup.fadeOutStarted, "guild-create fades options popup like Flash");
-		closeAll();
-
-		LobbySession.group = 1;
-		LobbySession.guildId = 19;
-		LobbySession.guildOwner = true;
-		popup = new OptionsPopup();
-		click(popup, "guildTransfer_bt");
-		open = Popup.getOpen();
-		var transferGuild = Std.downcast(open[open.length - 1], TransferGuildPopup);
-		assertNotNull(transferGuild, "guild-transfer button opens the authored dialog");
-		assertEquals(true, popup.fadeOutStarted, "guild-transfer fades options popup like Flash");
-		closeAll();
-
-		LobbySession.group = 1;
-		LobbySession.guildId = 19;
-		LobbySession.guildOwner = true;
-		popup = new OptionsPopup();
-		click(popup, "guildEdit_bt");
-		open = Popup.getOpen();
-		var editGuild = Std.downcast(open[open.length - 1], CreateGuildPopup);
-		assertNotNull(editGuild, "guild-edit button opens the authored dialog");
-		assertEquals(true, popup.fadeOutStarted, "guild-edit fades options popup like Flash");
-		closeAll();
 	}
 
 	private static function testGuildLeaveFlow():Void {

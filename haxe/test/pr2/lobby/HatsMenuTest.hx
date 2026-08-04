@@ -7,10 +7,10 @@ class HatsMenuTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testBlankAndNullAllowAllHats();
+		pr2.DeterministicTestMode.runTest("HatsMenuTest.testBlankAndNullAllowAllHats", testBlankAndNullAllowAllHats);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("HatsMenuTest")) return;
-		testCommaDelimitedBadHats();
-		testHatAttackForcesArtifactUnavailable();
+		pr2.DeterministicTestMode.runTest("HatsMenuTest.testCommaDelimitedBadHats", testCommaDelimitedBadHats);
+		pr2.DeterministicTestMode.runTest("HatsMenuTest.testHatAttackForcesArtifactUnavailable", testHatAttackForcesArtifactUnavailable);
 		trace('HatsMenuTest passed $assertions assertions');
 	}
 

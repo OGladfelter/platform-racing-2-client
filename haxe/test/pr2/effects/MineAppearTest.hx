@@ -10,6 +10,7 @@ class MineAppearTest {
 	private static var assertions = 0;
 
 	public static function main():Void {
+		pr2.DeterministicTestMode.runTest("MineAppearTest.testAuthoredAnimationLifecycle", function():Void {
 		assertAuthoredMineAsset();
 		var completions = 0;
 		var effect = new MineAppear(125, 75, 30, 0, 0, function():Void completions++, false);
@@ -36,7 +37,8 @@ class MineAppearTest {
 		assertEquals(null, effect.animation, "completion tears down the native animation");
 		effect.remove(true);
 		assertEquals(1, completions, "explicit removal cannot replay completion");
-		testEffectLifetimeMatchesAtBothPresentationRates();
+		});
+		pr2.DeterministicTestMode.runTest("MineAppearTest.testEffectLifetimeMatchesAtBothPresentationRates", testEffectLifetimeMatchesAtBothPresentationRates);
 
 		trace('MineAppearTest passed $assertions assertions');
 	}

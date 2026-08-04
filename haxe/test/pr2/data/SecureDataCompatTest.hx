@@ -8,12 +8,12 @@ class SecureDataCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testNumberEntriesUseHiddenValuePlusKey();
+		pr2.DeterministicTestMode.runTest("SecureDataCompatTest.testNumberEntriesUseHiddenValuePlusKey", testNumberEntriesUseHiddenValuePlusKey);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("SecureDataCompatTest")) return;
-		testBoolRoundTrip();
-		testEncryptedStringSaltRoundTrip();
-		testStaticSecureDataFacade();
-		testRemoveClearsEntries();
+		pr2.DeterministicTestMode.runTest("SecureDataCompatTest.testBoolRoundTrip", testBoolRoundTrip);
+		pr2.DeterministicTestMode.runTest("SecureDataCompatTest.testEncryptedStringSaltRoundTrip", testEncryptedStringSaltRoundTrip);
+		pr2.DeterministicTestMode.runTest("SecureDataCompatTest.testStaticSecureDataFacade", testStaticSecureDataFacade);
+		pr2.DeterministicTestMode.runTest("SecureDataCompatTest.testRemoveClearsEntries", testRemoveClearsEntries);
 		trace('SecureDataCompatTest passed $assertions assertions');
 	}
 

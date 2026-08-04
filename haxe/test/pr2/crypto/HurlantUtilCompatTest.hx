@@ -8,10 +8,10 @@ class HurlantUtilCompatTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		testBase64Surface();
+		pr2.DeterministicTestMode.runTest("HurlantUtilCompatTest.testBase64Surface", testBase64Surface);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("HurlantUtilCompatTest")) return;
-		testHexSurface();
-		testMemorySurface();
+		pr2.DeterministicTestMode.runTest("HurlantUtilCompatTest.testHexSurface", testHexSurface);
+		pr2.DeterministicTestMode.runTest("HurlantUtilCompatTest.testMemorySurface", testMemorySurface);
 		trace('HurlantUtilCompatTest passed $assertions assertions');
 	}
 
