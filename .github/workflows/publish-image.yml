@@ -30,6 +30,9 @@ jobs:
           haxelib install openfl 9.5.2 --quiet
           haxelib install svg 1.2.0 --quiet
 
+      - name: Run full deterministic test suite
+        run: ./test.sh --full
+
       - name: Build HTML5 game
         run: haxelib run openfl build html5
 
