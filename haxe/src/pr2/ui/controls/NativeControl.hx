@@ -10,6 +10,7 @@ import pr2.assets.NativeAssetIds.StaticSvg;
 import pr2.assets.NativeAssets;
 
 class NativeControl extends Sprite {
+	public static inline var KEYBOARD_ACTIVATE:String = "nativeControlKeyboardActivate";
 	private static final FOCUS_GRID = new Rectangle(4, 2, 74, 18);
 
 	public var enabled(get, set):Bool;
@@ -145,7 +146,7 @@ class NativeControl extends Sprite {
 		if (!enabled) return;
 		if (event.keyCode == 13 || event.keyCode == 32) {
 			activate();
-			dispatchEvent(new Event(Event.ACTIVATE));
+			dispatchEvent(new Event(KEYBOARD_ACTIVATE));
 		}
 	}
 

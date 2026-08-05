@@ -179,6 +179,8 @@ class NativePresentationFoundationTest {
 		button.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, 0, Keyboard.ENTER));
 		assertEquals(2, presses, "button keeps its own keyboard activation callback when lobby wiring is attached");
 		assertEquals(1, lobbyActivations, "lobby click wiring also responds to keyboard activation");
+		button.dispatchEvent(new Event(Event.ACTIVATE));
+		assertEquals(1, lobbyActivations, "browser lifecycle activation does not press the focused button");
 		LobbyArt.unbind(lobbyBinding);
 		button.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, 0, Keyboard.ENTER));
 		assertEquals(1, lobbyActivations, "removing lobby wiring also removes its keyboard activation listener");

@@ -128,7 +128,7 @@ class LoginFlashPopup extends Sprite {
 		target.addEventListener(MouseEvent.CLICK, handler);
 		buttonHandlers.push({target: target, handler: handler});
 		var activationHandler = function(_:Event):Void clickHandler();
-		target.addEventListener(Event.ACTIVATE, activationHandler);
+		target.addEventListener(NativeControl.KEYBOARD_ACTIVATE, activationHandler);
 		activationHandlers.push({target: target, handler: activationHandler});
 	}
 
@@ -192,7 +192,7 @@ class LoginFlashPopup extends Sprite {
 		}
 		buttonHandlers = [];
 		for (entry in activationHandlers) {
-			entry.target.removeEventListener(Event.ACTIVATE, entry.handler);
+			entry.target.removeEventListener(NativeControl.KEYBOARD_ACTIVATE, entry.handler);
 		}
 		activationHandlers = [];
 		for (entry in comboHandlers) {
@@ -392,7 +392,7 @@ private class LoginTextButton extends Sprite {
 		addEventListener(FocusEvent.FOCUS_IN, function(_):Void focusIndicator.visible = true);
 		addEventListener(FocusEvent.FOCUS_OUT, function(_):Void focusIndicator.visible = false);
 		addEventListener(KeyboardEvent.KEY_DOWN, function(event):Void {
-			if (event.keyCode == Keyboard.ENTER || event.keyCode == Keyboard.SPACE) dispatchEvent(new Event(Event.ACTIVATE));
+			if (event.keyCode == Keyboard.ENTER || event.keyCode == Keyboard.SPACE) dispatchEvent(new Event(NativeControl.KEYBOARD_ACTIVATE));
 		});
 	}
 }

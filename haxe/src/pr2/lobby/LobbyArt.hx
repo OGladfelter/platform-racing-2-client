@@ -143,7 +143,7 @@ class LobbyArt {
 		var nativeControl = Std.downcast(target, NativeControl);
 		if (nativeControl != null) {
 			activationListener = function(_:Event):Void handler();
-			nativeControl.addEventListener(Event.ACTIVATE, activationListener);
+			nativeControl.addEventListener(NativeControl.KEYBOARD_ACTIVATE, activationListener);
 		} else if (interactive != null) {
 			keyboardListener = function(event:KeyboardEvent):Void {
 				if (event.keyCode == 13 || event.keyCode == 32) handler();
@@ -156,7 +156,7 @@ class LobbyArt {
 	public static function unbind(binding:Null<Binding>):Void {
 		if (binding != null) {
 			binding.target.removeEventListener(MouseEvent.CLICK, binding.listener);
-			if (binding.activationListener != null) binding.target.removeEventListener(Event.ACTIVATE, binding.activationListener);
+			if (binding.activationListener != null) binding.target.removeEventListener(NativeControl.KEYBOARD_ACTIVATE, binding.activationListener);
 			if (binding.keyboardListener != null) binding.target.removeEventListener(KeyboardEvent.KEY_DOWN, binding.keyboardListener);
 		}
 	}
