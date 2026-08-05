@@ -21,7 +21,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--xfl-parity", action="store_true", help="compare every compiled pose with the archival XFL")
     args = parser.parse_args()
-    roots = root_matrices()
+    roots = root_matrices() if args.xfl_parity else None
     maximum = 0.0
     frame_total = 0
     for name in STATES:

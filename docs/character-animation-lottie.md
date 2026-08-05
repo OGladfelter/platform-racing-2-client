@@ -41,9 +41,13 @@ Then run the focused character tests:
 ./test.sh --character
 ```
 
-The normal test gate compares every migrated pose with the archival XFL. If an
-intentional redesign should differ from Flash, change that parity policy as an
-explicit follow-up rather than silently accepting drift.
+The normal test gate validates the committed Lottie documents without requiring
+the ignored archival XFL. When the archive is available locally, compare every
+migrated pose with it explicitly:
+
+```sh
+python3 tools/validate_character_lottie.py --xfl-parity
+```
 
 To reseed documents from the archival XFL, run the destructive import
 explicitly with one or more state names:

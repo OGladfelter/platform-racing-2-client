@@ -253,34 +253,3 @@ available from their source threads.
   message dialogs now use the authored 100x44 TextArea bounds without scaling
   their text, and the overflow scrollbar preserves and changes the visible line.
   [Evidence](docs/bug-reports/html-pr2/tid-5388-01.png)
-- [x] [Logging into an account twice on the same server errors](https://jiggmin2.com/forums/showthread.php?tid=5403):
-  make duplicate-login handling return HTML to the main menu and match Flash's
-  specific already-running-account error instead of a generic disconnect.
-- [!] [Cowboy Hat speed is not identical](https://jiggmin2.com/forums/showthread.php?tid=5361):
-  upward Cowboy Hat flight is too fast and incorrectly depends on Acceleration.
-- [x] [Destroying Crumble Blocks stops movement](https://jiggmin2.com/forums/showthread.php?tid=5367):
-  destroying a Crumble Block collides like a solid Block and stops running or
-  falling instead of allowing seamless passage through multiple Blocks.
-- [!] [Safety Nets allow you to jump from anywhere](https://jiggmin2.com/forums/showthread.php?tid=5364):
-  touching a Safety Net resets jump availability and permits mid-air jumps.
-  [Evidence](docs/bug-reports/html-pr2/tid-5364-01.png)
-- [?] [Mines through block above water glitch not working](https://jiggmin2.com/forums/showthread.php?tid=5400):
-  need a reproducible Flash trace for the water-edge clipping case. Flash's
-  `LocalCharacter.hit` enters the normal 60-frame hurt mode for Mine hits, and
-  shortening that recovery breaks established Mine-driven levels.
-- [x] [Getting new item does not end Speed Burst](https://jiggmin2.com/forums/showthread.php?tid=5399):
-  picking up an item leaves Speed Burst active, then deletes the held item when
-  the burst ends.
-- [!] [Backgrounds are wrongly positioned](https://jiggmin2.com/forums/showthread.php?tid=5397):
-  loaded/tested level backgrounds are offset and custom backgrounds render only
-  their associated solid colour.
-  Evidence: [loaded view](docs/bug-reports/html-pr2/tid-5397-01.png),
-  [editor/test view](docs/bug-reports/html-pr2/tid-5397-02.png), and
-  [custom background](docs/bug-reports/html-pr2/tid-5397-03.png).
-- [x] [Tab Key Select Element Doesn't Work](https://jiggmin2.com/forums/showthread.php?tid=5398):
-  native controls now show Flash's authored focus outline when reached with Tab,
-  Enter/Space activates focused login and lobby buttons, and disabled controls no
-  longer remain in the tab order.
-- [x] [Santa hat doesn't freeze arrow blocks](https://jiggmin2.com/forums/showthread.php?tid=5396):
-  Santa Hat now gives Arrow Blocks the same fading ice overlay as Flash while
-  preserving their normal arrow impulse and activation animation.
