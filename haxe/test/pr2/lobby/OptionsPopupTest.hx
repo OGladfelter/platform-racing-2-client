@@ -17,6 +17,7 @@ import pr2.lobby.dialogs.SetEmailPopup;
 import pr2.lobby.dialogs.TransferGuildPopup;
 import pr2.lobby.dialogs.UploadingPopup;
 import pr2.net.ServerConfig;
+import pr2.ui.controls.GameButton;
 import pr2.ui.controls.GameSlider;
 import pr2.util.TestDisplayUtil as DisplayUtil;
 
@@ -32,6 +33,7 @@ class OptionsPopupTest {
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testAccountButtonStacks", testAccountButtonStacks);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("OptionsPopupTest")) return;
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testGuildLeaveFlow", testGuildLeaveFlow);
+		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testInitialArtLabelVisibility", testInitialArtLabelVisibility);
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testHoverPopups", testHoverPopups);
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testSoundSliderRelease", testSoundSliderRelease);
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testArtQualityMenuSingleton", testArtQualityMenuSingleton);
@@ -43,6 +45,7 @@ class OptionsPopupTest {
 		LobbySession.guildOwner = false;
 		Settings.setValue(Settings.MUSIC_VOLUME, 35);
 		Settings.setValue(Settings.SOUND_VOLUME, 45);
+		Settings.setValue(Settings.DRAW_ART, true);
 		Settings.setValue(Settings.DISABLED_SONGS, ["2", "17"]);
 		var popup = new OptionsPopup();
 		var view = optionsView(popup);
@@ -50,7 +53,13 @@ class OptionsPopupTest {
 		assertNear(-145, view.panel.y, 0.000001, "options ShadowBG keeps XFL Y");
 		assertNear(1.01094055175781, view.panel.scaleX, 0.000001, "options ShadowBG keeps XFL horizontal scale");
 		assertNear(1.51835632324219, view.panel.scaleY, 0.000001, "options ShadowBG keeps XFL vertical scale");
+		assertNear(0.901960784313726, view.panel.alpha, 0.000001, "options ShadowBG keeps authored translucent alpha");
 		assertEquals("-- Options --", view.title.text, "options title keeps exact authored copy");
+		var artButton = Std.downcast(DisplayUtil.findByName(popup, "art_bt"), GameButton);
+		var artOffText = LobbyArt.text(popup, "artOffText");
+		assertNear(artButton.x + artButton.labelField.x, artOffText.x, 0.000001, "art button and disabled label share X");
+		assertNear(artButton.y + artButton.labelField.y, artOffText.y, 0.000001, "art button and disabled label share Y");
+		assertNear(artButton.labelField.width, artOffText.width, 0.000001, "art button and disabled label share width");
 
 		var music = slider(popup, "musicSlider");
 		var sound = slider(popup, "soundSlider");
@@ -69,6 +78,11 @@ class OptionsPopupTest {
 		assertNear(-82.45, DisplayUtil.findByName(popup, "artOn_bt").y, 0.000001, "art On keeps XFL Y");
 		assertNear(-68.75, LobbyArt.text(popup, "wasdUp").x, 0.000001, "alternate Up field keeps XFL X");
 		assertNear(14.5, LobbyArt.text(popup, "wasdUp").y, 0.000001, "alternate Up field keeps XFL Y");
+		for (name in ["wasdUp", "wasdRight", "wasdDown", "wasdLeft", "wasdItem"]) {
+			var input = LobbyArt.text(popup, name);
+			assertEquals(true, input.border, name + " keeps the authored input outline");
+			assertEquals(0x000000, input.borderColor, name + " uses the authored black input outline");
+		}
 		assertEquals(35.0, music.value, "music slider loads persisted value");
 		assertEquals("35%", LobbyArt.text(popup, "musicPercentBox").text, "music label loads persisted value");
 		music.value = 62;
@@ -197,6 +211,25 @@ class OptionsPopupTest {
 		LobbySession.offAccountChange(listener);
 		UploadingPopup.postFactory = savedPostFactory;
 		ServerConfig.resetHost();
+		closeAll();
+	}
+
+	private static function testInitialArtLabelVisibility():Void {
+		LobbySession.group = 1;
+		LobbySession.guildId = 0;
+		LobbySession.guildOwner = false;
+		Settings.setValue(Settings.DRAW_ART, true);
+		var enabled = new OptionsPopup();
+		assertEquals(true, DisplayUtil.findByName(enabled, "art_bt").visible, "enabled art starts with button label visible");
+		assertEquals(false, DisplayUtil.findByName(enabled, "artOffText").visible, "enabled art starts with plain label hidden");
+		enabled.remove();
+
+		Settings.setValue(Settings.DRAW_ART, false);
+		var disabled = new OptionsPopup();
+		assertEquals(false, DisplayUtil.findByName(disabled, "art_bt").visible, "disabled art starts with button label hidden");
+		assertEquals(true, DisplayUtil.findByName(disabled, "artOffText").visible, "disabled art starts with plain label visible");
+		disabled.remove();
+		Settings.setValue(Settings.DRAW_ART, true);
 		closeAll();
 	}
 

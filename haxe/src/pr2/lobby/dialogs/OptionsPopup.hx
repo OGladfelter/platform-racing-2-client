@@ -62,6 +62,9 @@ class OptionsPopup extends Popup {
 		bind("music_bt", toggleSongsMenu);
 		bindHover("art_bt", hoverArt, hoverOut);
 		bindHover("music_bt", hoverMusic, hoverOut);
+		// Flash calls toggleArtBtnListeners during construction, before the popup
+		// is shown. Keep exactly one form of the art label visible from frame one.
+		syncArtLabel();
 		bind("close_bt", startFadeOut);
 		setupAccountButtons();
 	}
@@ -166,12 +169,16 @@ class OptionsPopup extends Popup {
 	private function setDrawArt(value:Bool):Void {
 		drawArt = value;
 		setHighlight("artHighlight", value);
-		var button = DisplayUtil.directChildByName(art, "art_bt");
-		var offText = DisplayUtil.directChildByName(art, "artOffText");
-		if (button != null) button.visible = value;
-		if (offText != null) offText.visible = !value;
+		syncArtLabel();
 		if (!value) closeArtMenu();
 		if (!value) hoverOut();
+	}
+
+	private function syncArtLabel():Void {
+		var button = DisplayUtil.directChildByName(art, "art_bt");
+		var offText = DisplayUtil.directChildByName(art, "artOffText");
+		if (button != null) button.visible = drawArt;
+		if (offText != null) offText.visible = !drawArt;
 	}
 	private function setHighlight(name:String, value:Bool):Void { var target = DisplayUtil.directChildByName(art, name); if (target != null) target.y = value ? TRUE_Y : FALSE_Y; }
 

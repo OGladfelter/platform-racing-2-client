@@ -34,6 +34,10 @@ class OptionsView extends NativeView {
 		panel.y = -145;
 		panel.scaleX = 1.01094055175781;
 		panel.scaleY = 1.51835632324219;
+		// UI/ShadowBG's authored white fill is 230/255 opaque. The SVG also
+		// contains the shadow source shape, so apply the authored alpha to the
+		// complete asset to preserve the slightly translucent Flash result.
+		panel.alpha = 0.901960784313726;
 		addChild(panel);
 		highlight("artHighlight", -93.05, -71.5);
 		highlight("filterHighlight", -28.15, -71.5);
@@ -70,7 +74,9 @@ class OptionsView extends NativeView {
 		linkButton("art_bt", "art", -108.2, -106.5, 30, 12);
 		componentButton("artOff_bt", "Off", -118.2, -54.5, 50);
 		componentButton("artOn_bt", "On", -118.2, -82.45, 50);
-		label("art", "artOffText", -106.1, -104.5, 26, 14.55, 12, false, TextFormatAlign.CENTER);
+		// The art button symbol places its 26px label at local (2, 2). Match
+		// those final bounds exactly so swapping the disabled label cannot shift.
+		label("art", "artOffText", -106.2, -104.5, 26, 14.55, 12, false, TextFormatAlign.CENTER);
 		title = label("-- Options --", null, -53, -133, 106, 17.05, 14, true, TextFormatAlign.CENTER);
 	}
 
@@ -125,6 +131,8 @@ class OptionsView extends NativeView {
 		var field = label("", name, x, y, 16, 14.55, 12, false, TextFormatAlign.CENTER);
 		field.type = TextFieldType.INPUT;
 		field.selectable = true;
+		field.border = true;
+		field.borderColor = 0x000000;
 	}
 
 	private function label(value:String, name:Null<String>, x:Float, y:Float, width:Float, height:Float, size:Int, bold:Bool,
@@ -170,12 +178,19 @@ private class OptionsLinkButton extends GameButton {
 		labelField.setTextFormat(format);
 		labelField.x = 2;
 		labelField.y = 2;
-		labelField.width = Math.max(0, controlWidth - 2);
+		labelField.width = Math.max(0, controlWidth - 4);
 		labelField.height = authoredSize == 12 ? 14.55 : 12.15;
 	}
 }
 
 private class OptionsLinkSkin implements ControlSkin {
 	public function new() {}
-	public function draw(graphics:Graphics, width:Float, height:Float, state:ControlState):Void graphics.clear();
+	public function draw(graphics:Graphics, width:Float, height:Float, state:ControlState):Void {
+		graphics.clear();
+		// Flash button symbols have an interactive hit area even though their
+		// visible content is only text. A tiny alpha keeps that behavior on HTML5.
+		graphics.beginFill(0x000000, 0.01);
+		graphics.drawRect(0, 0, width, height);
+		graphics.endFill();
+	}
 }
