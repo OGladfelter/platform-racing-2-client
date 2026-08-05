@@ -67,6 +67,8 @@ class EditorBlockOptionsTest {
 		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testEditorEggBlockUsesAuthoredGraphic", testEditorEggBlockUsesAuthoredGraphic);
 		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredBlockOptionsViews", testAuthoredBlockOptionsViews);
 		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredTestCourseViews", testAuthoredTestCourseViews);
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAnimatedPropellerPickerHat", testAnimatedPropellerPickerHat);
+		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAnimatedJiggPickerHat", testAnimatedJiggPickerHat);
 		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredLevelListRows", testAuthoredLevelListRows);
 		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredGetLevelsView", testAuthoredGetLevelsView);
 		pr2.DeterministicTestMode.runTest("EditorBlockOptionsTest.testAuthoredSaveLevelView", testAuthoredSaveLevelView);
@@ -295,8 +297,36 @@ class EditorBlockOptionsTest {
 		picker.setHat(2);
 		assertEquals(3, hat.numChildren, "hat picker mounts all authored color channels");
 		assertEquals(false, hat.getChildByName("colorMC2").visible, "ordinary hat hides the secondary channel like Flash");
+		assertEquals(null, hat.getChildByName("animatedOverlay"), "static hats do not mount an animation overlay");
 		picker.setHat(16);
 		assertEquals(true, hat.getChildByName("colorMC2").visible, "epic hat exposes the secondary channel like Flash");
+		picker.dispose();
+	}
+
+	private static function testAnimatedPropellerPickerHat():Void {
+		var picker = new TestCourseHatPickerView();
+		var hat = Std.downcast(picker.getChildByName("hat"), DisplayObjectContainer);
+		picker.setHat(4);
+		var propellerOverlay = Std.downcast(hat.getChildByName("animatedOverlay"), DisplayObjectContainer);
+		assertTrue(propellerOverlay != null && propellerOverlay.numChildren == 1, "propeller hat mounts its animated blade overlay");
+		var propellerFrame = picker.overlayCurrentFrame;
+		picker.advanceOverlayFrameForTests();
+		assertEquals(true, picker.overlayCurrentFrame != propellerFrame, "propeller hat blade animation advances");
+		picker.dispose();
+	}
+
+	private static function testAnimatedJiggPickerHat():Void {
+		var picker = new TestCourseHatPickerView();
+		var hat = Std.downcast(picker.getChildByName("hat"), DisplayObjectContainer);
+		picker.setHat(13);
+		var jiggOverlay = Std.downcast(hat.getChildByName("animatedOverlay"), DisplayObjectContainer);
+		assertTrue(jiggOverlay != null && jiggOverlay.numChildren == 1, "Jigg hat mounts its animated bubble overlay");
+		var jiggFrame = picker.overlayCurrentFrame;
+		picker.advanceOverlayFrameForTests();
+		assertEquals(true, picker.overlayCurrentFrame != jiggFrame, "Jigg hat bubble animation advances");
+		picker.setHat(16);
+		assertEquals(null, hat.getChildByName("animatedOverlay"), "switching hats removes the previous animation overlay");
+		picker.dispose();
 	}
 
 	private static function testAuthoredBlockOptionsViews():Void {

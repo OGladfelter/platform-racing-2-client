@@ -1,6 +1,7 @@
 package pr2.levelEditor;
 
 import openfl.display.Sprite;
+import openfl.events.Event;
 import openfl.filters.DropShadowFilter;
 import openfl.geom.Matrix;
 import pr2.character.CharacterRig;
@@ -11,6 +12,9 @@ import pr2.ui.view.NativeView;
 /** Exact native composition of XFL `HatPickerGraphic`. */
 class TestCourseHatPickerView extends NativeView {
 	private final hat:Sprite;
+	private var overlay:Null<Sprite>;
+	private var overlayFrames:Array<String> = [];
+	public var overlayCurrentFrame(default, null):Int = 0;
 
 	public function new() {
 		super();
@@ -20,10 +24,14 @@ class TestCourseHatPickerView extends NativeView {
 		addChild(hat);
 		arrow("left", 10, -0.999984741210938);
 		arrow("right", 100, 1);
+		listen(this, Event.ENTER_FRAME, advanceOverlay);
 	}
 
 	public function setHat(id:Int):Void {
 		while (hat.numChildren > 0) hat.removeChildAt(0);
+		overlay = null;
+		overlayFrames = [];
+		overlayCurrentFrame = 0;
 		var channels = hatChannels(id);
 		var primary = SvgAsset.create(channels.primary);
 		primary.name = "colorMC";
@@ -35,7 +43,35 @@ class TestCourseHatPickerView extends NativeView {
 		secondary.name = "colorMC2";
 		secondary.visible = id == 16;
 		hat.addChild(secondary);
+		if (channels.overlayAnimation != null && channels.overlayAnimation.frames.length > 0) {
+			overlayFrames = channels.overlayAnimation.frames.copy();
+			overlay = new Sprite();
+			overlay.name = "animatedOverlay";
+			hat.addChild(overlay);
+			renderOverlayFrame();
+		}
 	}
+
+	private function advanceOverlay(_:Event):Void {
+		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
+		stepOverlay();
+	}
+
+	private function stepOverlay():Void {
+		if (overlayFrames.length == 0) return;
+		overlayCurrentFrame = (overlayCurrentFrame + 1) % overlayFrames.length;
+		renderOverlayFrame();
+	}
+
+	private function renderOverlayFrame():Void {
+		if (overlay == null || overlayFrames.length == 0) return;
+		while (overlay.numChildren > 0) overlay.removeChildAt(0);
+		var frame = SvgAsset.create(overlayFrames[overlayCurrentFrame]);
+		frame.name = "vectorFrame";
+		overlay.addChild(frame);
+	}
+
+	public function advanceOverlayFrameForTests():Void stepOverlay();
 
 	private function arrow(name:String, x:Float, scaleX:Float):Void {
 		var arrow = new EditorNativeGraphic("HatPickerArrow");

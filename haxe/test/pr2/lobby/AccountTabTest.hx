@@ -10,6 +10,7 @@ import pr2.lobby.account.AccountCustomizeData;
 import pr2.lobby.account.LoadoutsPopup;
 import pr2.lobby.account.PartInfoPopup;
 import pr2.lobby.account.PartPopup;
+import pr2.lobby.account.PartPreview;
 import pr2.lobby.account.PartSelector;
 import pr2.lobby.account.PlayerDisplay;
 import pr2.lobby.account.Presets;
@@ -33,6 +34,7 @@ class AccountTabTest {
 		if (pr2.DeterministicTestMode.finishSmokeSuite("AccountTabTest")) return;
 		pr2.DeterministicTestMode.runTest("AccountTabTest.testCustomizePayload", testCustomizePayload);
 		pr2.DeterministicTestMode.runTest("AccountTabTest.testPartSelectorArrowsChangePart", testPartSelectorArrowsChangePart);
+		pr2.DeterministicTestMode.runTest("AccountTabTest.testHatPartPreviewAnimations", testHatPartPreviewAnimations);
 		pr2.DeterministicTestMode.runTest("AccountTabTest.testStatSlidersDoNotRunUnderRightArrow", testStatSlidersDoNotRunUnderRightArrow);
 		pr2.DeterministicTestMode.runTest("AccountTabTest.testHotkeys", testHotkeys);
 		pr2.DeterministicTestMode.runTest("AccountTabTest.testHoverDelayPopupCleanup", testHoverDelayPopupCleanup);
@@ -73,6 +75,26 @@ class AccountTabTest {
 		assertEquals(1, selector.getValue(), "left part-picker arrow selects the previous owned part");
 		assertEquals(2, changes, "part-picker arrows dispatch changes to the character preview");
 		selector.remove();
+	}
+
+	private static function testHatPartPreviewAnimations():Void {
+		var propeller = new PartPreview("HAT", 4, true);
+		var propellerSlot = propeller.character.display.hatSlot(0);
+		assertNotNull(propellerSlot.getChildByName("animatedOverlay"), "lobby Propeller preview mounts its blade animation");
+		var propellerFrame = @:privateAccess propeller.character.display.hatAnimationFrames[0];
+		propeller.character.display.advanceOneFrame();
+		assertEquals(true, @:privateAccess propeller.character.display.hatAnimationFrames[0] != propellerFrame,
+			"lobby Propeller preview blade animation advances");
+		propeller.remove();
+
+		var jigg = new PartPreview("HAT", 13, true);
+		var jiggSlot = jigg.character.display.hatSlot(0);
+		assertNotNull(jiggSlot.getChildByName("animatedOverlay"), "lobby Jigg preview mounts its bubble animation");
+		var jiggFrame = @:privateAccess jigg.character.display.hatAnimationFrames[0];
+		jigg.character.display.advanceOneFrame();
+		assertEquals(true, @:privateAccess jigg.character.display.hatAnimationFrames[0] != jiggFrame,
+			"lobby Jigg preview bubble animation advances");
+		jigg.remove();
 	}
 
 	private static function testStatSlidersDoNotRunUnderRightArrow():Void {
