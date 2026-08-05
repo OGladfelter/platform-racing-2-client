@@ -179,7 +179,8 @@ class MessagesItemTest {
 	}
 
 	private static function testTimestampDisplayAndHover():Void {
-		var item = new MessagesItem(null, 6, "Sender", "1", "Body", false, 1700000000);
+		var localTimestamp = Std.int(new Date(2023, 10, 14, 17, 13, 20).getTime() / 1000);
+		var item = new MessagesItem(null, 6, "Sender", "1", "Body", false, localTimestamp);
 		var field = @:privateAccess item.timeTextField();
 		assertNotNull(field, "message item exposes a time text field");
 		assertEquals("11/14/2023", field.text, "row time uses locale-style date instead of ISO");

@@ -10,6 +10,7 @@
 #   ./test.sh --full         # runs the full deterministic suite
 #   ./test.sh --physics      # runs every physics test
 #   ./test.sh --lobby --items # runs the union of the lobby and item tests
+#   ./test.sh --timings      # includes per-test TEST_TIME logging
 #   ./test.sh protocol       # runs test/protocol.hxml
 #   ./test.sh real-server    # runs test/real-server.hxml
 set -euo pipefail
@@ -20,6 +21,7 @@ suite="deterministic"
 suite_was_set=false
 full_suite=false
 groups=""
+timings=false
 
 add_group() {
 	if [[ -z "$groups" ]]; then
@@ -30,7 +32,7 @@ add_group() {
 }
 
 usage() {
-	echo "Usage: $0 [deterministic|protocol|real-server] [--full] [domain flags]"
+	echo "Usage: $0 [deterministic|protocol|real-server] [--full] [--timings] [domain flags]"
 	echo "Domain flags:"
 	echo "  --audio --blocks --character --crypto --data --effects --gameplay"
 	echo "  --items --level-editor --level-rendering --lobby --network --physics"
@@ -49,6 +51,9 @@ for arg in "$@"; do
 			;;
 		--full)
 			full_suite=true
+			;;
+		--timings)
+			timings=true
 			;;
 		--audio|--blocks|--character|--crypto|--data|--effects|--gameplay|--items|--level-editor|--level-rendering|--lobby|--network|--physics|--runtime|--ui)
 			add_group "${arg#--}"
@@ -97,7 +102,7 @@ if [ ! -f "$hxml" ]; then
 fi
 
 if [[ "$full_suite" == true ]]; then
-	PR2_TEST_MODE=full PR2_TEST_GROUPS="$groups" haxe "$hxml" 2>&1
+	PR2_TEST_MODE=full PR2_TEST_GROUPS="$groups" PR2_TEST_TIMINGS="$timings" haxe "$hxml" 2>&1
 else
-	PR2_TEST_MODE=smoke PR2_TEST_GROUPS= haxe "$hxml" 2>&1
+	PR2_TEST_MODE=smoke PR2_TEST_GROUPS= PR2_TEST_TIMINGS="$timings" haxe "$hxml" 2>&1
 fi

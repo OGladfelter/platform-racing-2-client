@@ -4,6 +4,7 @@ package pr2;
 class DeterministicTestMode {
 	private static inline var MAX_TEST_MILLISECONDS:Float = 250;
 	private static var cachedSmoke:Null<Bool>;
+	private static var cachedTimings:Null<Bool>;
 	private static var cachedGroups:Null<Array<String>>;
 	private static var selectedSuites:Int = 0;
 	private static var timedTests:Int = 0;
@@ -53,10 +54,19 @@ class DeterministicTestMode {
 		timedTests++;
 		var elapsedMilliseconds = elapsedSeconds * 1000;
 		var formattedMilliseconds = formatMilliseconds(elapsedMilliseconds);
-		Sys.println('TEST_TIME\t$name\t$formattedMilliseconds ms');
+		if (timingsEnabled()) {
+			Sys.println('TEST_TIME\t$name\t$formattedMilliseconds ms');
+		}
 		if (elapsedMilliseconds > MAX_TEST_MILLISECONDS) {
 			slowTests.push('$name took $formattedMilliseconds ms');
 		}
+	}
+
+	private static function timingsEnabled():Bool {
+		if (cachedTimings == null) {
+			cachedTimings = Sys.getEnv("PR2_TEST_TIMINGS") == "true";
+		}
+		return cachedTimings;
 	}
 
 	public static function failIfTestsAreTooSlow():Void {

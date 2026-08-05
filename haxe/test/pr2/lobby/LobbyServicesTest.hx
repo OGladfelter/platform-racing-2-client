@@ -584,7 +584,8 @@ class LobbyServicesTest {
 		assertEquals("-- Reported Levels --", LobbyArt.text(popup.art, "titleBox").text, "reported popup title matches Flash");
 		assertEquals(1, popup.listings.length, "reported popup renders returned listings");
 		assertEquals("Reported <One>", LobbyArt.text(popup.listings[0].art, "titleBox").text, "reported listing renders title");
-		assertEquals("16/Mar/2013", LobbyArt.text(popup.listings[0].art, "timeBox").text, "reported listing renders report date");
+		assertEquals(Data.getShortDateStr(1363478400.0), LobbyArt.text(popup.listings[0].art, "timeBox").text,
+			"reported listing renders report date");
 		assertEquals("-- Reported &lt;One&gt; --", GetReportedLevelsPopupItem.hoverTitleForTests(popup.listings[0].level),
 			"reported listing hover title escapes HTML");
 		assertEquals("Creator: Maker &amp; Co<br/>"

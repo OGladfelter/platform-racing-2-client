@@ -1,5 +1,6 @@
 package pr2.lobby;
 
+import com.jiggmin.data.Data;
 import openfl.display.InteractiveObject;
 import openfl.events.Event;
 import openfl.events.EventDispatcher;
@@ -142,7 +143,7 @@ class LevelInfoPopupTest {
 		assertEquals("12,345", LobbyArt.text(popup, "version").text, "version is comma-formatted");
 		assertEquals("987,654", LobbyArt.text(popup, "plays").text, "plays is comma-formatted");
 		assertEquals("15", LobbyArt.text(popup, "minRank").text, "min rank populates");
-		assertEquals("15/Nov/2020", LobbyArt.text(popup, "updated").text, "updated uses Flash short date");
+		assertEquals(Data.getShortDateStr(1605484800.0), LobbyArt.text(popup, "updated").text, "updated uses Flash short date");
 		assertEquals("Hat Attack", popup.gameMode, "game mode is normalized");
 		assertEquals("Code - Stefano Maccarelli", popup.song, "song id is named");
 		assertEquals(0.75, DisplayUtil.findByName(popup, "bar").scaleX, "rating star bar scales");
