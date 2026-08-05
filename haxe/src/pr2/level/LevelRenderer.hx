@@ -58,7 +58,7 @@ class LevelRenderer extends Sprite {
 	// MAX_TEXTURE_SIZE (8192 on many GPUs, 4096 on some) so a single tile never
 	// fails to upload. See rasterizeBrushInto.
 	public static inline var ART_RASTER_TILE_SIZE:Int = 512;
-	public static inline var DEFAULT_ART_RASTER_TILE_LIMIT:Int = 750;
+	public static inline var DEFAULT_ART_RASTER_TILE_LIMIT:Int = 500;
 	public static inline var DEFAULT_ART_BRUSH_SIZE:Float = 4.0;
 	private static inline var ART_DRAW_ACTION_BATCH_LIMIT:Int = 8;
 	public static inline var ART_DRAW_BATCH_MAX_TILE_COUNT:Int = 24;
@@ -213,8 +213,9 @@ class LevelRenderer extends Sprite {
 		this.blocksPerFrame = blocksPerFrame <= 0 ? DEFAULT_BLOCKS_PER_FRAME : blocksPerFrame;
 		this.drawArtEnabled = Settings.getValue(Settings.DRAW_ART, true) != false;
 		this.artOptions = artOptions;
-		this.artRasterBudget = new ArtRasterBudget(artOptions != null && artOptions.rasterTileLimit != null ? artOptions.rasterTileLimit
-			: DEFAULT_ART_RASTER_TILE_LIMIT, artRenderer.notifyRasterStopped);
+		var rasterTileLimit = artOptions != null && artOptions.rasterTileLimit != null ? artOptions.rasterTileLimit
+			: Settings.getValue(Settings.ART_LOSSLESS_QUALITY, false) == true ? -1 : DEFAULT_ART_RASTER_TILE_LIMIT;
+		this.artRasterBudget = new ArtRasterBudget(rasterTileLimit, artRenderer.notifyRasterStopped);
 		this.currentBackgroundColor = level.bgColor;
 
 		var focus = focusBlock == null ? firstRenderableBlock(level) : focusBlock;

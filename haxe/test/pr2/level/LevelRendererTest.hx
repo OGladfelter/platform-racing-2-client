@@ -49,6 +49,7 @@ class LevelRendererTest {
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtRasterTilesCullToViewWindow", testArtRasterTilesCullToViewWindow);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testIncrementalArtFailureCompletesAndWarns", testIncrementalArtFailureCompletesAndWarns);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testRasterTileLimitStopsAndWarns", testRasterTileLimitStopsAndWarns);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testLosslessArtQualityControlsRasterBudget", testLosslessArtQualityControlsRasterBudget);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtBatchLimitsRejectHugeSpans", testArtBatchLimitsRejectHugeSpans);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testDrawArtSettingSkipsGameplayArt", testDrawArtSettingSkipsGameplayArt);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testBg5CircleGrid", testBg5CircleGrid);
@@ -512,6 +513,21 @@ class LevelRendererTest {
 		assertTrue(warnings[0].indexOf("lossless art quality") >= 0, "raster stop warning uses Flash lossless-quality hint");
 		assertEquals(1, strokeRaster(artLayer).numChildren, "raster tile budget stops creating new tiles after the limit");
 		assertEquals(true, renderer.isDrawingComplete(), "raster stop does not leave renderer stuck drawing");
+	}
+
+	private static function testLosslessArtQualityControlsRasterBudget():Void {
+		Settings.disablePersistenceForTests();
+		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, false);
+		var block = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 10020, 10050);
+		var limitedRenderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block);
+		assertEquals(500, @:privateAccess limitedRenderer.artRasterBudget.limit, "standard art quality uses the port's 500-tile budget");
+		limitedRenderer.remove();
+
+		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, true);
+		var losslessRenderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block);
+		assertEquals(-1, @:privateAccess losslessRenderer.artRasterBudget.limit, "lossless art quality removes the raster tile limit");
+		losslessRenderer.remove();
+		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, false);
 	}
 
 	private static function testArtBatchLimitsRejectHugeSpans():Void {
