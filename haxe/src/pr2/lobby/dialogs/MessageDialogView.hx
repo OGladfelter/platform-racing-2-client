@@ -24,9 +24,9 @@ class MessageDialogView extends NativeView {
 		addChild(panel);
 
 		// Flash authoring stores the TextArea's resized bounds as a transform on
-		// the 100x22 component avatar. fl.controls.UIComponent consumes that
+		// its 100x44 component avatar. fl.controls.UIComponent consumes that
 		// transform as component dimensions, so its 11px text is not magnified.
-		messageArea = ownControl(new GameTextArea(309.109497070313, 49.9833984375));
+		messageArea = ownControl(new GameTextArea(309.109497070313, 99.966796875));
 		messageArea.name = "textBox_control";
 		messageArea.x = -155;
 		messageArea.y = -65;

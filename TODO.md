@@ -249,9 +249,9 @@ available from their source threads.
 - [!] [Hats become transparent and non-interactable after being removed](https://jiggmin2.com/forums/showthread.php?tid=5370):
   removed EXP and Propeller Hats become transparent and cannot be picked up.
   [Evidence](docs/bug-reports/html-pr2/tid-5370-01.png)
-- [!] [Giant Dialog Boxes](https://jiggmin2.com/forums/showthread.php?tid=5388):
-  verify dialog sizing parity and restore scrolling; a follow-up reports that
-  boxes became smaller but scrolling remained broken.
+- [x] [Giant Dialog Boxes](https://jiggmin2.com/forums/showthread.php?tid=5388):
+  message dialogs now use the authored 100x44 TextArea bounds without scaling
+  their text, and the overflow scrollbar preserves and changes the visible line.
   [Evidence](docs/bug-reports/html-pr2/tid-5388-01.png)
 - [x] [Logging into an account twice on the same server errors](https://jiggmin2.com/forums/showthread.php?tid=5403):
   make duplicate-login handling return HTML to the main menu and match Flash's

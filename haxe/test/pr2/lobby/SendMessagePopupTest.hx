@@ -41,7 +41,7 @@ class SendMessagePopupTest {
 		assertNear(197.996520996094, view.nameInput.controlWidth, "recipient input keeps authored horizontal scale");
 		assertNear(-155, view.messageInput.x, "message area keeps XFL X");
 		assertNear(309.109497070313, view.messageInput.controlWidth, "message area keeps authored horizontal scale");
-		assertNear(50.0082397460936, view.messageInput.controlHeight, "message area keeps authored vertical scale");
+		assertNear(100.016479492187, view.messageInput.controlHeight, "message area applies its XFL scale to the 44px TextArea avatar");
 		assertEquals("5 / 1000", view.charsRemaining.text, "message counter starts from supplied body length");
 		view.messageInput.text = "1234567";
 		view.messageInput.textField.dispatchEvent(new Event(Event.CHANGE));

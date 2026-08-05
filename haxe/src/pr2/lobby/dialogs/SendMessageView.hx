@@ -45,7 +45,7 @@ class SendMessageView extends NativeView {
 		nameInput.setSize(197.996520996094, 22);
 		nameInput.textField.name = "nameBox";
 		addChild(nameInput);
-		messageInput = ownControl(new GameTextArea(309.109497070313, 50.0082397460936));
+		messageInput = ownControl(new GameTextArea(309.109497070313, 100.016479492187));
 		messageInput.text = message;
 		messageInput.x = -155;
 		messageInput.y = -68;

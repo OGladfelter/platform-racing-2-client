@@ -478,7 +478,7 @@ class NativePresentationFoundationTest {
 		assertClose(-155, view.messageArea.x, "message TextArea keeps its XFL X");
 		assertClose(-65, view.messageArea.y, "message TextArea keeps its XFL Y");
 		assertClose(309.109497070313, view.messageArea.controlWidth, "message TextArea consumes its XFL X scale as component width");
-		assertClose(49.9833984375, view.messageArea.controlHeight, "message TextArea consumes its XFL Y scale as component height");
+		assertClose(99.966796875, view.messageArea.controlHeight, "message TextArea consumes its XFL Y scale over the 44px component avatar");
 		assertClose(1, view.messageArea.scaleX, "message TextArea does not magnify its component text horizontally");
 		assertClose(1, view.messageArea.scaleY, "message TextArea does not magnify its component text vertically");
 		assertClose(11, view.message.defaultTextFormat.size, "message TextArea keeps the original component font size");
@@ -486,6 +486,18 @@ class NativePresentationFoundationTest {
 			"message TextArea ends above the OK button");
 		assertEquals(false, view.messageArea.editable, "message TextArea is non-editable as authored");
 		assertEquals("Server message", view.message.text, "message popup applies its AS3 htmlText assignment");
+		view.messageArea.text = [
+			"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+			"eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"
+		].join("\n");
+		assertEquals(true, view.messageArea.verticalScrollBar.visible, "long message text reveals the authored scrollbar");
+		assertEquals(true, view.message.maxScrollV > 1, "long message text exposes a scrollable native text range");
+		assertEquals(true, view.messageArea.verticalScrollBar.maximum > 1, "message scrollbar adopts the native text range");
+		assertEquals(true, view.messageArea.verticalScrollBar.enabled, "message scrollbar remains interactive");
+		assertEquals(1, view.messageArea.verticalScrollBar.value, "message scrollbar starts at the top of the text");
+		view.messageArea.verticalScrollBar.scrollTo(2);
+		assertEquals(2, view.messageArea.verticalScrollBar.value, "message scrollbar advances through its scroll range");
+		assertEquals(2, view.message.scrollV, "message scrollbar scrolls the native text field");
 		assertClose(-50, view.okButton.x, "message OK button keeps its XFL X");
 		assertClose(43, view.okButton.y, "message OK button keeps its XFL Y");
 		var closes = 0;

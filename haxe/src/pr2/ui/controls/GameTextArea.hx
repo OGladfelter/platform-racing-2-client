@@ -30,6 +30,7 @@ class GameTextArea extends NativeControl {
 	public final verticalScrollBar:GameScrollBar;
 
 	private var authoredBackground:Sprite;
+	private var syncingScrollBar:Bool = false;
 
 	public function new(width:Float = 160, height:Float = 100) {
 		super(width, height);
@@ -178,7 +179,9 @@ class GameTextArea extends NativeControl {
 	}
 
 	private function syncScrollBar():Void {
-		if (verticalScrollBar == null || textField == null) return;
+		if (syncingScrollBar || verticalScrollBar == null || textField == null) return;
+		syncingScrollBar = true;
+		var requestedScrollV = textField.scrollV;
 		// Flash TextArea defaults to ScrollPolicy.AUTO. Measure at the full text
 		// width first so removing the scrollbar can also remove wrapping overflow.
 		textField.width = Math.max(1, controlWidth - 6);
@@ -186,10 +189,13 @@ class GameTextArea extends NativeControl {
 			|| (verticalScrollPolicy == "auto" && textField.maxScrollV > 1);
 		verticalScrollBar.visible = showScrollBar;
 		if (showScrollBar) textField.width = Math.max(1, controlWidth - SCROLL_WIDTH - 6);
-		else if (textField.scrollV != 1) textField.scrollV = 1;
+		else requestedScrollV = 1;
+		requestedScrollV = Std.int(Math.max(1, Math.min(requestedScrollV, textField.maxScrollV)));
+		if (textField.scrollV != requestedScrollV) textField.scrollV = requestedScrollV;
 		var visibleLines = Math.max(1, textField.bottomScrollV - textField.scrollV + 1);
 		verticalScrollBar.setScrollProperties(visibleLines, 1, Math.max(1, textField.maxScrollV));
 		verticalScrollBar.value = textField.scrollV;
+		syncingScrollBar = false;
 	}
 
 	private function textFormatForState():TextFormat {
