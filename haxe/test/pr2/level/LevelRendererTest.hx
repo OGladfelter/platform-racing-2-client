@@ -29,6 +29,8 @@ class LevelRendererTest {
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testPackedArtBackgroundMounts", testPackedArtBackgroundMounts);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testDefaultArtStrokeThickness", testDefaultArtStrokeThickness);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtEraseStrokeClearsRasterTiles", testArtEraseStrokeClearsRasterTiles);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testLosslessArtRasterScaleAddsFixedSizeTiles", testLosslessArtRasterScaleAddsFixedSizeTiles);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testLosslessArtRerasterizesAtHigherDensity", testLosslessArtRerasterizesAtHigherDensity);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testWorldToScreenFocus", testWorldToScreenFocus);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testPresentationCameraOffsetDoesNotRebuild", testPresentationCameraOffsetDoesNotRebuild);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testPresentationCourseRotationDoesNotAdvanceAuthority", testPresentationCourseRotationDoesNotAdvanceAuthority);
@@ -519,13 +521,17 @@ class LevelRendererTest {
 		Settings.disablePersistenceForTests();
 		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, false);
 		var block = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 10020, 10050);
-		var limitedRenderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block);
+		var limitedRenderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block, 180, 280, false,
+			LevelRenderer.DEFAULT_BLOCKS_PER_FRAME, {rasterScale: 2});
 		assertEquals(500, @:privateAccess limitedRenderer.artRasterBudget.limit, "standard art quality uses the port's 500-tile budget");
+		assertEquals(1.0, @:privateAccess limitedRenderer.artRasterScale, "standard art quality ignores native-output raster scaling");
 		limitedRenderer.remove();
 
 		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, true);
-		var losslessRenderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block);
+		var losslessRenderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block, 180, 280, false,
+			LevelRenderer.DEFAULT_BLOCKS_PER_FRAME, {rasterScale: 2});
 		assertEquals(-1, @:privateAccess losslessRenderer.artRasterBudget.limit, "lossless art quality removes the raster tile limit");
+		assertEquals(2.0, @:privateAccess losslessRenderer.artRasterScale, "lossless art quality uses native-output raster scaling");
 		losslessRenderer.remove();
 		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, false);
 	}
@@ -774,6 +780,43 @@ class LevelRendererTest {
 		assertEquals(1, raster.numChildren, "mixed draw/erase strokes create one raster tile");
 		assertEquals(LevelRenderer.ART_RASTER_TILE_SIZE + 1, tile.width, "raster tile keeps overlap width");
 		assertEquals(LevelRenderer.ART_RASTER_TILE_SIZE + 1, tile.height, "raster tile keeps overlap height");
+	}
+
+	private static function testLosslessArtRasterScaleAddsFixedSizeTiles():Void {
+		var actions = [new LevelDrawAction("d", [10, 10, 300, 0])];
+		var standardRaster = new Sprite();
+		LevelRenderer.renderLayerStrokes(standardRaster, actions);
+		var nativeRaster = new Sprite();
+		LevelRenderer.renderLayerStrokes(nativeRaster, actions, null, 2);
+
+		assertEquals(1, standardRaster.numChildren, "standard density fits the test stroke in one tile");
+		assertEquals(2, nativeRaster.numChildren, "2x lossless density covers the same stroke with more tiles");
+		var nativeTile = Std.downcast(nativeRaster.getChildAt(0), Bitmap);
+		assertEquals(LevelRenderer.ART_RASTER_TILE_SIZE + 1, nativeTile.bitmapData.width, "native-density tiles keep the fixed texture width");
+		assertEquals(LevelRenderer.ART_RASTER_TILE_SIZE + 1, nativeTile.bitmapData.height, "native-density tiles keep the fixed texture height");
+		assertClose(0.5, nativeTile.scaleX, "2x native-density tile covers half as many game units horizontally");
+		assertClose(0.5, nativeTile.scaleY, "2x native-density tile covers half as many game units vertically");
+		var nextNativeTile = Std.downcast(nativeRaster.getChildAt(1), Bitmap);
+		assertClose(LevelRenderer.ART_RASTER_TILE_SIZE / 2, nextNativeTile.x, "next 2x tile begins after half the standard world span");
+	}
+
+	private static function testLosslessArtRerasterizesAtHigherDensity():Void {
+		Settings.disablePersistenceForTests();
+		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, true);
+		var block = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 0, 0);
+		var art = new LevelArtLayer([new LevelDrawAction("d", [10, 10, 300, 0])], [], [], 1);
+		var renderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block], [art]), block, 180, 280, false,
+			LevelRenderer.DEFAULT_BLOCKS_PER_FRAME, {rasterScale: 1});
+
+		assertEquals(1, strokeRaster(worldLayer(renderer, 1)).numChildren, "lossless art starts with one standard-density tile");
+		@:privateAccess renderer.artRenderer.rerasterizeLayers(2);
+		var rerasterized = strokeRaster(worldLayer(renderer, 1));
+		assertEquals(2, rerasterized.numChildren, "density increase rebuilds existing lossless art with more tiles");
+		assertClose(0.5, Std.downcast(rerasterized.getChildAt(0), Bitmap).scaleX,
+			"rebuilt lossless art tiles use the higher raster density");
+
+		renderer.remove();
+		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, false);
 	}
 
 	private static function testWorldToScreenFocus():Void {

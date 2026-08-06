@@ -106,6 +106,7 @@ class LargeStrokeRasterOperation {
 
 class ArtRasterTiles {
 	public final rasterCanvas:Sprite;
+	public final rasterScale:Float;
 	public var lastProfilePath(default, null):String = "";
 	public var lastProfileMode(default, null):String = "";
 	public var lastProfileTileCount(default, null):Int = 0;
@@ -136,9 +137,10 @@ class ArtRasterTiles {
 	private var size:Float = LevelRenderer.DEFAULT_ART_BRUSH_SIZE;
 	private var mode:String = "draw";
 
-	public function new(rasterCanvas:Sprite, ?budget:ArtRasterBudget) {
+	public function new(rasterCanvas:Sprite, ?budget:ArtRasterBudget, rasterScale:Float = 1) {
 		this.rasterCanvas = rasterCanvas;
 		this.budget = budget;
+		this.rasterScale = rasterScale > 1 ? rasterScale : 1;
 	}
 
 	public function dispose():Void {
@@ -212,6 +214,7 @@ class ArtRasterTiles {
 					continue;
 				}
 				matrix.identity();
+				matrix.scale(rasterScale, rasterScale);
 				matrix.translate(-pendingTileXs[i], -pendingTileYs[i]);
 				bitmap.bitmapData.draw(shape, matrix, null, null, null, true);
 				queueTileAttach(pendingTileKeys[i]);
@@ -232,16 +235,17 @@ class ArtRasterTiles {
 			}
 			var tileX = pendingTileXs[i];
 			var tileY = pendingTileYs[i];
-			var rectX = Std.int(Math.max(0, Math.floor(pendingBounds.x - tileX)));
-			var rectY = Std.int(Math.max(0, Math.floor(pendingBounds.y - tileY)));
-			var rectRight = Std.int(Math.min(tileSize, Math.ceil(pendingBounds.right - tileX)));
-			var rectBottom = Std.int(Math.min(tileSize, Math.ceil(pendingBounds.bottom - tileY)));
+			var rectX = Std.int(Math.max(0, Math.floor(pendingBounds.x * rasterScale - tileX)));
+			var rectY = Std.int(Math.max(0, Math.floor(pendingBounds.y * rasterScale - tileY)));
+			var rectRight = Std.int(Math.min(tileSize, Math.ceil(pendingBounds.right * rasterScale - tileX)));
+			var rectBottom = Std.int(Math.min(tileSize, Math.ceil(pendingBounds.bottom * rasterScale - tileY)));
 			if (rectRight <= rectX || rectBottom <= rectY) {
 				continue;
 			}
 			var targetRect = new Rectangle(rectX, rectY, rectRight - rectX, rectBottom - rectY);
 			var mask = new BitmapData(Std.int(targetRect.width), Std.int(targetRect.height), true, 0);
 			matrix.identity();
+			matrix.scale(rasterScale, rasterScale);
 			matrix.translate(-(tileX + rectX), -(tileY + rectY));
 			mask.draw(shape, matrix, null, null, null, true);
 			clearMaskedPixels(bitmap.bitmapData, targetRect, mask);
@@ -261,7 +265,13 @@ class ArtRasterTiles {
 		pendingMinTileX = pendingMaxTileX = pendingMinTileY = pendingMaxTileY = 0;
 	}
 
-	public function setVisibleTileWindow(minTileX:Int, maxTileX:Int, minTileY:Int, maxTileY:Int, force:Bool):Void {
+	public function setVisibleWorldWindow(minX:Float, maxX:Float, minY:Float, maxY:Float, force:Bool):Void {
+		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
+		var margin = LevelRenderer.ART_RASTER_VIEW_MARGIN_TILES * tile;
+		var minTileX = tileOrigin(Std.int(Math.floor(minX * rasterScale))) - margin;
+		var maxTileX = tileOrigin(Std.int(Math.floor(maxX * rasterScale))) + margin;
+		var minTileY = tileOrigin(Std.int(Math.floor(minY * rasterScale))) - margin;
+		var maxTileY = tileOrigin(Std.int(Math.floor(maxY * rasterScale))) + margin;
 		var threshold = LevelRenderer.ART_RASTER_VIEW_REBUILD_THRESHOLD * LevelRenderer.ART_RASTER_TILE_SIZE;
 		if (!force
 			&& viewInitialized
@@ -281,7 +291,7 @@ class ArtRasterTiles {
 			if (bitmap == null) {
 				continue;
 			}
-			if (isTileVisible(Std.int(bitmap.x), Std.int(bitmap.y))) {
+			if (isTileVisible(bitmapTileX(bitmap), bitmapTileY(bitmap))) {
 				queueTileAttach(key);
 			} else {
 				setTileAttached(bitmap, false);
@@ -301,7 +311,7 @@ class ArtRasterTiles {
 			if (bitmap == null) {
 				continue;
 			}
-			if (!isTileVisible(Std.int(bitmap.x), Std.int(bitmap.y))) {
+			if (!isTileVisible(bitmapTileX(bitmap), bitmapTileY(bitmap))) {
 				setTileAttached(bitmap, false);
 				continue;
 			}
@@ -324,7 +334,7 @@ class ArtRasterTiles {
 	public function hasQueuedVisibleTiles():Bool {
 		for (key in attachQueue) {
 			var bitmap = tiles.get(key);
-			if (bitmap != null && bitmap.parent != rasterCanvas && isTileVisible(Std.int(bitmap.x), Std.int(bitmap.y))) {
+			if (bitmap != null && bitmap.parent != rasterCanvas && isTileVisible(bitmapTileX(bitmap), bitmapTileY(bitmap))) {
 				return true;
 			}
 		}
@@ -346,8 +356,9 @@ class ArtRasterTiles {
 		}
 		bitmap = new Bitmap(new BitmapData(LevelRenderer.ART_RASTER_TILE_SIZE + 1, LevelRenderer.ART_RASTER_TILE_SIZE + 1, true, 0));
 		bitmap.smoothing = true;
-		bitmap.x = tileX;
-		bitmap.y = tileY;
+		bitmap.scaleX = bitmap.scaleY = 1 / rasterScale;
+		bitmap.x = tileX / rasterScale;
+		bitmap.y = tileY / rasterScale;
 		tiles.set(key, bitmap);
 		queueTileAttach(key);
 		return bitmap;
@@ -372,7 +383,7 @@ class ArtRasterTiles {
 			return;
 		}
 		var bitmap = tiles.get(key);
-		if (bitmap == null || bitmap.parent == rasterCanvas || !isTileVisible(Std.int(bitmap.x), Std.int(bitmap.y))) {
+		if (bitmap == null || bitmap.parent == rasterCanvas || !isTileVisible(bitmapTileX(bitmap), bitmapTileY(bitmap))) {
 			return;
 		}
 		attachQueueSeen.set(key, true);
@@ -382,6 +393,10 @@ class ArtRasterTiles {
 	private static inline function intAbs(value:Int):Int {
 		return value < 0 ? -value : value;
 	}
+
+	private inline function bitmapTileX(bitmap:Bitmap):Int return Std.int(Math.round(bitmap.x * rasterScale));
+
+	private inline function bitmapTileY(bitmap:Bitmap):Int return Std.int(Math.round(bitmap.y * rasterScale));
 
 	private function startLargeStroke(action:LevelDrawAction, erase:Bool, profilePath:String, ?deadline:Null<Float>):Bool {
 		flush();
@@ -429,6 +444,7 @@ class ArtRasterTiles {
 			return;
 		}
 		matrix.identity();
+		matrix.scale(rasterScale, rasterScale);
 		matrix.translate(-tileX, -tileY);
 		bitmap.bitmapData.draw(op.shape, matrix, null, null, null, true);
 		queueTileAttach(op.strokeTiles.keys[op.tileIndex]);
@@ -443,16 +459,17 @@ class ArtRasterTiles {
 		var tileX = op.strokeTiles.tileXs[op.tileIndex];
 		var tileY = op.strokeTiles.tileYs[op.tileIndex];
 		var tileSize = LevelRenderer.ART_RASTER_TILE_SIZE + 1;
-		var rectX = Std.int(Math.max(0, Math.floor(op.bounds.x - tileX)));
-		var rectY = Std.int(Math.max(0, Math.floor(op.bounds.y - tileY)));
-		var rectRight = Std.int(Math.min(tileSize, Math.ceil(op.bounds.right - tileX)));
-		var rectBottom = Std.int(Math.min(tileSize, Math.ceil(op.bounds.bottom - tileY)));
+		var rectX = Std.int(Math.max(0, Math.floor(op.bounds.x * rasterScale - tileX)));
+		var rectY = Std.int(Math.max(0, Math.floor(op.bounds.y * rasterScale - tileY)));
+		var rectRight = Std.int(Math.min(tileSize, Math.ceil(op.bounds.right * rasterScale - tileX)));
+		var rectBottom = Std.int(Math.min(tileSize, Math.ceil(op.bounds.bottom * rasterScale - tileY)));
 		if (rectRight <= rectX || rectBottom <= rectY) {
 			return;
 		}
 		var targetRect = new Rectangle(rectX, rectY, rectRight - rectX, rectBottom - rectY);
 		var mask = new BitmapData(Std.int(targetRect.width), Std.int(targetRect.height), true, 0);
 		matrix.identity();
+		matrix.scale(rasterScale, rasterScale);
 		matrix.translate(-(tileX + rectX), -(tileY + rectY));
 		mask.draw(op.shape, matrix, null, null, null, true);
 		clearMaskedPixels(bitmap.bitmapData, targetRect, mask);
@@ -648,11 +665,11 @@ class ArtRasterTiles {
 
 	private function addTilesForBounds(tiles:ArtStrokeTileSet, minX:Float, minY:Float, maxX:Float, maxY:Float):Void {
 		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
-		var tileY = tileOrigin(Std.int(Math.floor(minY)));
-		var endY = tileOrigin(Std.int(Math.floor(maxY)));
+		var tileY = tileOrigin(Std.int(Math.floor(minY * rasterScale)));
+		var endY = tileOrigin(Std.int(Math.floor(maxY * rasterScale)));
 		while (tileY <= endY) {
-			var tileX = tileOrigin(Std.int(Math.floor(minX)));
-			var endX = tileOrigin(Std.int(Math.floor(maxX)));
+			var tileX = tileOrigin(Std.int(Math.floor(minX * rasterScale)));
+			var endX = tileOrigin(Std.int(Math.floor(maxX * rasterScale)));
 			while (tileX <= endX) {
 				var key = tileKey(tileX, tileY);
 				tiles.add(key, tileX, tileY);
@@ -752,10 +769,10 @@ class ArtRasterTiles {
 
 	private function setEstimatedStrokeProfile(action:LevelDrawAction, path:String):Void {
 		var bounds = strokeBounds(action, Math.max(0.5, size / 2));
-		var minTileX = tileOrigin(Std.int(Math.floor(bounds.x)));
-		var maxTileX = tileOrigin(Std.int(Math.floor(bounds.right)));
-		var minTileY = tileOrigin(Std.int(Math.floor(bounds.y)));
-		var maxTileY = tileOrigin(Std.int(Math.floor(bounds.bottom)));
+		var minTileX = tileOrigin(Std.int(Math.floor(bounds.x * rasterScale)));
+		var maxTileX = tileOrigin(Std.int(Math.floor(bounds.right * rasterScale)));
+		var minTileY = tileOrigin(Std.int(Math.floor(bounds.y * rasterScale)));
+		var maxTileY = tileOrigin(Std.int(Math.floor(bounds.bottom * rasterScale)));
 		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
 		lastProfilePath = path;
 		lastProfileMode = mode;

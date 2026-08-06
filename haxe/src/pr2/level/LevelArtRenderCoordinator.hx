@@ -30,7 +30,7 @@ class LevelArtRenderCoordinator {
 		var rasterCanvas = new Sprite();
 		rasterCanvas.name = LevelRenderer.ART_RASTER_CANVAS_NAME;
 		container.addChild(rasterCanvas);
-		var strokeTiles = new ArtRasterTiles(rasterCanvas, owner.artRasterBudget);
+		var strokeTiles = new ArtRasterTiles(rasterCanvas, owner.artRasterBudget, owner.artRasterScale);
 		owner.artRasterTileLayers[index] = strokeTiles;
 		if (owner.incrementalBlocks) {
 			owner.totalArtItems += layer.drawActions.length + layer.objects.length + layer.texts.length;
@@ -158,13 +158,8 @@ class LevelArtRenderCoordinator {
 			if (local.y < minY) minY = local.y;
 			if (local.y > maxY) maxY = local.y;
 		}
-		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
-		var margin = LevelRenderer.ART_RASTER_VIEW_MARGIN_TILES * tile;
-		tiles.setVisibleTileWindow(tileOrigin(Std.int(Math.floor(minX))) - margin, tileOrigin(Std.int(Math.floor(maxX))) + margin,
-			tileOrigin(Std.int(Math.floor(minY))) - margin, tileOrigin(Std.int(Math.floor(maxY))) + margin, force);
+		tiles.setVisibleWorldWindow(minX, maxX, minY, maxY, force);
 	}
-
-	private static inline function tileOrigin(pixel:Int):Int return Std.int(Math.floor(pixel / LevelRenderer.ART_RASTER_TILE_SIZE)) * LevelRenderer.ART_RASTER_TILE_SIZE;
 
 	private function handleFailure(error:Dynamic):Void {
 		if (!owner.artLoadWarningShown) {
@@ -224,6 +219,36 @@ class LevelArtRenderCoordinator {
 			owner.rasterStopNotified = true;
 			emitWarning(LevelRenderer.ART_RASTER_STOP_WARNING, false);
 		}
+	}
+
+	public function rerasterizeLayers(rasterScale:Float):Void {
+		for (index in 0...owner.artRasterTileLayers.length) {
+			var oldTiles = owner.artRasterTileLayers[index];
+			if (oldTiles == null || index >= owner.level.artLayers.length) continue;
+			var oldCanvas = oldTiles.rasterCanvas;
+			var container = Std.downcast(oldCanvas.parent, Sprite);
+			if (container == null) continue;
+
+			var newCanvas = new Sprite();
+			newCanvas.name = LevelRenderer.ART_RASTER_CANVAS_NAME;
+			var childIndex = container.getChildIndex(oldCanvas);
+			container.addChildAt(newCanvas, childIndex);
+			var newTiles = new ArtRasterTiles(newCanvas, owner.artRasterBudget, rasterScale);
+			try {
+				newTiles.applyAll(owner.level.artLayers[index].drawActions);
+				owner.artRasterTileLayers[index] = newTiles;
+				updateViewWindow(newTiles, true);
+				newTiles.attachQueuedTiles(1000000);
+				oldTiles.dispose();
+				if (oldCanvas.parent != null) oldCanvas.parent.removeChild(oldCanvas);
+			} catch (error:Dynamic) {
+				newTiles.dispose();
+				if (newCanvas.parent != null) newCanvas.parent.removeChild(newCanvas);
+				handleFailure(error);
+				return;
+			}
+		}
+		finishRasterAttaching();
 	}
 
 	public function dispose():Void {

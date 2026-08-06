@@ -19,6 +19,8 @@ import openfl.geom.Matrix;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
 import pr2.Constants;
+import pr2.app.AppStage;
+import pr2.app.DebugSignal;
 import pr2.lobby.account.Settings;
 import pr2.level.Level.LevelArtObject;
 import pr2.level.Level.LevelDrawAction;
@@ -35,6 +37,7 @@ typedef ArtRenderOptions = {
 	@:optional var suppressArtWarningPopup:Bool;
 	@:optional var artDrawFaultInjector:Int->Void;
 	@:optional var rasterTileLimit:Int;
+	@:optional var rasterScale:Float;
 	@:optional var editorWarning:Bool;
 }
 
@@ -166,6 +169,9 @@ class LevelRenderer extends Sprite {
 	private final drawArtEnabled:Bool;
 	private final artOptions:Null<ArtRenderOptions>;
 	private final artRasterBudget:ArtRasterBudget;
+	private final losslessArtEnabled:Bool;
+	private var artRasterScale:Float;
+	private var artRasterResizeTimer:Null<Timer>;
 	private final blockFactory:BlockViewFactory;
 	private var backgroundRenderer:LevelBackgroundRenderer;
 	private var artRenderer:LevelArtRenderCoordinator;
@@ -213,10 +219,15 @@ class LevelRenderer extends Sprite {
 		this.blocksPerFrame = blocksPerFrame <= 0 ? DEFAULT_BLOCKS_PER_FRAME : blocksPerFrame;
 		this.drawArtEnabled = Settings.getValue(Settings.DRAW_ART, true) != false;
 		this.artOptions = artOptions;
+		var losslessArt = Settings.getValue(Settings.ART_LOSSLESS_QUALITY, false) == true;
+		this.losslessArtEnabled = losslessArt;
 		var rasterTileLimit = artOptions != null && artOptions.rasterTileLimit != null ? artOptions.rasterTileLimit
-			: Settings.getValue(Settings.ART_LOSSLESS_QUALITY, false) == true ? -1 : DEFAULT_ART_RASTER_TILE_LIMIT;
+			: losslessArt ? -1 : DEFAULT_ART_RASTER_TILE_LIMIT;
 		this.artRasterBudget = new ArtRasterBudget(rasterTileLimit, artRenderer.notifyRasterStopped);
+		this.artRasterScale = resolveArtRasterScale(losslessArt, artOptions);
+		DebugSignal.set("art-raster-scale", Std.string(artRasterScale));
 		this.currentBackgroundColor = level.bgColor;
+		addEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
 
 		var focus = focusBlock == null ? firstRenderableBlock(level) : focusBlock;
 		if (focus == null) {
@@ -263,8 +274,53 @@ class LevelRenderer extends Sprite {
 		return tileCount <= ART_DRAW_BATCH_MAX_TILE_COUNT && tileSpanX <= ART_DRAW_BATCH_MAX_TILE_SPAN && tileSpanY <= ART_DRAW_BATCH_MAX_TILE_SPAN;
 	}
 
+	private static function resolveArtRasterScale(losslessArt:Bool, artOptions:Null<ArtRenderOptions>):Float {
+		if (!losslessArt) return 1;
+		if (artOptions != null && artOptions.rasterScale != null) return Math.max(1, artOptions.rasterScale);
+		#if html5
+		var currentStage = AppStage.stage;
+		if (currentStage != null && currentStage.window != null) {
+			var pixelWidth = currentStage.window.width * currentStage.window.scale;
+			var pixelHeight = currentStage.window.height * currentStage.window.scale;
+			return Math.max(1, Math.min(pixelWidth / Constants.STAGE_WIDTH, pixelHeight / Constants.STAGE_HEIGHT));
+		}
+		#end
+		return 1;
+	}
+
 	public function isDrawingComplete():Bool {
 		return isBlockDrawingComplete() && drawnArtItems >= totalArtItems;
+	}
+
+	public function artRasterDensity():Float return artRasterScale;
+
+	private function onAddedToStage(_:Event):Void {
+		removeEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
+		if (!losslessArtEnabled || stage == null) return;
+		if (stage.window != null) stage.window.onResize.add(onWindowResize);
+		scheduleArtRasterDensityRefresh();
+	}
+
+	private function onWindowResize(_width:Int, _height:Int):Void scheduleArtRasterDensityRefresh();
+
+	private function scheduleArtRasterDensityRefresh(delayMs:Int = 150):Void {
+		if (!losslessArtEnabled) return;
+		if (artRasterResizeTimer != null) artRasterResizeTimer.stop();
+		artRasterResizeTimer = Timer.delay(refreshArtRasterDensity, delayMs);
+	}
+
+	private function refreshArtRasterDensity():Void {
+		artRasterResizeTimer = null;
+		if (!losslessArtEnabled || stage == null) return;
+		var desiredScale = resolveArtRasterScale(true, artOptions);
+		if (desiredScale <= artRasterScale + 0.01) return;
+		if (!isDrawingComplete()) {
+			scheduleArtRasterDensityRefresh(250);
+			return;
+		}
+		artRasterScale = desiredScale;
+		artRenderer.rerasterizeLayers(desiredScale);
+		DebugSignal.set("art-raster-scale", Std.string(artRasterScale));
 	}
 
 	public function drawnBlockCount():Int {
@@ -1125,6 +1181,12 @@ class LevelRenderer extends Sprite {
 	}
 
 	public function remove():Void {
+		removeEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
+		if (stage != null && stage.window != null) stage.window.onResize.remove(onWindowResize);
+		if (artRasterResizeTimer != null) {
+			artRasterResizeTimer.stop();
+			artRasterResizeTimer = null;
+		}
 		removeEventListener(Event.ENTER_FRAME, drawBlockBatch);
 		removeEventListener(Event.ENTER_FRAME, drawArtBatch);
 		artRenderer.dispose();
@@ -1237,8 +1299,8 @@ class LevelRenderer extends Sprite {
 	public static function drawLayerStrokes(brushCanvas:Sprite, actions:Array<LevelDrawAction>):Void
 		LevelArtFactory.drawLayerStrokes(brushCanvas, actions);
 
-	public static function renderLayerStrokes(rasterCanvas:Sprite, actions:Array<LevelDrawAction>, ?budget:ArtRasterBudget):Void
-		LevelArtFactory.renderLayerStrokes(rasterCanvas, actions, budget);
+	public static function renderLayerStrokes(rasterCanvas:Sprite, actions:Array<LevelDrawAction>, ?budget:ArtRasterBudget, rasterScale:Float = 1):Void
+		LevelArtFactory.renderLayerStrokes(rasterCanvas, actions, budget, rasterScale);
 
 	public static function rasterizeBrushInto(rasterCanvas:Sprite, brushCanvas:Sprite):Void
 		LevelArtFactory.rasterizeBrushInto(rasterCanvas, brushCanvas);
