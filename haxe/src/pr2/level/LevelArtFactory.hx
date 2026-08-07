@@ -42,7 +42,7 @@ class LevelArtFactory {
 	public static function renderLayerStrokes(rasterCanvas:Sprite, actions:Array<LevelDrawAction>, ?budget:ArtRasterBudget, rasterScale:Float = 1):Void {
 		var tiles = new ArtRasterTiles(rasterCanvas, budget, rasterScale);
 		tiles.applyAll(actions);
-		tiles.attachQueuedTiles(1000000);
+		tiles.updateTiles(0);
 	}
 
 	/**

@@ -71,12 +71,9 @@ class OptionsView extends NativeView {
 		componentButton("filterOff_bt", "Off", -52.9, -54.5, 50);
 		label("swear filter", null, -63.4, -104.5, 69.05, 14.55, 12, false, TextFormatAlign.CENTER);
 		componentButton("filterOn_bt", "On", -52.9, -82.45, 50);
-		linkButton("art_bt", "art", -108.2, -106.5, 30, 12);
+		label("art", "artLabel", -106.2, -104.5, 26, 14.55, 12, false, TextFormatAlign.CENTER);
 		componentButton("artOff_bt", "Off", -118.2, -54.5, 50);
 		componentButton("artOn_bt", "On", -118.2, -82.45, 50);
-		// The art button symbol places its 26px label at local (2, 2). Match
-		// those final bounds exactly so swapping the disabled label cannot shift.
-		label("art", "artOffText", -106.2, -104.5, 26, 14.55, 12, false, TextFormatAlign.CENTER);
 		title = label("-- Options --", null, -53, -133, 106, 17.05, 14, true, TextFormatAlign.CENTER);
 	}
 

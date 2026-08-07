@@ -8,7 +8,6 @@ import pr2.lobby.account.AlternateControls;
 import pr2.lobby.dialogs.ChangePasswordPopup;
 import pr2.lobby.dialogs.ConfirmPopup;
 import pr2.lobby.dialogs.CreateGuildPopup;
-import pr2.lobby.dialogs.OptionsArtQualityMenu;
 import pr2.lobby.dialogs.OptionsPopup;
 import pr2.lobby.dialogs.OptionsSongsMenu;
 import pr2.lobby.dialogs.OptionsView;
@@ -17,7 +16,6 @@ import pr2.lobby.dialogs.SetEmailPopup;
 import pr2.lobby.dialogs.TransferGuildPopup;
 import pr2.lobby.dialogs.UploadingPopup;
 import pr2.net.ServerConfig;
-import pr2.ui.controls.GameButton;
 import pr2.ui.controls.GameSlider;
 import pr2.util.TestDisplayUtil as DisplayUtil;
 
@@ -33,10 +31,9 @@ class OptionsPopupTest {
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testAccountButtonStacks", testAccountButtonStacks);
 		if (pr2.DeterministicTestMode.finishSmokeSuite("OptionsPopupTest")) return;
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testGuildLeaveFlow", testGuildLeaveFlow);
-		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testInitialArtLabelVisibility", testInitialArtLabelVisibility);
+		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testArtLabelIsStatic", testArtLabelIsStatic);
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testHoverPopups", testHoverPopups);
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testSoundSliderRelease", testSoundSliderRelease);
-		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testArtQualityMenuSingleton", testArtQualityMenuSingleton);
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testSongsMenuSingleton", testSongsMenuSingleton);
 
 		pr2.DeterministicTestMode.runTest("OptionsPopupTest.testAuthoredOptionsViewAndPersistence", function():Void {
@@ -55,11 +52,10 @@ class OptionsPopupTest {
 		assertNear(1.51835632324219, view.panel.scaleY, 0.000001, "options ShadowBG keeps XFL vertical scale");
 		assertNear(0.901960784313726, view.panel.alpha, 0.000001, "options ShadowBG keeps authored translucent alpha");
 		assertEquals("-- Options --", view.title.text, "options title keeps exact authored copy");
-		var artButton = Std.downcast(DisplayUtil.findByName(popup, "art_bt"), GameButton);
-		var artOffText = LobbyArt.text(popup, "artOffText");
-		assertNear(artButton.x + artButton.labelField.x, artOffText.x, 0.000001, "art button and disabled label share X");
-		assertNear(artButton.y + artButton.labelField.y, artOffText.y, 0.000001, "art button and disabled label share Y");
-		assertNear(artButton.labelField.width, artOffText.width, 0.000001, "art button and disabled label share width");
+		var artLabel = LobbyArt.text(popup, "artLabel");
+		assertNear(-106.2, artLabel.x, 0.000001, "static art label keeps XFL X");
+		assertNear(-104.5, artLabel.y, 0.000001, "static art label keeps XFL Y");
+		assertEquals(null, DisplayUtil.findByName(popup, "art_bt"), "art quality button is removed");
 
 		var music = slider(popup, "musicSlider");
 		var sound = slider(popup, "soundSlider");
@@ -95,13 +91,8 @@ class OptionsPopupTest {
 		click(popup, "filterOff_bt");
 		click(popup, "artOff_bt");
 		assertEquals(-43.5, DisplayUtil.findByName(popup, "filterHighlight").y, "filter off moves authored highlight");
-		assertEquals(false, DisplayUtil.findByName(popup, "art_bt").visible, "art quality is unavailable when art is off");
 
 		click(popup, "artOn_bt");
-		click(popup, "art_bt");
-		var lossless = OptionsArtQualityMenu.instance;
-		assertNotNull(lossless, "art button opens art quality singleton");
-		lossless.setLosslessForTests(true);
 		click(popup, "music_bt");
 		var songs = OptionsSongsMenu.instance;
 		assertNotNull(songs, "music button opens songs singleton");
@@ -120,7 +111,6 @@ class OptionsPopupTest {
 		assertEquals(false, AlternateControls.matches("item", 73), "replaced alternate key is inactive");
 		assertEquals(false, Settings.getValue(Settings.FILTER_SWEARS, true), "filter choice persists on close");
 		assertEquals(true, Settings.getValue(Settings.DRAW_ART, false), "art choice persists on close");
-		assertEquals(true, Settings.getValue(Settings.ART_LOSSLESS_QUALITY, false), "quality choice persists on close");
 		var disabled = Settings.disabledSongs();
 		assertEquals(true, disabled.indexOf("2") >= 0 && disabled.indexOf("3") >= 0, "song choices persist on close");
 
@@ -214,20 +204,20 @@ class OptionsPopupTest {
 		closeAll();
 	}
 
-	private static function testInitialArtLabelVisibility():Void {
+	private static function testArtLabelIsStatic():Void {
 		LobbySession.group = 1;
 		LobbySession.guildId = 0;
 		LobbySession.guildOwner = false;
 		Settings.setValue(Settings.DRAW_ART, true);
 		var enabled = new OptionsPopup();
-		assertEquals(true, DisplayUtil.findByName(enabled, "art_bt").visible, "enabled art starts with button label visible");
-		assertEquals(false, DisplayUtil.findByName(enabled, "artOffText").visible, "enabled art starts with plain label hidden");
+		assertEquals(true, DisplayUtil.findByName(enabled, "artLabel").visible, "enabled art shows the static label");
+		assertEquals(null, DisplayUtil.findByName(enabled, "art_bt"), "enabled art has no quality button");
 		enabled.remove();
 
 		Settings.setValue(Settings.DRAW_ART, false);
 		var disabled = new OptionsPopup();
-		assertEquals(false, DisplayUtil.findByName(disabled, "art_bt").visible, "disabled art starts with button label hidden");
-		assertEquals(true, DisplayUtil.findByName(disabled, "artOffText").visible, "disabled art starts with plain label visible");
+		assertEquals(true, DisplayUtil.findByName(disabled, "artLabel").visible, "disabled art keeps the static label");
+		assertEquals(null, DisplayUtil.findByName(disabled, "art_bt"), "disabled art has no quality button");
 		disabled.remove();
 		Settings.setValue(Settings.DRAW_ART, true);
 		closeAll();
@@ -239,15 +229,6 @@ class OptionsPopupTest {
 		LobbySession.guildOwner = false;
 		Settings.setValue(Settings.DRAW_ART, true);
 		var popup = new OptionsPopup();
-
-		hover(popup, "art_bt", MouseEvent.MOUSE_OVER);
-		assertEquals(true, popup.hasActiveHover(), "art button hover opens quality tooltip");
-		hover(popup, "art_bt", MouseEvent.MOUSE_OUT);
-		assertEquals(false, popup.hasActiveHover(), "art button mouse-out closes quality tooltip");
-
-		click(popup, "artOff_bt");
-		hover(popup, "art_bt", MouseEvent.MOUSE_OVER);
-		assertEquals(false, popup.hasActiveHover(), "disabled art quality button has no tooltip");
 
 		hover(popup, "music_bt", MouseEvent.MOUSE_OVER);
 		assertEquals(true, popup.hasActiveHover(), "music button hover opens song tooltip");
@@ -277,41 +258,6 @@ class OptionsPopupTest {
 		if (sound.onRelease != null) sound.onRelease();
 		assertEquals(1, heard.length, "removed options popup detaches sound release listener");
 		OptionsPopup.playJumpSound = savedPlayJumpSound;
-		closeAll();
-	}
-
-	private static function testArtQualityMenuSingleton():Void {
-		LobbySession.group = 1;
-		LobbySession.guildId = 0;
-		LobbySession.guildOwner = false;
-		Settings.setValue(Settings.DRAW_ART, true);
-		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, false);
-		var popup = new OptionsPopup();
-
-		click(popup, "art_bt");
-		var first = OptionsArtQualityMenu.instance;
-		assertNotNull(first, "art quality button creates singleton menu");
-		assertEquals(false, first.isLosslessSelectedForTests(), "art quality menu loads persisted lossless value");
-		assertEquals(false, first.autoDismissArmedForTests(), "art quality menu waits before outside-click arming");
-		first.stageMouseDownForTests(10000, 10000);
-		assertEquals(first, OptionsArtQualityMenu.instance, "outside click before arm delay does not dismiss");
-		first.armAutoDismissForTests();
-		assertEquals(true, first.autoDismissArmedForTests(), "art quality menu arms outside-click dismissal");
-		first.stageMouseDownForTests(10000, 10000);
-		assertEquals(null, OptionsArtQualityMenu.instance, "outside click after arm delay dismisses menu");
-
-		click(popup, "art_bt");
-		first = OptionsArtQualityMenu.instance;
-		assertNotNull(first, "art quality menu reopens after dismissal");
-		first.setLosslessForTests(true);
-		click(popup, "art_bt");
-		var second = OptionsArtQualityMenu.instance;
-		assertNotNull(second, "art quality click replaces previous singleton");
-		assertEquals(true, first.isRemoved(), "new art quality menu removes previous instance");
-		assertEquals(true, second.isLosslessSelectedForTests(), "replacement art quality menu reloads saved lossless value");
-		second.remove();
-		assertEquals(true, Settings.getValue(Settings.ART_LOSSLESS_QUALITY, false), "art quality menu persists lossless value on removal");
-		popup.remove();
 		closeAll();
 	}
 

@@ -16,6 +16,8 @@ import pr2.level.LevelArtRasterizer.ArtRasterTiles;
 @:access(pr2.level.LevelRenderer)
 class LevelArtRenderCoordinator {
 	private final owner:LevelRenderer;
+	private var rasterSaveFrame:Int = -1;
+	private var rasterSavesStartedThisFrame:Int = 0;
 
 	public function new(owner:LevelRenderer) this.owner = owner;
 
@@ -30,7 +32,7 @@ class LevelArtRenderCoordinator {
 		var rasterCanvas = new Sprite();
 		rasterCanvas.name = LevelRenderer.ART_RASTER_CANVAS_NAME;
 		container.addChild(rasterCanvas);
-		var strokeTiles = new ArtRasterTiles(rasterCanvas, owner.artRasterBudget, owner.artRasterScale);
+		var strokeTiles = createRasterTiles(rasterCanvas, index, owner.artRasterScale);
 		owner.artRasterTileLayers[index] = strokeTiles;
 		if (owner.incrementalBlocks) {
 			owner.totalArtItems += layer.drawActions.length + layer.objects.length + layer.texts.length;
@@ -46,7 +48,19 @@ class LevelArtRenderCoordinator {
 		}
 		owner.worldContainer.addChild(container);
 		updateViewWindow(strokeTiles, true);
-		if (!owner.incrementalBlocks) strokeTiles.attachQueuedTiles(1000000);
+		if (!owner.incrementalBlocks) {
+			updateRasterTiles();
+			continueRasterWork();
+		}
+	}
+
+	private function createRasterTiles(rasterCanvas:Sprite, layerIndex:Int, rasterScale:Float):ArtRasterTiles {
+		return new ArtRasterTiles(rasterCanvas, owner.artRasterBudget, rasterScale, {
+			store: owner.artTileStore,
+			groupKey: owner.artTileCacheGroup,
+			levelId: owner.level.id,
+			layerIndex: layerIndex
+		}, continueRasterWork);
 	}
 
 	public function drawBatch(event:Event):Void {
@@ -54,13 +68,13 @@ class LevelArtRenderCoordinator {
 		var deadline = Timer.stamp() + LevelRenderer.RENDER_FRAME_ESCAPE_SECONDS;
 		try {
 			drawNextForFrame(deadline);
-			if (Timer.stamp() < deadline) attachRasterTiles(LevelRenderer.ART_RASTER_ATTACH_TILES_PER_FRAME, deadline);
+			if (Timer.stamp() < deadline) updateRasterTiles();
 		} catch (error:Dynamic) {
 			handleFailure(error);
 		}
 		if (owner.drawnArtItems >= owner.totalArtItems) {
 			owner.removeEventListener(Event.ENTER_FRAME, drawBatch);
-			finishRasterAttaching();
+			continueRasterWork();
 		}
 	}
 
@@ -128,7 +142,7 @@ class LevelArtRenderCoordinator {
 
 	public function updateViewWindows(force:Bool):Void {
 		for (tiles in owner.artRasterTileLayers) if (tiles != null) updateViewWindow(tiles, force);
-		if (owner.drawnArtItems >= owner.totalArtItems) finishRasterAttaching();
+		if (owner.drawnArtItems >= owner.totalArtItems) continueRasterWork();
 	}
 
 	private function updateViewWindow(tiles:ArtRasterTiles, force:Bool):Void {
@@ -168,38 +182,54 @@ class LevelArtRenderCoordinator {
 		}
 		owner.drawnArtItems = owner.totalArtItems;
 		owner.nextArtLayerToDraw = owner.artDrawCursors.length;
+		for (tiles in owner.artRasterTileLayers) if (tiles != null) tiles.finishIndexingAfterFailure();
 		owner.removeEventListener(Event.ENTER_FRAME, drawBatch);
-		finishRasterAttaching();
+		continueRasterWork();
 	}
 
-	private function finishRasterAttaching():Void {
-		if (hasQueuedTiles() && !owner.artRasterAttachActive) {
-			owner.artRasterAttachActive = true;
-			owner.addEventListener(Event.ENTER_FRAME, onRasterAttachFrame);
+	private function continueRasterWork():Void {
+		if (hasPendingTiles() && !owner.artRasterWorkActive) {
+			owner.artRasterWorkActive = true;
+			owner.addEventListener(Event.ENTER_FRAME, onRasterWorkFrame);
 		}
 	}
 
-	private function onRasterAttachFrame(event:Event):Void {
+	private function onRasterWorkFrame(event:Event):Void {
 		if (!pr2.runtime.FrameClock.shouldRunSimulationFrame()) return;
-		attachRasterTiles(LevelRenderer.ART_RASTER_ATTACH_TILES_PER_FRAME, Timer.stamp() + LevelRenderer.RENDER_FRAME_ESCAPE_SECONDS);
-		if (!hasQueuedTiles()) {
-			owner.artRasterAttachActive = false;
-			owner.removeEventListener(Event.ENTER_FRAME, onRasterAttachFrame);
+		updateRasterTiles();
+		if (!hasPendingTiles()) {
+			owner.artRasterWorkActive = false;
+			owner.removeEventListener(Event.ENTER_FRAME, onRasterWorkFrame);
 		}
 	}
 
-	private function attachRasterTiles(limit:Int, ?deadline:Null<Float>):Int {
-		var remaining = limit;
+	private function updateRasterTiles():Int {
+		var frameClock = pr2.runtime.FrameClock.current;
+		var frameNumber = frameClock == null ? -1 : frameClock.simulationFrameNumber;
+		if (frameNumber < 0 || frameNumber != rasterSaveFrame) {
+			rasterSaveFrame = frameNumber;
+			rasterSavesStartedThisFrame = 0;
+		}
+		var remaining = LevelRenderer.ART_RASTER_SAVES_PER_FRAME - rasterSavesStartedThisFrame;
+		var started = 0;
 		for (tiles in owner.artRasterTileLayers) {
-			if (remaining <= 0 || (deadline != null && remaining < limit && Timer.stamp() >= deadline)) break;
-			if (tiles != null) remaining -= tiles.attachQueuedTiles(remaining);
+			if (tiles == null) continue;
+			var layerStarted = tiles.updateTiles(remaining);
+			started += layerStarted;
+			remaining -= layerStarted;
 		}
-		return limit - remaining;
+		rasterSavesStartedThisFrame += started;
+		return started;
 	}
 
-	private function hasQueuedTiles():Bool {
-		for (tiles in owner.artRasterTileLayers) if (tiles != null && tiles.hasQueuedVisibleTiles()) return true;
+	private function hasPendingTiles():Bool {
+		for (tiles in owner.artRasterTileLayers) if (tiles != null && tiles.hasPendingTileWork()) return true;
 		return false;
+	}
+
+	public function isTileBakeComplete():Bool {
+		for (tiles in owner.artRasterTileLayers) if (tiles != null && !tiles.isBakeComplete()) return false;
+		return true;
 	}
 
 	private function emitWarning(message:String, gatePopup:Bool):Void {
@@ -233,12 +263,12 @@ class LevelArtRenderCoordinator {
 			newCanvas.name = LevelRenderer.ART_RASTER_CANVAS_NAME;
 			var childIndex = container.getChildIndex(oldCanvas);
 			container.addChildAt(newCanvas, childIndex);
-			var newTiles = new ArtRasterTiles(newCanvas, owner.artRasterBudget, rasterScale);
+			var newTiles = createRasterTiles(newCanvas, index, rasterScale);
 			try {
 				newTiles.applyAll(owner.level.artLayers[index].drawActions);
 				owner.artRasterTileLayers[index] = newTiles;
 				updateViewWindow(newTiles, true);
-				newTiles.attachQueuedTiles(1000000);
+				newTiles.renderHotTilesNow();
 				oldTiles.dispose();
 				if (oldCanvas.parent != null) oldCanvas.parent.removeChild(oldCanvas);
 			} catch (error:Dynamic) {
@@ -248,11 +278,13 @@ class LevelArtRenderCoordinator {
 				return;
 			}
 		}
-		finishRasterAttaching();
+		continueRasterWork();
 	}
 
 	public function dispose():Void {
-		owner.removeEventListener(Event.ENTER_FRAME, onRasterAttachFrame);
-		owner.artRasterAttachActive = false;
+		owner.removeEventListener(Event.ENTER_FRAME, onRasterWorkFrame);
+		owner.artRasterWorkActive = false;
+		for (tiles in owner.artRasterTileLayers) if (tiles != null) tiles.dispose();
+		owner.artRasterTileLayers.resize(0);
 	}
 }

@@ -1,26 +1,11 @@
 package pr2.lobby;
 
-import pr2.lobby.dialogs.OptionsArtQualityView;
 import pr2.lobby.dialogs.OptionsSongsView;
 
 class OptionsSubmenuViewTest {
 	private static var assertions:Int = 0;
 
 	public static function main():Void {
-		var art = new OptionsArtQualityView(true);
-		assertNear(-115, art.panel.x, "art-quality ShadowBG keeps XFL X");
-		assertNear(-33.95, art.panel.y, "art-quality ShadowBG keeps XFL Y");
-		assertNear(0.8455810546875, art.panel.scaleX, "art-quality ShadowBG keeps XFL horizontal scale");
-		assertNear(0.83758544921875, art.panel.scaleY, "art-quality ShadowBG keeps XFL vertical scale");
-		assertEquals("Lossless (EXPERIMENTAL)", art.losslessCheck.label, "art-quality checkbox keeps exact authored copy");
-		assertEquals(true, art.losslessCheck.selected, "art-quality checkbox loads selected state");
-		if (pr2.DeterministicTestMode.finishSmokeSuite("OptionsSubmenuViewTest")) return;
-		assertNear(-105, art.description.x, "art-quality description keeps authored left bound");
-		assertNear(32.5, art.description.y, "art-quality description keeps XFL Y");
-		assertNear(212, art.description.width, "art-quality description keeps XFL width");
-		assertEquals("-- Art Quality --", art.title.text, "art-quality title keeps exact authored copy");
-		art.dispose();
-
 		var songs = new OptionsSongsView(["2", "21"]);
 		assertNear(-137.5, songs.panel.x, "songs ShadowBG keeps XFL X");
 		assertNear(-125, songs.panel.y, "songs ShadowBG keeps XFL Y");
@@ -41,6 +26,7 @@ class OptionsSubmenuViewTest {
 		assertEquals(true, songs.checks.get(3).selected, "unlisted songs remain selected");
 		assertEquals(false, songs.checks.get(21).selected, "disabled final song clears authored selection");
 		songs.dispose();
+		if (pr2.DeterministicTestMode.finishSmokeSuite("OptionsSubmenuViewTest")) return;
 		trace('OptionsSubmenuViewTest passed $assertions assertions');
 	}
 

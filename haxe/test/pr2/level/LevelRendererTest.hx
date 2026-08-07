@@ -7,6 +7,7 @@ import openfl.display.Shape;
 import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.text.TextField;
+import openfl.utils.ByteArray;
 import pr2.effects.BlockPiece;
 import pr2.lobby.account.Settings;
 import pr2.level.Level.LevelArtLayer;
@@ -14,6 +15,8 @@ import pr2.level.Level.LevelArtObject;
 import pr2.level.Level.LevelDrawAction;
 import pr2.level.Level.LevelTextObject;
 import pr2.level.Level.LevelBlock;
+import pr2.level.ArtTileStorage.ArtTileStore;
+import pr2.level.LevelArtRasterizer.ArtRasterTiles;
 import pr2.runtime.FontResolver;
 import pr2.runtime.FrameClock;
 import pr2.runtime.FrameRateDiagnostics;
@@ -29,11 +32,12 @@ class LevelRendererTest {
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testPackedArtBackgroundMounts", testPackedArtBackgroundMounts);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testDefaultArtStrokeThickness", testDefaultArtStrokeThickness);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtEraseStrokeClearsRasterTiles", testArtEraseStrokeClearsRasterTiles);
-		pr2.DeterministicTestMode.runTest("LevelRendererTest.testLosslessArtRasterScaleAddsFixedSizeTiles", testLosslessArtRasterScaleAddsFixedSizeTiles);
-		pr2.DeterministicTestMode.runTest("LevelRendererTest.testLosslessArtRerasterizesAtHigherDensity", testLosslessArtRerasterizesAtHigherDensity);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testNativeArtRasterScaleAddsFixedSizeTiles", testNativeArtRasterScaleAddsFixedSizeTiles);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtRerasterizesAtHigherDensity", testArtRerasterizesAtHigherDensity);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testWorldToScreenFocus", testWorldToScreenFocus);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testPresentationCameraOffsetDoesNotRebuild", testPresentationCameraOffsetDoesNotRebuild);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testPresentationCourseRotationDoesNotAdvanceAuthority", testPresentationCourseRotationDoesNotAdvanceAuthority);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testRotationCommitDefersArtCullingUntilCameraSnap", testRotationCommitDefersArtCullingUntilCameraSnap);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testBackgroundColorTransforms", testBackgroundColorTransforms);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtObjectAndTextLayerScale", testArtObjectAndTextLayerScale);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testBlockAlphaUpdate", testBlockAlphaUpdate);
@@ -48,10 +52,17 @@ class LevelRendererTest {
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testRuntimeBlockAppendPreservesDrawingCompletion", testRuntimeBlockAppendPreservesDrawingCompletion);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testViewWindowRefreshesBeforeLeftEdgeExposure", testViewWindowRefreshesBeforeLeftEdgeExposure);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testIncrementalArtDrawing", testIncrementalArtDrawing);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testRaceReadinessWaitsForEveryArtTile", testRaceReadinessWaitsForEveryArtTile);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testRaceReadinessAcceptsEmptyArtLayers", testRaceReadinessAcceptsEmptyArtLayers);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtRasterTilesCullToViewWindow", testArtRasterTilesCullToViewWindow);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtRasterTilesReleaseColdPixels", testArtRasterTilesReleaseColdPixels);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtRasterSavesAreBounded", testArtRasterSavesAreBounded);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtRasterLifecycleUpdatesImmediately", testArtRasterLifecycleUpdatesImmediately);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtRasterHotAndWarmMargins", testArtRasterHotAndWarmMargins);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtTileCacheIdentityTracksContentAndScale", testArtTileCacheIdentityTracksContentAndScale);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testIncrementalArtFailureCompletesAndWarns", testIncrementalArtFailureCompletesAndWarns);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testRasterTileLimitStopsAndWarns", testRasterTileLimitStopsAndWarns);
-		pr2.DeterministicTestMode.runTest("LevelRendererTest.testLosslessArtQualityControlsRasterBudget", testLosslessArtQualityControlsRasterBudget);
+		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtDefaultsToUnlimitedNativeDensity", testArtDefaultsToUnlimitedNativeDensity);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testArtBatchLimitsRejectHugeSpans", testArtBatchLimitsRejectHugeSpans);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testDrawArtSettingSkipsGameplayArt", testDrawArtSettingSkipsGameplayArt);
 		pr2.DeterministicTestMode.runTest("LevelRendererTest.testBg5CircleGrid", testBg5CircleGrid);
@@ -87,6 +98,28 @@ class LevelRendererTest {
 		renderer.setCourseRotation(90, 0);
 		assertClose(0, renderer.courseTweenRotation(), "rotation commit clears authoritative tween");
 		assertClose(0, renderer.presentationCourseTweenRotation(), "rotation commit snaps presented tween");
+		renderer.remove();
+	}
+
+	private static function testRotationCommitDefersArtCullingUntilCameraSnap():Void {
+		var block = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 0, 0);
+		var art = new LevelArtLayer([new LevelDrawAction("d", [20, 20])]);
+		var renderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block], [art]), block);
+		var updatesBeforeCommit = @:privateAccess renderer.artViewWindowUpdateCount;
+
+		renderer.setCourseRotation(90, 0);
+
+		assertEquals(updatesBeforeCommit, @:privateAccess renderer.artViewWindowUpdateCount,
+			"rotation commit does not reconcile art against the stale camera");
+		assertEquals(true, @:privateAccess renderer.artViewRefreshPendingAfterRotation,
+			"rotation commit remembers the deferred art refresh");
+
+		renderer.setCameraOffset(180, 280);
+
+		assertEquals(updatesBeforeCommit + 1, @:privateAccess renderer.artViewWindowUpdateCount,
+			"camera snap performs one art reconciliation for the committed rotation");
+		assertEquals(false, @:privateAccess renderer.artViewRefreshPendingAfterRotation,
+			"camera snap clears the deferred refresh");
 		renderer.remove();
 	}
 
@@ -428,7 +461,7 @@ class LevelRendererTest {
 		renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
 		assertEquals(3, renderer.drawnArtItemCount(), "first art batch counts the initial stroke commands");
 		assertEquals(1, artLayer.numChildren, "first art batch has not reached text object");
-		assertTrue(strokeRaster(artLayer).numChildren > 0, "first art batch refreshes one visible stroke tile");
+		assertEquals(1, strokeRaster(artLayer).numChildren, "completed stroke indexing mounts its visible tile immediately");
 		assertEquals(false, renderer.isDrawingComplete(), "renderer waits for remaining art item");
 
 		renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
@@ -455,6 +488,8 @@ class LevelRendererTest {
 		], [], [], 1);
 		var renderer = new LevelRenderer(new TestLevel(0xFFFFFF, [focus], [art]), focus, 180, 280);
 		var raster = strokeRaster(worldLayer(renderer, 1));
+		var frames = 0;
+		while (!renderer.isDrawingComplete() && frames++ < 10) renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
 
 		assertEquals(1, raster.numChildren, "art raster culling starts with only visible tiles attached");
 		var visible = Std.downcast(raster.getChildAt(0), Bitmap);
@@ -462,10 +497,155 @@ class LevelRendererTest {
 
 		renderer.setCameraOffset(180 - farX, 280 - focus.worldY);
 		renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(1, raster.numChildren, "scrolling replaces the visible tile immediately");
+		assertEquals(true, renderer.isDrawingComplete(), "post-start culling cannot reopen race loading or free-scroll mode");
+		var scrollFrames = 1;
+		while (raster.numChildren == 0 && scrollFrames++ < 6) renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
 
 		assertEquals(1, raster.numChildren, "art raster culling keeps off-screen tiles detached after scroll");
+		assertEquals(true, scrollFrames <= 5, "newly visible cached art attaches after loading");
 		visible = Std.downcast(raster.getChildAt(0), Bitmap);
 		assertEquals(farTileX, Std.int(visible.x), "scrolling attaches the newly visible raster tile");
+	}
+
+	private static function testRaceReadinessWaitsForEveryArtTile():Void {
+		var focus = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 10020, 10050);
+		var distance = LevelRenderer.ART_RASTER_TILE_SIZE * 15;
+		var art = new LevelArtLayer([new LevelDrawAction("d", [focus.worldX, focus.worldY, distance, 0])], [], [], 1);
+		var renderer = new LevelRenderer(new TestLevel(0xFFFFFF, [focus], [art]), focus, 180, 280, true, 1);
+		var frames = 0;
+		while (renderer.drawnArtItemCount() == 0 && frames++ < 10) renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
+
+		assertEquals(1, renderer.drawnArtItemCount(), "all art commands can finish before tile baking");
+		assertEquals(true, renderer.isDrawingComplete(), "direct tile rendering can bake every tile in the art-command frame");
+		while (!renderer.isDrawingComplete() && frames++ < 20) renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
+		assertEquals(true, renderer.isDrawingComplete(), "race readiness opens after every art tile is baked");
+		renderer.remove();
+	}
+
+	private static function testRaceReadinessAcceptsEmptyArtLayers():Void {
+		var focus = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 10020, 10050);
+		var drawn = new LevelArtLayer([new LevelDrawAction("d", [focus.worldX, focus.worldY])], [], [], 1);
+		var empty = new LevelArtLayer([], [], [], 1);
+		var renderer = new LevelRenderer(new TestLevel(0xFFFFFF, [focus], [drawn, empty]), focus, 180, 280, true, 1);
+		var frames = 0;
+		while (!renderer.isDrawingComplete() && frames++ < 10) renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
+
+		assertEquals(true, renderer.isDrawingComplete(), "empty trailing art layers cannot hold race readiness open");
+		renderer.remove();
+	}
+
+	private static function testArtRasterTilesReleaseColdPixels():Void {
+		var raster = new Sprite();
+		var store = new TestArtTileStore();
+		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
+		var tiles = new ArtRasterTiles(raster, null, 1, {
+			store: store,
+			groupKey: "test-group",
+			levelId: "test-level",
+			layerIndex: 0,
+			encode: function(_):ByteArray {
+				var bytes = new ByteArray();
+				bytes.writeByte(1);
+				return bytes;
+			}
+		});
+		tiles.applyAll([
+			new LevelDrawAction("d", [20, 20]),
+			new LevelDrawAction("d", [tile * 6 + 20, 20])
+		]);
+		tiles.setVisibleWorldWindow(0, 100, 0, 100, true);
+		tiles.updateTiles(1000);
+		tiles.updateTiles(1000);
+
+		assertEquals(1, tiles.hotTileCount(), "visible art tile is hot");
+		assertEquals(0, tiles.unbakedTileCount(), "startup baking renders distant art before play");
+		assertEquals(2, store.putCount, "startup baking persists every art tile");
+		assertTrue(tiles.isBakeComplete(), "art baking completes only after every cache write");
+
+		tiles.setVisibleWorldWindow(tile * 6, tile * 6 + 100, 0, 100, true);
+		tiles.updateTiles(1000);
+		tiles.updateTiles(1000);
+
+		assertEquals(1, tiles.hotTileCount(), "newly visible art tile is promoted to hot");
+		assertEquals(1, tiles.coldTileCount(), "former hot tile releases its BitmapData after persistence");
+		assertEquals(1, raster.numChildren, "only the hot tile remains attached");
+		tiles.dispose();
+	}
+
+	private static function testArtRasterLifecycleUpdatesImmediately():Void {
+		var raster = new Sprite();
+		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
+		var tiles = new ArtRasterTiles(raster);
+		tiles.applyAll([
+			new LevelDrawAction("d", [20, 20]),
+			new LevelDrawAction("d", [tile + 20, 20])
+		]);
+		tiles.setVisibleWorldWindow(0, tile * 2, 0, 100, true);
+
+		assertEquals(2, tiles.hotTileCount(), "all hot tiles render immediately");
+		assertEquals(2, raster.numChildren, "all hot tiles attach immediately");
+
+		tiles.setVisibleWorldWindow(tile * 5, tile * 6, 0, 100, true);
+		assertEquals(0, raster.numChildren, "tiles leaving the hot window detach immediately");
+		assertEquals(2, tiles.coldTileCount(), "tiles leaving the warm window release their pixels immediately");
+		tiles.dispose();
+	}
+
+	private static function testArtRasterSavesAreBounded():Void {
+		var raster = new Sprite();
+		var store = new TestArtTileStore();
+		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
+		var tiles = new ArtRasterTiles(raster, null, 1, {
+			store: store,
+			groupKey: "save-limit-group",
+			levelId: "save-limit-level",
+			layerIndex: 0,
+			encode: function(_):ByteArray {
+				var bytes = new ByteArray();
+				bytes.writeByte(1);
+				return bytes;
+			}
+		});
+		tiles.applyAll([new LevelDrawAction("d", [20, 20, tile * 11, 0])]);
+		tiles.setVisibleWorldWindow(0, tile * 12, 0, 100, true);
+
+		assertEquals(10, tiles.updateTiles(10), "one update starts at most ten persistent-cache saves");
+		assertEquals(10, store.putCount, "the first update writes only its ten-tile allowance");
+		assertEquals(2, tiles.updateTiles(10), "the next update starts the remaining saves");
+		assertEquals(12, store.putCount, "every tile is eventually persisted");
+		tiles.dispose();
+	}
+
+	private static function testArtRasterHotAndWarmMargins():Void {
+		var raster = new Sprite();
+		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
+		var tiles = new ArtRasterTiles(raster);
+		tiles.applyAll([
+			new LevelDrawAction("d", [20, 20]),
+			new LevelDrawAction("d", [tile + 20, 20]),
+			new LevelDrawAction("d", [tile * 2 + 20, 20]),
+			new LevelDrawAction("d", [tile * 3 + 20, 20])
+		]);
+		tiles.setVisibleWorldWindow(0, 100, 0, 100, true);
+		tiles.updateTiles(1000);
+
+		assertEquals(2, tiles.hotTileCount(), "visible tiles plus a one-tile margin are attached");
+		assertEquals(1, tiles.warmTileCount(), "the second margin tile remains warm but detached");
+		assertEquals(1, tiles.coldTileCount(), "tiles beyond the two-tile warm margin release their pixels");
+		assertEquals(2, raster.numChildren, "only the visible tile and first margin tile are mounted");
+		tiles.dispose();
+	}
+
+	private static function testArtTileCacheIdentityTracksContentAndScale():Void {
+		var block = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 0, 0);
+		var first = new TestLevel(0xFFFFFF, [block], [new LevelArtLayer([new LevelDrawAction("d", [20, 20])])]);
+		var second = new TestLevel(0xFFFFFF, [block], [new LevelArtLayer([new LevelDrawAction("d", [21, 20])])]);
+		var key = ArtTileCacheIdentity.groupKey(first, 1);
+
+		assertEquals(key, ArtTileCacheIdentity.groupKey(first, 1), "unchanged art produces a stable cache group");
+		assertTrue(key != ArtTileCacheIdentity.groupKey(first, 2), "raster density selects a different cache group");
+		assertTrue(key != ArtTileCacheIdentity.groupKey(second, 1), "changed art selects a different cache group");
 	}
 
 	private static function testIncrementalArtFailureCompletesAndWarns():Void {
@@ -509,31 +689,24 @@ class LevelRendererTest {
 				rasterTileLimit: 1
 			});
 		var artLayer = worldLayer(renderer, 1);
+		var frames = 0;
+		while (!renderer.isDrawingComplete() && frames++ < 10) renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
 
 		assertEquals(true, renderer.stoppedRasterizing, "raster tile budget sets stoppedRasterizing");
 		assertEquals(1, warnings.length, "raster stop warning emits once");
-		assertTrue(warnings[0].indexOf("lossless art quality") >= 0, "raster stop warning uses Flash lossless-quality hint");
+		assertEquals(LevelRenderer.ART_RASTER_STOP_WARNING, warnings[0], "raster stop warning does not reference a removed quality option");
 		assertEquals(1, strokeRaster(artLayer).numChildren, "raster tile budget stops creating new tiles after the limit");
 		assertEquals(true, renderer.isDrawingComplete(), "raster stop does not leave renderer stuck drawing");
 	}
 
-	private static function testLosslessArtQualityControlsRasterBudget():Void {
+	private static function testArtDefaultsToUnlimitedNativeDensity():Void {
 		Settings.disablePersistenceForTests();
-		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, false);
 		var block = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 10020, 10050);
-		var limitedRenderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block, 180, 280, false,
+		var renderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block, 180, 280, false,
 			LevelRenderer.DEFAULT_BLOCKS_PER_FRAME, {rasterScale: 2});
-		assertEquals(500, @:privateAccess limitedRenderer.artRasterBudget.limit, "standard art quality uses the port's 500-tile budget");
-		assertEquals(1.0, @:privateAccess limitedRenderer.artRasterScale, "standard art quality ignores native-output raster scaling");
-		limitedRenderer.remove();
-
-		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, true);
-		var losslessRenderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block]), block, 180, 280, false,
-			LevelRenderer.DEFAULT_BLOCKS_PER_FRAME, {rasterScale: 2});
-		assertEquals(-1, @:privateAccess losslessRenderer.artRasterBudget.limit, "lossless art quality removes the raster tile limit");
-		assertEquals(2.0, @:privateAccess losslessRenderer.artRasterScale, "lossless art quality uses native-output raster scaling");
-		losslessRenderer.remove();
-		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, false);
+		assertEquals(-1, @:privateAccess renderer.artRasterBudget.limit, "art has no default raster tile limit");
+		assertEquals(2.0, @:privateAccess renderer.artRasterScale, "art always uses native-output raster scaling");
+		renderer.remove();
 	}
 
 	private static function testArtBatchLimitsRejectHugeSpans():Void {
@@ -782,7 +955,7 @@ class LevelRendererTest {
 		assertEquals(LevelRenderer.ART_RASTER_TILE_SIZE + 1, tile.height, "raster tile keeps overlap height");
 	}
 
-	private static function testLosslessArtRasterScaleAddsFixedSizeTiles():Void {
+	private static function testNativeArtRasterScaleAddsFixedSizeTiles():Void {
 		var actions = [new LevelDrawAction("d", [10, 10, 300, 0])];
 		var standardRaster = new Sprite();
 		LevelRenderer.renderLayerStrokes(standardRaster, actions);
@@ -790,7 +963,7 @@ class LevelRendererTest {
 		LevelRenderer.renderLayerStrokes(nativeRaster, actions, null, 2);
 
 		assertEquals(1, standardRaster.numChildren, "standard density fits the test stroke in one tile");
-		assertEquals(2, nativeRaster.numChildren, "2x lossless density covers the same stroke with more tiles");
+		assertEquals(2, nativeRaster.numChildren, "2x native density covers the same stroke with more tiles");
 		var nativeTile = Std.downcast(nativeRaster.getChildAt(0), Bitmap);
 		assertEquals(LevelRenderer.ART_RASTER_TILE_SIZE + 1, nativeTile.bitmapData.width, "native-density tiles keep the fixed texture width");
 		assertEquals(LevelRenderer.ART_RASTER_TILE_SIZE + 1, nativeTile.bitmapData.height, "native-density tiles keep the fixed texture height");
@@ -800,23 +973,24 @@ class LevelRendererTest {
 		assertClose(LevelRenderer.ART_RASTER_TILE_SIZE / 2, nextNativeTile.x, "next 2x tile begins after half the standard world span");
 	}
 
-	private static function testLosslessArtRerasterizesAtHigherDensity():Void {
+	private static function testArtRerasterizesAtHigherDensity():Void {
 		Settings.disablePersistenceForTests();
-		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, true);
 		var block = new DecodedBlock(ObjectCodes.BLOCK_BASIC1, 0, 0);
 		var art = new LevelArtLayer([new LevelDrawAction("d", [10, 10, 300, 0])], [], [], 1);
 		var renderer = new LevelRenderer(new TestLevel(0xFFFFFF, [block], [art]), block, 180, 280, false,
 			LevelRenderer.DEFAULT_BLOCKS_PER_FRAME, {rasterScale: 1});
+		var frames = 0;
+		while (!renderer.isDrawingComplete() && frames++ < 10) renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
 
-		assertEquals(1, strokeRaster(worldLayer(renderer, 1)).numChildren, "lossless art starts with one standard-density tile");
+		assertEquals(1, strokeRaster(worldLayer(renderer, 1)).numChildren, "art starts with one standard-density tile");
 		@:privateAccess renderer.artRenderer.rerasterizeLayers(2);
+		while (strokeRaster(worldLayer(renderer, 1)).numChildren < 2 && frames++ < 20) renderer.dispatchEvent(new Event(Event.ENTER_FRAME));
 		var rerasterized = strokeRaster(worldLayer(renderer, 1));
-		assertEquals(2, rerasterized.numChildren, "density increase rebuilds existing lossless art with more tiles");
+		assertEquals(2, rerasterized.numChildren, "density increase rebuilds existing art with more tiles");
 		assertClose(0.5, Std.downcast(rerasterized.getChildAt(0), Bitmap).scaleX,
-			"rebuilt lossless art tiles use the higher raster density");
+			"rebuilt art tiles use the higher raster density");
 
 		renderer.remove();
-		Settings.setValue(Settings.ART_LOSSLESS_QUALITY, false);
 	}
 
 	private static function testWorldToScreenFocus():Void {
@@ -1050,6 +1224,25 @@ class LevelRendererTest {
 		}
 		return null;
 	}
+}
+
+private class TestArtTileStore implements ArtTileStore {
+	public var putCount(default, null):Int = 0;
+	private final entries:Map<String, ByteArray> = new Map();
+	public var enabled(get, never):Bool;
+	private inline function get_enabled():Bool return true;
+
+	public function new() {}
+	public function prepareGroup(groupKey:String, levelId:String):Void {}
+	// The eval test target cannot decode PNG bytes, so this fake exercises writes
+	// and reports misses when a cold tile is promoted again.
+	public function get(groupKey:String, tileKey:String, callback:Null<ByteArray>->Void):Void callback(null);
+	public function put(groupKey:String, levelId:String, tileKey:String, bytes:ByteArray, callback:Bool->Void):Void {
+		entries.set(groupKey + ":" + tileKey, bytes);
+		putCount++;
+		callback(true);
+	}
+	public function dispose():Void {}
 }
 
 private class DecodedBlock extends LevelBlock {

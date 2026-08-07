@@ -3,19 +3,22 @@ package pr2.level;
 import haxe.Timer;
 import openfl.display.Bitmap;
 import openfl.display.BitmapData;
+import openfl.display.BlendMode;
+import openfl.display.PNGEncoderOptions;
 import openfl.display.Shape;
 import openfl.display.Sprite;
 import openfl.geom.Matrix;
-import openfl.geom.Point;
 import openfl.geom.Rectangle;
+import openfl.utils.ByteArray;
+import pr2.level.ArtTileStorage.ArtTileStore;
 import pr2.level.Level.LevelDrawAction;
 
-/** Tile-based stroke rasterization, batching, culling, and resource budgeting. */
+/** Tile-based stroke indexing, rasterization, culling, and resource budgeting. */
 class ArtStrokeTileSet {
 	public final keys:Array<String> = [];
 	public final tileXs:Array<Int> = [];
 	public final tileYs:Array<Int> = [];
-	public final seen:Map<String, Bool> = new Map();
+	private final seen:Map<String, Bool> = new Map();
 	public var minTileX:Int = 0;
 	public var maxTileX:Int = 0;
 	public var minTileY:Int = 0;
@@ -24,9 +27,7 @@ class ArtStrokeTileSet {
 	public function new() {}
 
 	public function add(key:String, tileX:Int, tileY:Int):Void {
-		if (seen.exists(key)) {
-			return;
-		}
+		if (seen.exists(key)) return;
 		seen.set(key, true);
 		keys.push(key);
 		tileXs.push(tileX);
@@ -42,19 +43,8 @@ class ArtStrokeTileSet {
 		if (tileY > maxTileY) maxTileY = tileY;
 	}
 
-	public function tileSpanX():Int {
-		if (keys.length == 0) {
-			return 0;
-		}
-		return Std.int((maxTileX - minTileX) / LevelRenderer.ART_RASTER_TILE_SIZE) + 1;
-	}
-
-	public function tileSpanY():Int {
-		if (keys.length == 0) {
-			return 0;
-		}
-		return Std.int((maxTileY - minTileY) / LevelRenderer.ART_RASTER_TILE_SIZE) + 1;
-	}
+	public function tileSpanX():Int return keys.length == 0 ? 0 : Std.int((maxTileX - minTileX) / LevelRenderer.ART_RASTER_TILE_SIZE) + 1;
+	public function tileSpanY():Int return keys.length == 0 ? 0 : Std.int((maxTileY - minTileY) / LevelRenderer.ART_RASTER_TILE_SIZE) + 1;
 }
 
 class ArtRasterBudget {
@@ -85,22 +75,63 @@ class ArtRasterBudget {
 	}
 }
 
-class LargeStrokeRasterOperation {
-	public final shape:Shape;
-	public final strokeTiles:ArtStrokeTileSet;
-	public final bounds:Rectangle;
+typedef ArtTileCacheContext = {
+	var store:ArtTileStore;
+	var groupKey:String;
+	var levelId:String;
+	var layerIndex:Int;
+	@:optional var encode:BitmapData->Null<ByteArray>;
+}
+
+private class ArtResolvedStroke {
+	public final values:Array<Float>;
+	public final color:Int;
+	public final size:Float;
 	public final erase:Bool;
-	public final profilePath:String;
-	public final profileMode:String;
+
+	public function new(action:LevelDrawAction, color:Int, size:Float, erase:Bool) {
+		this.values = action.values.copy();
+		this.color = color;
+		this.size = size;
+		this.erase = erase;
+	}
+}
+
+private class ArtTileRecipe {
+	public final key:String;
+	public final tileX:Int;
+	public final tileY:Int;
+	public final strokes:Array<ArtResolvedStroke> = [];
+	public var bitmap:Null<Bitmap>;
+	public var revision:Int = 0;
+	public var bakedRevision:Int = -1;
+	public var renderedRevision:Int = -1;
+	public var savedRevision:Int = -1;
+	public var saveFailedRevision:Int = -1;
+	public var cacheChecked:Bool = false;
+	public var loadPending:Bool = false;
+	public var savePending:Bool = false;
+	public var pendingBitmapData:Null<BitmapData>;
+	#if html5
+	public var pendingSaveCanvas:Null<js.html.CanvasElement>;
+	#end
+	public var generation:Int = 0;
+
+	public function new(key:String, tileX:Int, tileY:Int) {
+		this.key = key;
+		this.tileX = tileX;
+		this.tileY = tileY;
+	}
+}
+
+private class PendingStrokeRecipeOperation {
+	public final stroke:ArtResolvedStroke;
+	public final tiles:ArtStrokeTileSet;
 	public var tileIndex:Int = 0;
 
-	public function new(shape:Shape, strokeTiles:ArtStrokeTileSet, bounds:Rectangle, erase:Bool, profilePath:String, profileMode:String) {
-		this.shape = shape;
-		this.strokeTiles = strokeTiles;
-		this.bounds = bounds;
-		this.erase = erase;
-		this.profilePath = profilePath;
-		this.profileMode = profileMode;
+	public function new(stroke:ArtResolvedStroke, tiles:ArtStrokeTileSet) {
+		this.stroke = stroke;
+		this.tiles = tiles;
 	}
 }
 
@@ -113,84 +144,75 @@ class ArtRasterTiles {
 	public var lastProfileTileSpanX(default, null):Int = 0;
 	public var lastProfileTileSpanY(default, null):Int = 0;
 	private final budget:Null<ArtRasterBudget>;
-	private final tiles:Map<String, Bitmap> = new Map();
-	private var attachQueue:Array<String> = [];
-	private var attachQueueSeen:Map<String, Bool> = new Map();
-	private var pendingShape:Null<Shape>;
-	private var pendingErase:Bool = false;
-	private var pendingBounds:Null<Rectangle>;
-	private var pendingTileKeys:Array<String> = [];
-	private var pendingTileKeySeen:Map<String, Bool> = new Map();
-	private var pendingTileXs:Array<Int> = [];
-	private var pendingTileYs:Array<Int> = [];
-	private var pendingMinTileX:Int = 0;
-	private var pendingMaxTileX:Int = 0;
-	private var pendingMinTileY:Int = 0;
-	private var pendingMaxTileY:Int = 0;
-	private var pendingLargeStroke:Null<LargeStrokeRasterOperation>;
+	private final cache:Null<ArtTileCacheContext>;
+	private final onWorkAvailable:Null<Void->Void>;
+	private final recipes:Map<String, ArtTileRecipe> = new Map();
+	private final recipeOrder:Array<ArtTileRecipe> = [];
+	private var pendingStroke:Null<PendingStrokeRecipeOperation>;
+	private var indexingComplete:Bool = false;
+	private var disposed:Bool = false;
 	private var viewInitialized:Bool = false;
-	private var viewMinTileX:Int = 0;
-	private var viewMaxTileX:Int = 0;
-	private var viewMinTileY:Int = 0;
-	private var viewMaxTileY:Int = 0;
+	private var hotMinTileX:Int = 0;
+	private var hotMaxTileX:Int = 0;
+	private var hotMinTileY:Int = 0;
+	private var hotMaxTileY:Int = 0;
+	private var warmMinTileX:Int = 0;
+	private var warmMaxTileX:Int = 0;
+	private var warmMinTileY:Int = 0;
+	private var warmMaxTileY:Int = 0;
 	private var color:Int = 0x000000;
 	private var size:Float = LevelRenderer.DEFAULT_ART_BRUSH_SIZE;
 	private var mode:String = "draw";
 
-	public function new(rasterCanvas:Sprite, ?budget:ArtRasterBudget, rasterScale:Float = 1) {
+	public function new(rasterCanvas:Sprite, ?budget:ArtRasterBudget, rasterScale:Float = 1, ?cache:ArtTileCacheContext,
+			?onWorkAvailable:Void->Void) {
 		this.rasterCanvas = rasterCanvas;
 		this.budget = budget;
 		this.rasterScale = rasterScale > 1 ? rasterScale : 1;
+		this.cache = cache;
+		this.onWorkAvailable = onWorkAvailable;
 	}
 
+	public function hasPersistentCache():Bool return cache != null && cache.store.enabled;
+
 	public function dispose():Void {
-		for (bitmap in tiles) {
-			if (bitmap.parent != null) {
-				bitmap.parent.removeChild(bitmap);
-			}
-			if (bitmap.bitmapData != null) {
-				bitmap.bitmapData.dispose();
-			}
+		disposed = true;
+		for (recipe in recipeOrder) {
+			recipe.generation++;
+			if (recipe.pendingBitmapData != null) recipe.pendingBitmapData.dispose();
+			recipe.pendingBitmapData = null;
+			disposePixels(recipe);
 		}
-		tiles.clear();
-		attachQueue = [];
-		attachQueueSeen = new Map();
-		resetPendingBatch();
-		pendingLargeStroke = null;
+		recipes.clear();
+		recipeOrder.resize(0);
+		pendingStroke = null;
 	}
 
 	public function applyAll(actions:Array<LevelDrawAction>):Void {
-		for (action in actions) {
-			while (!apply(action, true)) {}
-		}
+		for (action in actions) while (!apply(action, true)) {}
 		flush();
+		finishIndexing();
 	}
 
 	public function apply(action:LevelDrawAction, batch:Bool = false, ?deadline:Null<Float>):Bool {
-		if (pendingLargeStroke != null) {
-			return continueLargeStroke(deadline);
-		}
+		if (pendingStroke != null) return continuePendingStroke(deadline);
 		switch (action.kind) {
 			case "c":
-				color = Std.int(action.values[0]);
+				if (action.values.length > 0) color = Std.int(action.values[0]);
 				setControlProfile("color");
 			case "t":
-				size = action.values[0];
+				if (action.values.length > 0) size = action.values[0];
 				setControlProfile("size");
 			case "m":
-				if (batch && mode != action.text) {
-					flush();
-				}
 				mode = action.text;
 				setControlProfile("mode");
 			case "d":
-				if (action.values.length >= 2) {
-					var complete = mode == "erase" ? addEraseStrokeToBatch(action, deadline) : addDrawStrokeToBatch(action, deadline);
-					if (!batch && complete && !hasPendingRasterWork()) {
-						flush();
-					}
-					return complete;
-				}
+				if (action.values.length < 2) return true;
+				var radius = Math.max(0.5, size / 2);
+				var tiles = collectStrokeTiles(action, radius);
+				setStrokeTileProfile(tiles, mode == "erase" ? "eraseRecipe" : "recipe");
+				pendingStroke = new PendingStrokeRecipeOperation(new ArtResolvedStroke(action, color, size, mode == "erase"), tiles);
+				return continuePendingStroke(deadline);
 			default:
 				setControlProfile("unknown");
 		}
@@ -198,467 +220,524 @@ class ArtRasterTiles {
 	}
 
 	public function flush():Void {
-		if (pendingShape == null) {
-			setControlProfile("flush");
-			return;
-		}
-		setPendingFlushProfile(pendingErase ? "eraseFlush" : "flush");
-		var shape = pendingShape;
-		var matrix = new Matrix();
-		if (pendingErase) {
-			flushEraseShape(shape, matrix);
-		} else {
-			for (i in 0...pendingTileKeys.length) {
-				var bitmap = getOrCreateTile(pendingTileXs[i], pendingTileYs[i]);
-				if (bitmap == null) {
-					continue;
-				}
-				matrix.identity();
-				matrix.scale(rasterScale, rasterScale);
-				matrix.translate(-pendingTileXs[i], -pendingTileYs[i]);
-				bitmap.bitmapData.draw(shape, matrix, null, null, null, true);
-				queueTileAttach(pendingTileKeys[i]);
-			}
-		}
-		resetPendingBatch();
+		lastProfilePath = "recipeFlush";
+		lastProfileMode = mode;
 	}
 
-	private function flushEraseShape(shape:Shape, matrix:Matrix):Void {
-		if (pendingBounds == null) {
-			return;
-		}
-		var tileSize = LevelRenderer.ART_RASTER_TILE_SIZE + 1;
-		for (i in 0...pendingTileKeys.length) {
-			var bitmap = tiles.get(pendingTileKeys[i]);
-			if (bitmap == null) {
-				continue;
-			}
-			var tileX = pendingTileXs[i];
-			var tileY = pendingTileYs[i];
-			var rectX = Std.int(Math.max(0, Math.floor(pendingBounds.x * rasterScale - tileX)));
-			var rectY = Std.int(Math.max(0, Math.floor(pendingBounds.y * rasterScale - tileY)));
-			var rectRight = Std.int(Math.min(tileSize, Math.ceil(pendingBounds.right * rasterScale - tileX)));
-			var rectBottom = Std.int(Math.min(tileSize, Math.ceil(pendingBounds.bottom * rasterScale - tileY)));
-			if (rectRight <= rectX || rectBottom <= rectY) {
-				continue;
-			}
-			var targetRect = new Rectangle(rectX, rectY, rectRight - rectX, rectBottom - rectY);
-			var mask = new BitmapData(Std.int(targetRect.width), Std.int(targetRect.height), true, 0);
-			matrix.identity();
-			matrix.scale(rasterScale, rasterScale);
-			matrix.translate(-(tileX + rectX), -(tileY + rectY));
-			mask.draw(shape, matrix, null, null, null, true);
-			clearMaskedPixels(bitmap.bitmapData, targetRect, mask);
-			mask.dispose();
-			queueTileAttach(pendingTileKeys[i]);
-		}
+	public function finishIndexing():Void {
+		indexingComplete = true;
+		updateTiles(0);
+		notifyWork();
 	}
 
-	private function resetPendingBatch():Void {
-		pendingShape = null;
-		pendingErase = false;
-		pendingBounds = null;
-		pendingTileKeys = [];
-		pendingTileKeySeen = new Map();
-		pendingTileXs = [];
-		pendingTileYs = [];
-		pendingMinTileX = pendingMaxTileX = pendingMinTileY = pendingMaxTileY = 0;
+	public function finishIndexingAfterFailure():Void {
+		pendingStroke = null;
+		finishIndexing();
+	}
+
+	public function hasPendingRasterWork():Bool return pendingStroke != null;
+
+	private function continuePendingStroke(?deadline:Null<Float>):Bool {
+		var operation = pendingStroke;
+		if (operation == null) return true;
+		var processed = 0;
+		while (operation.tileIndex < operation.tiles.keys.length && (processed == 0 || deadline == null || Timer.stamp() < deadline)) {
+			appendStrokeToTile(operation, operation.tileIndex);
+			operation.tileIndex++;
+			processed++;
+		}
+		if (operation.tileIndex >= operation.tiles.keys.length) {
+			pendingStroke = null;
+			notifyWork();
+			return true;
+		}
+		return false;
+	}
+
+	private function appendStrokeToTile(operation:PendingStrokeRecipeOperation, index:Int):Void {
+		var key = operation.tiles.keys[index];
+		var recipe = recipes.get(key);
+		if (recipe == null) {
+			if (operation.stroke.erase) return;
+			if (budget != null && !budget.reserveTile()) return;
+			recipe = new ArtTileRecipe(key, operation.tiles.tileXs[index], operation.tiles.tileYs[index]);
+			recipes.set(key, recipe);
+			recipeOrder.push(recipe);
+		}
+		recipe.strokes.push(operation.stroke);
+		recipe.revision++;
+		recipe.cacheChecked = false;
 	}
 
 	public function setVisibleWorldWindow(minX:Float, maxX:Float, minY:Float, maxY:Float, force:Bool):Void {
 		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
-		var margin = LevelRenderer.ART_RASTER_VIEW_MARGIN_TILES * tile;
-		var minTileX = tileOrigin(Std.int(Math.floor(minX * rasterScale))) - margin;
-		var maxTileX = tileOrigin(Std.int(Math.floor(maxX * rasterScale))) + margin;
-		var minTileY = tileOrigin(Std.int(Math.floor(minY * rasterScale))) - margin;
-		var maxTileY = tileOrigin(Std.int(Math.floor(maxY * rasterScale))) + margin;
-		var threshold = LevelRenderer.ART_RASTER_VIEW_REBUILD_THRESHOLD * LevelRenderer.ART_RASTER_TILE_SIZE;
-		if (!force
-			&& viewInitialized
-			&& intAbs(minTileX - viewMinTileX) <= threshold
-			&& intAbs(maxTileX - viewMaxTileX) <= threshold
-			&& intAbs(minTileY - viewMinTileY) <= threshold
-			&& intAbs(maxTileY - viewMaxTileY) <= threshold) {
-			return;
-		}
-		viewMinTileX = minTileX;
-		viewMaxTileX = maxTileX;
-		viewMinTileY = minTileY;
-		viewMaxTileY = maxTileY;
+		var hotMargin = LevelRenderer.ART_RASTER_HOT_MARGIN_TILES * tile;
+		var nextHotMinX = tileOrigin(Std.int(Math.floor(minX * rasterScale))) - hotMargin;
+		var nextHotMaxX = tileOrigin(Std.int(Math.floor(maxX * rasterScale))) + hotMargin;
+		var nextHotMinY = tileOrigin(Std.int(Math.floor(minY * rasterScale))) - hotMargin;
+		var nextHotMaxY = tileOrigin(Std.int(Math.floor(maxY * rasterScale))) + hotMargin;
+		if (!force && viewInitialized
+			&& nextHotMinX == hotMinTileX
+			&& nextHotMaxX == hotMaxTileX
+			&& nextHotMinY == hotMinTileY
+			&& nextHotMaxY == hotMaxTileY) return;
+		hotMinTileX = nextHotMinX;
+		hotMaxTileX = nextHotMaxX;
+		hotMinTileY = nextHotMinY;
+		hotMaxTileY = nextHotMaxY;
+		var warmExtraMargin = (LevelRenderer.ART_RASTER_WARM_MARGIN_TILES - LevelRenderer.ART_RASTER_HOT_MARGIN_TILES) * tile;
+		warmMinTileX = hotMinTileX - warmExtraMargin;
+		warmMaxTileX = hotMaxTileX + warmExtraMargin;
+		warmMinTileY = hotMinTileY - warmExtraMargin;
+		warmMaxTileY = hotMaxTileY + warmExtraMargin;
 		viewInitialized = true;
-		for (key in tiles.keys()) {
-			var bitmap = tiles.get(key);
-			if (bitmap == null) {
-				continue;
-			}
-			if (isTileVisible(bitmapTileX(bitmap), bitmapTileY(bitmap))) {
-				queueTileAttach(key);
+		updateTiles(0);
+		notifyWork();
+	}
+
+	/** Applies the current hot/warm/cold state immediately, then starts a bounded
+		 number of persistent-cache saves. The save limit is shared across layers by
+		 LevelArtRenderCoordinator. */
+	public function updateTiles(saveLimit:Int):Int {
+		if (disposed || !indexingComplete) return 0;
+		for (recipe in recipeOrder) reconcileRecipe(recipe);
+		return startPendingSaves(saveLimit);
+	}
+
+	private function reconcileRecipe(recipe:ArtTileRecipe):Void {
+		var pending = recipe.pendingBitmapData;
+		if (pending != null) {
+			recipe.pendingBitmapData = null;
+			if (isWarm(recipe)) {
+				installPixels(recipe, pending);
+				recipe.renderedRevision = recipe.revision;
 			} else {
-				setTileAttached(bitmap, false);
+				pending.dispose();
 			}
 		}
-	}
-
-	public function attachQueuedTiles(limit:Int):Int {
-		if (limit <= 0 || attachQueue.length == 0) {
-			return 0;
+		if (recipe.loadPending) return;
+		if (recipe.bitmap == null) {
+			if (recipe.bakedRevision != recipe.revision) {
+				if (hasPersistentCache() && !recipe.cacheChecked) {
+					startCacheLoad(recipe);
+					return;
+				}
+				startRecipeRender(recipe);
+			} else if (isWarm(recipe)) {
+				if (hasPersistentCache() && recipe.savedRevision == recipe.revision) {
+					startCacheLoad(recipe);
+					return;
+				}
+				recipe.bakedRevision = -1;
+				startRecipeRender(recipe);
+			}
+		} else if (recipe.renderedRevision != recipe.revision) {
+			startRecipeRender(recipe);
 		}
-		var attached = 0;
-		var remainingKeys:Array<String> = [];
-		var remainingSeen:Map<String, Bool> = new Map();
-		for (key in attachQueue) {
-			var bitmap = tiles.get(key);
-			if (bitmap == null) {
-				continue;
-			}
-			if (!isTileVisible(bitmapTileX(bitmap), bitmapTileY(bitmap))) {
-				setTileAttached(bitmap, false);
-				continue;
-			}
-			if (bitmap.parent == rasterCanvas) {
-				continue;
-			}
-			if (attached < limit) {
-				setTileAttached(bitmap, true);
-				attached++;
-			} else if (!remainingSeen.exists(key)) {
-				remainingSeen.set(key, true);
-				remainingKeys.push(key);
-			}
-		}
-		attachQueue = remainingKeys;
-		attachQueueSeen = remainingSeen;
-		return attached;
-	}
-
-	public function hasQueuedVisibleTiles():Bool {
-		for (key in attachQueue) {
-			var bitmap = tiles.get(key);
-			if (bitmap != null && bitmap.parent != rasterCanvas && isTileVisible(bitmapTileX(bitmap), bitmapTileY(bitmap))) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	public function hasPendingRasterWork():Bool {
-		return pendingLargeStroke != null;
-	}
-
-	private function getOrCreateTile(tileX:Int, tileY:Int):Null<Bitmap> {
-		var key = tileKey(tileX, tileY);
-		var bitmap = tiles.get(key);
-		if (bitmap != null) {
-			return bitmap;
-		}
-		if (budget != null && !budget.reserveTile()) {
-			return null;
-		}
-		bitmap = new Bitmap(new BitmapData(LevelRenderer.ART_RASTER_TILE_SIZE + 1, LevelRenderer.ART_RASTER_TILE_SIZE + 1, true, 0));
-		bitmap.smoothing = true;
-		bitmap.scaleX = bitmap.scaleY = 1 / rasterScale;
-		bitmap.x = tileX / rasterScale;
-		bitmap.y = tileY / rasterScale;
-		tiles.set(key, bitmap);
-		queueTileAttach(key);
-		return bitmap;
-	}
-
-	private function isTileVisible(tileX:Int, tileY:Int):Bool {
-		return !viewInitialized || (tileX >= viewMinTileX && tileX <= viewMaxTileX && tileY >= viewMinTileY && tileY <= viewMaxTileY);
-	}
-
-	private function setTileAttached(bitmap:Bitmap, attach:Bool):Void {
-		if (attach) {
-			if (bitmap.parent != rasterCanvas) {
-				rasterCanvas.addChild(bitmap);
-			}
+		var bitmap = recipe.bitmap;
+		if (bitmap == null) return;
+		if (isHot(recipe)) {
+			if (bitmap.parent != rasterCanvas) setTileAttached(recipe, true);
 		} else if (bitmap.parent == rasterCanvas) {
-			rasterCanvas.removeChild(bitmap);
+			setTileAttached(recipe, false);
+		}
+		if (!isWarm(recipe) && !recipe.savePending
+			&& (recipe.savedRevision == recipe.revision || recipe.saveFailedRevision == recipe.revision || !hasPersistentCache())) {
+			disposePixels(recipe);
 		}
 	}
 
-	private function queueTileAttach(key:String):Void {
-		if (attachQueueSeen.exists(key)) {
-			return;
+	private function startPendingSaves(limit:Int):Int {
+		if (limit <= 0 || !hasPersistentCache()) return 0;
+		var started = 0;
+		for (recipe in recipeOrder) {
+			if (started >= limit) break;
+			if (startPendingSave(recipe)) started++;
 		}
-		var bitmap = tiles.get(key);
-		if (bitmap == null || bitmap.parent == rasterCanvas || !isTileVisible(bitmapTileX(bitmap), bitmapTileY(bitmap))) {
-			return;
-		}
-		attachQueueSeen.set(key, true);
-		attachQueue.push(key);
+		return started;
 	}
 
-	private static inline function intAbs(value:Int):Int {
-		return value < 0 ? -value : value;
+	private function startPendingSave(recipe:ArtTileRecipe):Bool {
+		if (recipe.bitmap == null || recipe.renderedRevision != recipe.revision || recipe.savedRevision == recipe.revision
+			|| recipe.saveFailedRevision == recipe.revision || recipe.savePending) return false;
+		#if html5
+		var canvas = recipe.pendingSaveCanvas;
+		if (canvas == null) return false;
+		recipe.pendingSaveCanvas = null;
+		startCanvasSave(recipe, canvas, recipe.revision);
+		return true;
+		#else
+		return maybeSave(recipe);
+		#end
 	}
 
-	private inline function bitmapTileX(bitmap:Bitmap):Int return Std.int(Math.round(bitmap.x * rasterScale));
-
-	private inline function bitmapTileY(bitmap:Bitmap):Int return Std.int(Math.round(bitmap.y * rasterScale));
-
-	private function startLargeStroke(action:LevelDrawAction, erase:Bool, profilePath:String, ?deadline:Null<Float>):Bool {
-		flush();
-		var radius = Math.max(0.5, size / 2);
-		var strokeTiles = collectStrokeTilesForErase(action, radius);
-		if (strokeTiles.keys.length == 0) {
-			setEstimatedStrokeProfile(action, profilePath);
-			return true;
-		}
-		var shape = strokeShape(action, erase ? 0xFFFFFF : color);
-		var bounds = strokeBounds(action, radius);
-		pendingLargeStroke = new LargeStrokeRasterOperation(shape, strokeTiles, bounds, erase, profilePath, mode);
-		return continueLargeStroke(deadline);
-	}
-
-	private function continueLargeStroke(?deadline:Null<Float>):Bool {
-		var op = pendingLargeStroke;
-		if (op == null) {
-			return true;
-		}
-		setLargeStrokeProfile(op);
-		var matrix = new Matrix();
-		var processed = 0;
-		while (op.tileIndex < op.strokeTiles.keys.length && (processed == 0 || deadline == null || Timer.stamp() < deadline)) {
-			if (op.erase) {
-				eraseLargeStrokeTile(op, matrix);
-			} else {
-				drawLargeStrokeTile(op, matrix);
+	private function startCacheLoad(recipe:ArtTileRecipe):Void {
+		if (cache == null) return;
+		recipe.loadPending = true;
+		var generation = ++recipe.generation;
+		cache.store.get(cache.groupKey, persistentTileKey(recipe), function(bytes:Null<ByteArray>):Void {
+			if (disposed || generation != recipe.generation) return;
+			recipe.cacheChecked = true;
+			if (bytes == null) {
+				recipe.loadPending = false;
+				if (recipe.savedRevision == recipe.revision) {
+					recipe.savedRevision = -1;
+					recipe.bakedRevision = -1;
+				}
+				notifyWork();
+				return;
 			}
-			op.tileIndex++;
-			processed++;
+			recipe.bakedRevision = recipe.revision;
+			recipe.savedRevision = recipe.revision;
+			if (!isWarm(recipe)) {
+				recipe.loadPending = false;
+				notifyWork();
+				return;
+			}
+			BitmapData.loadFromBytes(bytes).onComplete(function(data:BitmapData):Void {
+				recipe.loadPending = false;
+				if (disposed || generation != recipe.generation || data == null) {
+					if (data != null) data.dispose();
+					if (!disposed && generation == recipe.generation) recipe.cacheChecked = false;
+					return;
+				}
+				if (recipe.pendingBitmapData != null) recipe.pendingBitmapData.dispose();
+				recipe.pendingBitmapData = data;
+				notifyWork();
+			}).onError(function(_:Dynamic):Void {
+				if (disposed || generation != recipe.generation) return;
+				recipe.loadPending = false;
+				recipe.bakedRevision = -1;
+				recipe.savedRevision = -1;
+				notifyWork();
+			});
+		});
+	}
+
+	private function maybeSave(recipe:ArtTileRecipe):Bool {
+		if (cache == null || !cache.store.enabled || !indexingComplete || recipe.bitmap == null
+			|| recipe.renderedRevision != recipe.revision || recipe.savedRevision == recipe.revision
+			|| recipe.saveFailedRevision == recipe.revision || recipe.savePending) return false;
+		var bytes:Null<ByteArray> = null;
+		try {
+			bytes = cache.encode == null ? recipe.bitmap.bitmapData.encode(recipe.bitmap.bitmapData.rect, new PNGEncoderOptions(true))
+				: cache.encode(recipe.bitmap.bitmapData);
+		} catch (_:Dynamic) {}
+		if (bytes == null) {
+			recipe.saveFailedRevision = recipe.revision;
+			return false;
 		}
-		if (op.tileIndex >= op.strokeTiles.keys.length) {
-			pendingLargeStroke = null;
-			return true;
+		startSaveBytes(recipe, bytes, recipe.revision);
+		return true;
+	}
+
+	private function startSaveBytes(recipe:ArtTileRecipe, bytes:ByteArray, revision:Int):Void {
+		if (cache == null || !cache.store.enabled) {
+			recipe.saveFailedRevision = revision;
+			return;
+		}
+		recipe.savePending = true;
+		putSaveBytes(recipe, bytes, revision);
+	}
+
+	private function putSaveBytes(recipe:ArtTileRecipe, bytes:ByteArray, revision:Int):Void {
+		if (cache == null || !cache.store.enabled) {
+			finishSave(recipe, revision, false);
+			return;
+		}
+		cache.store.put(cache.groupKey, cache.levelId, persistentTileKey(recipe), bytes, function(saved:Bool):Void {
+			if (disposed) return;
+			finishSave(recipe, revision, saved);
+		});
+	}
+
+	private function finishSave(recipe:ArtTileRecipe, revision:Int, saved:Bool):Void {
+		recipe.savePending = false;
+		if (saved) recipe.savedRevision = revision else recipe.saveFailedRevision = revision;
+		notifyWork();
+	}
+
+	public function hasPendingTileWork():Bool {
+		if (disposed) return false;
+		for (recipe in recipeOrder) {
+			if (!indexingComplete || recipe.loadPending || recipe.savePending || recipe.pendingBitmapData != null
+				|| recipe.bakedRevision != recipe.revision) return true;
+			if (hasPersistentCache() && recipe.savedRevision != recipe.revision && recipe.saveFailedRevision != recipe.revision) return true;
+			if (isWarm(recipe)) {
+				if (recipe.bitmap == null || recipe.renderedRevision != recipe.revision) return true;
+				if (isHot(recipe) && recipe.bitmap.parent != rasterCanvas) return true;
+				if (!isHot(recipe) && recipe.bitmap.parent == rasterCanvas) return true;
+			} else if (recipe.bitmap != null || recipe.pendingBitmapData != null) return true;
 		}
 		return false;
 	}
 
-	private function drawLargeStrokeTile(op:LargeStrokeRasterOperation, matrix:Matrix):Void {
-		var tileX = op.strokeTiles.tileXs[op.tileIndex];
-		var tileY = op.strokeTiles.tileYs[op.tileIndex];
-		var bitmap = getOrCreateTile(tileX, tileY);
-		if (bitmap == null) {
-			return;
+	public function isBakeComplete():Bool {
+		if (disposed || !indexingComplete || pendingStroke != null) return false;
+		for (recipe in recipeOrder) {
+			if (recipe.loadPending || recipe.savePending || recipe.pendingBitmapData != null || recipe.bakedRevision != recipe.revision) return false;
+			if (hasPersistentCache() && recipe.savedRevision != recipe.revision && recipe.saveFailedRevision != recipe.revision) return false;
+			if (isHot(recipe) && (recipe.bitmap == null || recipe.bitmap.parent != rasterCanvas)) return false;
+			if (!isHot(recipe) && recipe.bitmap != null && recipe.bitmap.parent == rasterCanvas) return false;
+			if (!isWarm(recipe) && recipe.bitmap != null) return false;
 		}
-		matrix.identity();
-		matrix.scale(rasterScale, rasterScale);
-		matrix.translate(-tileX, -tileY);
-		bitmap.bitmapData.draw(op.shape, matrix, null, null, null, true);
-		queueTileAttach(op.strokeTiles.keys[op.tileIndex]);
+		return true;
 	}
 
-	private function eraseLargeStrokeTile(op:LargeStrokeRasterOperation, matrix:Matrix):Void {
-		var key = op.strokeTiles.keys[op.tileIndex];
-		var bitmap = tiles.get(key);
-		if (bitmap == null) {
-			return;
-		}
-		var tileX = op.strokeTiles.tileXs[op.tileIndex];
-		var tileY = op.strokeTiles.tileYs[op.tileIndex];
+	public function renderHotTilesNow():Void {
+		updateTiles(0);
+		notifyWork();
+	}
+
+	public function hotTileCount():Int return countTiles(function(recipe) return isHot(recipe) && recipe.bitmap != null);
+	public function warmTileCount():Int return countTiles(function(recipe) return isWarm(recipe) && !isHot(recipe) && recipe.bitmap != null);
+	public function coldTileCount():Int return countTiles(function(recipe) return !isWarm(recipe) && recipe.bitmap == null && recipe.bakedRevision == recipe.revision);
+	public function unbakedTileCount():Int return countTiles(function(recipe) return recipe.bakedRevision != recipe.revision);
+
+	private function countTiles(test:ArtTileRecipe->Bool):Int {
+		var count = 0;
+		for (recipe in recipeOrder) if (test(recipe)) count++;
+		return count;
+	}
+
+	private function startRecipeRender(recipe:ArtTileRecipe):Void {
+		renderRecipe(recipe);
+		notifyWork();
+	}
+
+	private function renderRecipe(recipe:ArtTileRecipe):Void {
+		var data = rasterizeRecipe(recipe);
+		installPixels(recipe, data);
+		recipe.bakedRevision = recipe.revision;
+		recipe.renderedRevision = recipe.revision;
+		if (!hasPersistentCache()) recipe.saveFailedRevision = recipe.revision;
+	}
+
+
+	private function rasterizeRecipe(recipe:ArtTileRecipe):BitmapData {
+		#if html5
+		return rasterizeCanvasRecipe(recipe);
+		#elseif (sys && lime_cairo && !pr2_test)
+		return rasterizeCairoRecipe(recipe);
+		#elseif pr2_test
+		return rasterizeOpenFlRecipe(recipe);
+		#else
+		return rasterizeDisplayListRecipe(recipe);
+		#end
+	}
+
+	#if html5
+	private function rasterizeCanvasRecipe(recipe:ArtTileRecipe):BitmapData {
 		var tileSize = LevelRenderer.ART_RASTER_TILE_SIZE + 1;
-		var rectX = Std.int(Math.max(0, Math.floor(op.bounds.x * rasterScale - tileX)));
-		var rectY = Std.int(Math.max(0, Math.floor(op.bounds.y * rasterScale - tileY)));
-		var rectRight = Std.int(Math.min(tileSize, Math.ceil(op.bounds.right * rasterScale - tileX)));
-		var rectBottom = Std.int(Math.min(tileSize, Math.ceil(op.bounds.bottom * rasterScale - tileY)));
-		if (rectRight <= rectX || rectBottom <= rectY) {
+		var canvas = js.Browser.document.createCanvasElement();
+		canvas.width = canvas.height = tileSize;
+		var context:Dynamic = canvas.getContext2d();
+		context.lineCap = "round";
+		context.lineJoin = "round";
+		for (stroke in recipe.strokes) {
+			context.globalCompositeOperation = stroke.erase ? "destination-out" : "source-over";
+			context.strokeStyle = stroke.erase ? "#ffffff" : "#" + StringTools.hex(stroke.color & 0xFFFFFF, 6);
+			context.lineWidth = stroke.size * rasterScale;
+			appendCanvasStroke(context, stroke.values, recipe);
+			context.stroke();
+		}
+		var data = BitmapData.fromCanvas(canvas);
+		if (hasPersistentCache()) recipe.pendingSaveCanvas = canvas;
+		return data;
+	}
+
+	private function startCanvasSave(recipe:ArtTileRecipe, canvas:js.html.CanvasElement, revision:Int):Void {
+		if (cache == null || !cache.store.enabled || !indexingComplete || recipe.savedRevision == revision
+			|| recipe.saveFailedRevision == revision || recipe.savePending) return;
+		recipe.savePending = true;
+		try {
+			canvas.toBlob(function(blob:js.html.Blob):Void {
+				if (disposed) return;
+				if (blob == null) {
+					finishSave(recipe, revision, false);
+					return;
+				}
+				var reader = new js.html.FileReader();
+				reader.onload = function(_:Dynamic):Void {
+					if (disposed) return;
+					if (recipe.revision != revision || reader.result == null) {
+						finishSave(recipe, revision, false);
+						return;
+					}
+					putSaveBytes(recipe, ByteArray.fromArrayBuffer(cast reader.result), revision);
+				};
+				reader.onerror = function(_:Dynamic):Void {
+					if (!disposed) finishSave(recipe, revision, false);
+				};
+				reader.readAsArrayBuffer(blob);
+			}, "image/png");
+		} catch (_:Dynamic) finishSave(recipe, revision, false);
+	}
+
+	private function appendCanvasStroke(context:Dynamic, values:Array<Float>, recipe:ArtTileRecipe):Void {
+		var x = values[0];
+		var y = values[1];
+		context.beginPath();
+		context.moveTo(localX(x, recipe), localY(y, recipe));
+		context.lineTo(localX(x - 0.15, recipe), localY(y, recipe));
+		context.moveTo(localX(x, recipe), localY(y, recipe));
+		var index = 2;
+		while (index + 1 < values.length) {
+			x += values[index];
+			y += values[index + 1];
+			context.lineTo(localX(x, recipe), localY(y, recipe));
+			index += 2;
+		}
+	}
+	#end
+
+	#if (sys && lime_cairo && !pr2_test)
+	private function rasterizeCairoRecipe(recipe:ArtTileRecipe):BitmapData {
+		var tileSize = LevelRenderer.ART_RASTER_TILE_SIZE + 1;
+		var buffer = new lime.graphics.ImageBuffer(new lime.utils.UInt8Array(tileSize * tileSize * 4), tileSize, tileSize);
+		buffer.format = lime.graphics.PixelFormat.BGRA32;
+		buffer.premultiplied = true;
+		var image = new lime.graphics.Image(buffer, 0, 0, tileSize, tileSize);
+		var surface = lime.graphics.cairo.CairoImageSurface.fromImage(image);
+		var cairo = new lime.graphics.cairo.Cairo(surface);
+		cairo.lineCap = lime.graphics.cairo.CairoLineCap.ROUND;
+		cairo.lineJoin = lime.graphics.cairo.CairoLineJoin.ROUND;
+		for (stroke in recipe.strokes) {
+			cairo.setOperator(stroke.erase ? lime.graphics.cairo.CairoOperator.DEST_OUT : lime.graphics.cairo.CairoOperator.OVER);
+			if (stroke.erase) cairo.setSourceRGBA(1, 1, 1, 1) else {
+				cairo.setSourceRGBA(((stroke.color >> 16) & 0xFF) / 255, ((stroke.color >> 8) & 0xFF) / 255, (stroke.color & 0xFF) / 255, 1);
+			}
+			cairo.lineWidth = stroke.size * rasterScale;
+			appendCairoStroke(cairo, stroke.values, recipe);
+			cairo.stroke();
+		}
+		surface.flush();
+		return BitmapData.fromImage(image);
+	}
+
+	private function appendCairoStroke(cairo:lime.graphics.cairo.Cairo, values:Array<Float>, recipe:ArtTileRecipe):Void {
+		var x = values[0];
+		var y = values[1];
+		cairo.moveTo(localX(x, recipe), localY(y, recipe));
+		cairo.lineTo(localX(x - 0.15, recipe), localY(y, recipe));
+		cairo.moveTo(localX(x, recipe), localY(y, recipe));
+		var index = 2;
+		while (index + 1 < values.length) {
+			x += values[index];
+			y += values[index + 1];
+			cairo.lineTo(localX(x, recipe), localY(y, recipe));
+			index += 2;
+		}
+	}
+	#end
+
+	private function rasterizeDisplayListRecipe(recipe:ArtTileRecipe):BitmapData {
+		var data = new BitmapData(LevelRenderer.ART_RASTER_TILE_SIZE + 1, LevelRenderer.ART_RASTER_TILE_SIZE + 1, true, 0);
+		var drawing = new Sprite();
+		drawing.blendMode = BlendMode.LAYER;
+		for (stroke in recipe.strokes) {
+			var shape = new Shape();
+			shape.graphics.lineStyle(stroke.size, stroke.erase ? 0xFFFFFF : stroke.color);
+			appendStrokeToGraphics(shape, stroke.values);
+			shape.blendMode = stroke.erase ? BlendMode.ERASE : BlendMode.NORMAL;
+			drawing.addChild(shape);
+		}
+		var matrix = new Matrix();
+		matrix.scale(rasterScale, rasterScale);
+		matrix.translate(-recipe.tileX, -recipe.tileY);
+		data.draw(drawing, matrix, null, BlendMode.NORMAL, null, true);
+		return data;
+	}
+
+	#if pr2_test
+	private function rasterizeOpenFlRecipe(recipe:ArtTileRecipe):BitmapData {
+		var data = new BitmapData(LevelRenderer.ART_RASTER_TILE_SIZE + 1, LevelRenderer.ART_RASTER_TILE_SIZE + 1, true, 0);
+		var start = 0;
+		while (start < recipe.strokes.length) {
+			var first = recipe.strokes[start];
+			var end = start + 1;
+			while (end < recipe.strokes.length && sameBatch(first, recipe.strokes[end])) end++;
+			drawOpenFlStrokeBatch(data, recipe, start, end);
+			start = end;
+		}
+		return data;
+	}
+
+	private function drawOpenFlStrokeBatch(target:BitmapData, recipe:ArtTileRecipe, start:Int, end:Int):Void {
+		var first = recipe.strokes[start];
+		var shape = new Shape();
+		shape.graphics.lineStyle(first.size, first.erase ? 0xFFFFFF : first.color);
+		var bounds = strokeValuesBounds(first.values, first.size / 2);
+		for (index in start...end) {
+			appendStrokeToGraphics(shape, recipe.strokes[index].values);
+			if (index > start) bounds = bounds.union(strokeValuesBounds(recipe.strokes[index].values, first.size / 2));
+		}
+		var matrix = new Matrix();
+		matrix.scale(rasterScale, rasterScale);
+		matrix.translate(-recipe.tileX, -recipe.tileY);
+		if (!first.erase) {
+			target.draw(shape, matrix, null, BlendMode.NORMAL, null, true);
 			return;
 		}
+		var tileSize = LevelRenderer.ART_RASTER_TILE_SIZE + 1;
+		var rectX = Std.int(Math.max(0, Math.floor(bounds.x * rasterScale - recipe.tileX)));
+		var rectY = Std.int(Math.max(0, Math.floor(bounds.y * rasterScale - recipe.tileY)));
+		var rectRight = Std.int(Math.min(tileSize, Math.ceil(bounds.right * rasterScale - recipe.tileX)));
+		var rectBottom = Std.int(Math.min(tileSize, Math.ceil(bounds.bottom * rasterScale - recipe.tileY)));
+		if (rectRight <= rectX || rectBottom <= rectY) return;
 		var targetRect = new Rectangle(rectX, rectY, rectRight - rectX, rectBottom - rectY);
 		var mask = new BitmapData(Std.int(targetRect.width), Std.int(targetRect.height), true, 0);
-		matrix.identity();
-		matrix.scale(rasterScale, rasterScale);
-		matrix.translate(-(tileX + rectX), -(tileY + rectY));
-		mask.draw(op.shape, matrix, null, null, null, true);
-		clearMaskedPixels(bitmap.bitmapData, targetRect, mask);
+		matrix.translate(-rectX, -rectY);
+		mask.draw(shape, matrix, null, BlendMode.NORMAL, null, true);
+		clearMaskedPixels(target, targetRect, mask);
 		mask.dispose();
-		queueTileAttach(key);
 	}
+	#end
 
-	private function clearMaskedPixels(target:BitmapData, targetRect:Rectangle, mask:BitmapData):Void {
-		var maskPixels = mask.getPixels(mask.rect);
-		if (maskPixels == null) {
-			return;
-		}
-		var width = Std.int(targetRect.width);
-		var height = Std.int(targetRect.height);
-		var targetX = Std.int(targetRect.x);
-		var targetY = Std.int(targetRect.y);
-		maskPixels.position = 0;
-		target.lock();
-		for (y in 0...height) {
-			for (x in 0...width) {
-				if (maskPixels.readUnsignedInt() != 0) {
-					target.setPixel32(targetX + x, targetY + y, 0);
-				}
-			}
-		}
-		target.unlock(targetRect);
-	}
-
-	private function strokeShape(action:LevelDrawAction, strokeColor:Int):Shape {
-		var shape = new Shape();
-		var graphics = shape.graphics;
-		graphics.lineStyle(size, strokeColor);
-		var x = action.values[0];
-		var y = action.values[1];
-		graphics.moveTo(x, y);
-		graphics.lineTo(x - 0.15, y);
-		graphics.moveTo(x, y);
-		var i = 2;
-		while (i + 1 < action.values.length) {
-			var nextX = x + action.values[i];
-			var nextY = y + action.values[i + 1];
-			graphics.lineTo(nextX, nextY);
-			x = nextX;
-			y = nextY;
-			i += 2;
-		}
-		return shape;
-	}
-
-	private function strokeBounds(action:LevelDrawAction, radius:Float):Rectangle {
-		var x = action.values[0];
-		var y = action.values[1];
-		var minX = x - radius - 1;
-		var minY = y - radius - 1;
-		var maxX = x + radius + 1;
-		var maxY = y + radius + 1;
-		var i = 2;
-		while (i + 1 < action.values.length) {
-			x += action.values[i];
-			y += action.values[i + 1];
-			minX = Math.min(minX, x - radius - 1);
-			minY = Math.min(minY, y - radius - 1);
-			maxX = Math.max(maxX, x + radius + 1);
-			maxY = Math.max(maxY, y + radius + 1);
-			i += 2;
-		}
-		return new Rectangle(minX, minY, maxX - minX, maxY - minY);
-	}
-
-	private function addDrawStrokeToBatch(action:LevelDrawAction, ?deadline:Null<Float>):Bool {
-		var radius = Math.max(0.5, size / 2);
-		var strokeTiles = collectStrokeTiles(action, radius);
-		if (strokeTiles == null) {
-			flush();
-			return startLargeStroke(action, false, "tileFallback", deadline);
-		}
-		if (pendingShape != null && pendingErase) {
-			flush();
-		}
-		if (!canAddStrokeTilesToBatch(strokeTiles)) {
-			flush();
-		}
-		if (!canAddStrokeTilesToBatch(strokeTiles)) {
-			return startLargeStroke(action, false, "tileFallback", deadline);
-		}
-		setStrokeTileProfile(strokeTiles, "batch");
-		if (pendingShape == null) {
-			pendingShape = new Shape();
-			pendingErase = false;
-		}
-		var graphics = pendingShape.graphics;
-		graphics.lineStyle(size, color);
-		appendStrokeToGraphics(graphics, action);
-		addPendingStrokeTiles(strokeTiles);
-		return true;
-	}
-
-	private function addEraseStrokeToBatch(action:LevelDrawAction, ?deadline:Null<Float>):Bool {
-		var radius = Math.max(0.5, size / 2);
-		var strokeTiles = collectStrokeTiles(action, radius);
-		if (strokeTiles == null) {
-			flush();
-			return startLargeStroke(action, true, "eraseTileFallback", deadline);
-		}
-		if (pendingShape != null && !pendingErase) {
-			flush();
-		}
-		if (!canAddStrokeTilesToBatch(strokeTiles)) {
-			flush();
-		}
-		if (!canAddStrokeTilesToBatch(strokeTiles)) {
-			return startLargeStroke(action, true, "eraseTileFallback", deadline);
-		}
-		setStrokeTileProfile(strokeTiles, "eraseBatch");
-		if (pendingShape == null) {
-			pendingShape = new Shape();
-			pendingErase = true;
-		}
-		var graphics = pendingShape.graphics;
-		graphics.lineStyle(size, 0xFFFFFF);
-		appendStrokeToGraphics(graphics, action);
-		addPendingStrokeTiles(strokeTiles);
-		addPendingBounds(strokeBounds(action, radius));
-		return true;
-	}
-
-	private function appendStrokeToGraphics(graphics:openfl.display.Graphics, action:LevelDrawAction):Void {
-		var x = action.values[0];
-		var y = action.values[1];
-		graphics.moveTo(x, y);
-		graphics.lineTo(x - 0.15, y);
-		graphics.moveTo(x, y);
-		var i = 2;
-		while (i + 1 < action.values.length) {
-			var nextX = x + action.values[i];
-			var nextY = y + action.values[i + 1];
-			graphics.lineTo(nextX, nextY);
-			x = nextX;
-			y = nextY;
-			i += 2;
+	private function installPixels(recipe:ArtTileRecipe, data:BitmapData):Void {
+		if (recipe.bitmap == null) {
+			var bitmap = new Bitmap(data);
+			bitmap.smoothing = true;
+			bitmap.scaleX = bitmap.scaleY = 1 / rasterScale;
+			bitmap.x = recipe.tileX / rasterScale;
+			bitmap.y = recipe.tileY / rasterScale;
+			recipe.bitmap = bitmap;
+		} else {
+			if (recipe.bitmap.bitmapData != null) recipe.bitmap.bitmapData.dispose();
+			recipe.bitmap.bitmapData = data;
 		}
 	}
 
-	private function collectStrokeTiles(action:LevelDrawAction, radius:Float):Null<ArtStrokeTileSet> {
+	private function disposePixels(recipe:ArtTileRecipe):Void {
+		if (recipe.bitmap == null) return;
+		if (recipe.bitmap.parent != null) recipe.bitmap.parent.removeChild(recipe.bitmap);
+		if (recipe.bitmap.bitmapData != null) recipe.bitmap.bitmapData.dispose();
+		recipe.bitmap = null;
+		recipe.renderedRevision = -1;
+	}
+
+	private function setTileAttached(recipe:ArtTileRecipe, attach:Bool):Void {
+		var bitmap = recipe.bitmap;
+		if (bitmap == null) return;
+		if (attach) {
+			if (bitmap.parent != rasterCanvas) rasterCanvas.addChild(bitmap);
+		} else if (bitmap.parent == rasterCanvas) rasterCanvas.removeChild(bitmap);
+	}
+
+	private function collectStrokeTiles(action:LevelDrawAction, radius:Float):ArtStrokeTileSet {
 		var tiles = new ArtStrokeTileSet();
 		var x = action.values[0];
 		var y = action.values[1];
 		addTilesForBounds(tiles, x - radius - 1, y - radius - 1, x + radius + 1, y + radius + 1);
-		if (!isStrokeTileSetBatchable(tiles)) {
-			return null;
-		}
-		var i = 2;
-		while (i + 1 < action.values.length) {
-			var nextX = x + action.values[i];
-			var nextY = y + action.values[i + 1];
-			addTilesForBounds(tiles,
-				Math.min(x, nextX) - radius - 1,
-				Math.min(y, nextY) - radius - 1,
-				Math.max(x, nextX) + radius + 1,
-				Math.max(y, nextY) + radius + 1
-			);
-			if (!isStrokeTileSetBatchable(tiles)) {
-				return null;
-			}
+		var index = 2;
+		while (index + 1 < action.values.length) {
+			var nextX = x + action.values[index];
+			var nextY = y + action.values[index + 1];
+			addTilesForBounds(tiles, Math.min(x, nextX) - radius - 1, Math.min(y, nextY) - radius - 1,
+				Math.max(x, nextX) + radius + 1, Math.max(y, nextY) + radius + 1);
 			x = nextX;
 			y = nextY;
-			i += 2;
-		}
-		return tiles;
-	}
-
-	private function collectStrokeTilesForErase(action:LevelDrawAction, radius:Float):ArtStrokeTileSet {
-		var tiles = new ArtStrokeTileSet();
-		var x = action.values[0];
-		var y = action.values[1];
-		addTilesForBounds(tiles, x - radius - 1, y - radius - 1, x + radius + 1, y + radius + 1);
-		var i = 2;
-		while (i + 1 < action.values.length) {
-			var nextX = x + action.values[i];
-			var nextY = y + action.values[i + 1];
-			addTilesForBounds(tiles,
-				Math.min(x, nextX) - radius - 1,
-				Math.min(y, nextY) - radius - 1,
-				Math.max(x, nextX) + radius + 1,
-				Math.max(y, nextY) + radius + 1
-			);
-			x = nextX;
-			y = nextY;
-			i += 2;
+			index += 2;
 		}
 		return tiles;
 	}
@@ -671,85 +750,64 @@ class ArtRasterTiles {
 			var tileX = tileOrigin(Std.int(Math.floor(minX * rasterScale)));
 			var endX = tileOrigin(Std.int(Math.floor(maxX * rasterScale)));
 			while (tileX <= endX) {
-				var key = tileKey(tileX, tileY);
-				tiles.add(key, tileX, tileY);
+				tiles.add(tileKey(tileX, tileY), tileX, tileY);
 				tileX += tile;
 			}
 			tileY += tile;
 		}
 	}
 
-	private function isStrokeTileSetBatchable(tiles:ArtStrokeTileSet):Bool {
-		return LevelRenderer.isArtDrawBatchWithinLimits(tiles.keys.length, tiles.tileSpanX(), tiles.tileSpanY());
-	}
-
-	private function canAddStrokeTilesToBatch(strokeTiles:ArtStrokeTileSet):Bool {
-		var count = pendingTileKeys.length;
-		var minTileX = pendingMinTileX;
-		var maxTileX = pendingMaxTileX;
-		var minTileY = pendingMinTileY;
-		var maxTileY = pendingMaxTileY;
-		if (pendingShape == null) {
-			count = 0;
-			minTileX = strokeTiles.minTileX;
-			maxTileX = strokeTiles.maxTileX;
-			minTileY = strokeTiles.minTileY;
-			maxTileY = strokeTiles.maxTileY;
-		}
-		for (i in 0...strokeTiles.keys.length) {
-			var key = strokeTiles.keys[i];
-			var tileX = strokeTiles.tileXs[i];
-			var tileY = strokeTiles.tileYs[i];
-			if (!pendingTileKeySeen.exists(key)) {
-				count++;
-			}
-			if (tileX < minTileX) minTileX = tileX;
-			if (tileX > maxTileX) maxTileX = tileX;
-			if (tileY < minTileY) minTileY = tileY;
-			if (tileY > maxTileY) maxTileY = tileY;
-		}
-		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
-		return LevelRenderer.isArtDrawBatchWithinLimits(
-			count,
-			Std.int((maxTileX - minTileX) / tile) + 1,
-			Std.int((maxTileY - minTileY) / tile) + 1
-		);
-	}
-
-	private function addPendingStrokeTiles(strokeTiles:ArtStrokeTileSet):Void {
-		for (i in 0...strokeTiles.keys.length) {
-			var key = strokeTiles.keys[i];
-			if (!pendingTileKeySeen.exists(key)) {
-				var tileX = strokeTiles.tileXs[i];
-				var tileY = strokeTiles.tileYs[i];
-				pendingTileKeySeen.set(key, true);
-				pendingTileKeys.push(key);
-				pendingTileXs.push(tileX);
-				pendingTileYs.push(tileY);
-				if (pendingTileKeys.length == 1) {
-					pendingMinTileX = pendingMaxTileX = tileX;
-					pendingMinTileY = pendingMaxTileY = tileY;
-				} else {
-					if (tileX < pendingMinTileX) pendingMinTileX = tileX;
-					if (tileX > pendingMaxTileX) pendingMaxTileX = tileX;
-					if (tileY < pendingMinTileY) pendingMinTileY = tileY;
-					if (tileY > pendingMaxTileY) pendingMaxTileY = tileY;
-				}
-			}
+	private function appendStrokeToGraphics(shape:Shape, values:Array<Float>):Void {
+		var x = values[0];
+		var y = values[1];
+		shape.graphics.moveTo(x, y);
+		shape.graphics.lineTo(x - 0.15, y);
+		shape.graphics.moveTo(x, y);
+		var index = 2;
+		while (index + 1 < values.length) {
+			x += values[index];
+			y += values[index + 1];
+			shape.graphics.lineTo(x, y);
+			index += 2;
 		}
 	}
 
-	private function addPendingBounds(bounds:Rectangle):Void {
-		if (pendingBounds == null) {
-			pendingBounds = bounds;
-			return;
+	#if pr2_test
+	private function strokeValuesBounds(values:Array<Float>, radius:Float):Rectangle {
+		var x = values[0];
+		var y = values[1];
+		var minX = x - radius - 1;
+		var minY = y - radius - 1;
+		var maxX = x + radius + 1;
+		var maxY = y + radius + 1;
+		var index = 2;
+		while (index + 1 < values.length) {
+			x += values[index];
+			y += values[index + 1];
+			minX = Math.min(minX, x - radius - 1);
+			minY = Math.min(minY, y - radius - 1);
+			maxX = Math.max(maxX, x + radius + 1);
+			maxY = Math.max(maxY, y + radius + 1);
+			index += 2;
 		}
-		var minX = Math.min(pendingBounds.x, bounds.x);
-		var minY = Math.min(pendingBounds.y, bounds.y);
-		var maxX = Math.max(pendingBounds.right, bounds.right);
-		var maxY = Math.max(pendingBounds.bottom, bounds.bottom);
-		pendingBounds.setTo(minX, minY, maxX - minX, maxY - minY);
+		return new Rectangle(minX, minY, maxX - minX, maxY - minY);
 	}
+
+	private function clearMaskedPixels(target:BitmapData, targetRect:Rectangle, mask:BitmapData):Void {
+		var maskPixels = mask.getPixels(mask.rect);
+		if (maskPixels == null) return;
+		var width = Std.int(targetRect.width);
+		var height = Std.int(targetRect.height);
+		var targetX = Std.int(targetRect.x);
+		var targetY = Std.int(targetRect.y);
+		maskPixels.position = 0;
+		target.lock();
+		for (y in 0...height) {
+			for (x in 0...width) if (maskPixels.readUnsignedInt() != 0) target.setPixel32(targetX + x, targetY + y, 0);
+		}
+		target.unlock(targetRect);
+	}
+	#end
 
 	private function setControlProfile(path:String):Void {
 		lastProfilePath = path;
@@ -759,56 +817,32 @@ class ArtRasterTiles {
 		lastProfileTileSpanY = 0;
 	}
 
-	private function setStrokeTileProfile(strokeTiles:ArtStrokeTileSet, path:String):Void {
+	private function setStrokeTileProfile(tiles:ArtStrokeTileSet, path:String):Void {
 		lastProfilePath = path;
 		lastProfileMode = mode;
-		lastProfileTileCount = strokeTiles.keys.length;
-		lastProfileTileSpanX = strokeTiles.tileSpanX();
-		lastProfileTileSpanY = strokeTiles.tileSpanY();
+		lastProfileTileCount = tiles.keys.length;
+		lastProfileTileSpanX = tiles.tileSpanX();
+		lastProfileTileSpanY = tiles.tileSpanY();
 	}
 
-	private function setEstimatedStrokeProfile(action:LevelDrawAction, path:String):Void {
-		var bounds = strokeBounds(action, Math.max(0.5, size / 2));
-		var minTileX = tileOrigin(Std.int(Math.floor(bounds.x * rasterScale)));
-		var maxTileX = tileOrigin(Std.int(Math.floor(bounds.right * rasterScale)));
-		var minTileY = tileOrigin(Std.int(Math.floor(bounds.y * rasterScale)));
-		var maxTileY = tileOrigin(Std.int(Math.floor(bounds.bottom * rasterScale)));
-		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
-		lastProfilePath = path;
-		lastProfileMode = mode;
-		lastProfileTileSpanX = Std.int((maxTileX - minTileX) / tile) + 1;
-		lastProfileTileSpanY = Std.int((maxTileY - minTileY) / tile) + 1;
-		lastProfileTileCount = lastProfileTileSpanX * lastProfileTileSpanY;
+	private function sameBatch(a:ArtResolvedStroke, b:ArtResolvedStroke):Bool {
+		return a.erase == b.erase && a.size == b.size && (a.erase || a.color == b.color);
 	}
 
-	private function setLargeStrokeProfile(op:LargeStrokeRasterOperation):Void {
-		lastProfilePath = op.profilePath;
-		lastProfileMode = op.profileMode;
-		lastProfileTileCount = op.strokeTiles.keys.length;
-		lastProfileTileSpanX = op.strokeTiles.tileSpanX();
-		lastProfileTileSpanY = op.strokeTiles.tileSpanY();
+	private function isHot(recipe:ArtTileRecipe):Bool {
+		return !viewInitialized || (recipe.tileX >= hotMinTileX && recipe.tileX <= hotMaxTileX
+			&& recipe.tileY >= hotMinTileY && recipe.tileY <= hotMaxTileY);
 	}
 
-	private function setPendingFlushProfile(path:String):Void {
-		lastProfilePath = path;
-		lastProfileMode = mode;
-		lastProfileTileCount = pendingTileKeys.length;
-		if (pendingTileKeys.length == 0) {
-			lastProfileTileSpanX = 0;
-			lastProfileTileSpanY = 0;
-			return;
-		}
-		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
-		lastProfileTileSpanX = Std.int((pendingMaxTileX - pendingMinTileX) / tile) + 1;
-		lastProfileTileSpanY = Std.int((pendingMaxTileY - pendingMinTileY) / tile) + 1;
+	private function isWarm(recipe:ArtTileRecipe):Bool {
+		return !viewInitialized || (recipe.tileX >= warmMinTileX && recipe.tileX <= warmMaxTileX
+			&& recipe.tileY >= warmMinTileY && recipe.tileY <= warmMaxTileY);
 	}
 
-	private static inline function tileOrigin(pixel:Int):Int {
-		var tile = LevelRenderer.ART_RASTER_TILE_SIZE;
-		return Std.int(Math.floor(pixel / tile)) * tile;
-	}
-
-	private static inline function tileKey(tileX:Int, tileY:Int):String {
-		return tileX + "," + tileY;
-	}
+	private function notifyWork():Void if (onWorkAvailable != null) onWorkAvailable();
+	private inline function localX(value:Float, recipe:ArtTileRecipe):Float return value * rasterScale - recipe.tileX;
+	private inline function localY(value:Float, recipe:ArtTileRecipe):Float return value * rasterScale - recipe.tileY;
+	private inline function persistentTileKey(recipe:ArtTileRecipe):String return cache.layerIndex + "/" + recipe.key;
+	private static inline function tileOrigin(pixel:Int):Int return Std.int(Math.floor(pixel / LevelRenderer.ART_RASTER_TILE_SIZE)) * LevelRenderer.ART_RASTER_TILE_SIZE;
+	private static inline function tileKey(tileX:Int, tileY:Int):String return tileX + "," + tileY;
 }

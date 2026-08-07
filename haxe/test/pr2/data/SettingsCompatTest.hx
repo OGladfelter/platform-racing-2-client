@@ -40,7 +40,6 @@ class SettingsCompatTest {
 
 		assertEquals(0, Settings.disabledSongs().length, "disabled songs default");
 		assertEquals(true, Settings.getValue(Settings.DRAW_ART, false), "draw art default");
-		assertEquals(false, Settings.getValue(Settings.ART_LOSSLESS_QUALITY, true), "lossless quality default");
 		assertEquals(true, Settings.getValue(Settings.FILTER_SWEARS, false), "filter default");
 		assertEquals(2, Settings.getValue(Settings.LE_TEST_HAT, 99), "test hat default");
 		var controls:Dynamic = Settings.getValue(Settings.ALTERNATE_CONTROLS, null);

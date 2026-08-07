@@ -208,7 +208,7 @@ class EditorDrawableLayer extends Sprite {
 		rasterTiles.dispose();
 		rasterTiles = new ArtRasterTiles(rasterCanvas);
 		rasterTiles.applyAll(drawActions);
-		rasterTiles.attachQueuedTiles(1000000);
+		rasterTiles.updateTiles(0);
 		rasterizedActionCount = drawActions.length;
 		brushCanvas.graphics.clear();
 		brushCanvas.graphics.lineStyle(brushSize, color);
@@ -231,7 +231,7 @@ class EditorDrawableLayer extends Sprite {
 			rasterizedActionCount++;
 		}
 		rasterTiles.flush();
-		rasterTiles.attachQueuedTiles(1000000);
+		rasterTiles.updateTiles(0);
 		brushCanvas.graphics.clear();
 		brushCanvas.graphics.lineStyle(brushSize, color);
 	}

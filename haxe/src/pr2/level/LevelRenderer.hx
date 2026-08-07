@@ -4,6 +4,8 @@ import pr2.level.LevelArtCursor.ArtDrawCursor;
 import pr2.level.LevelArtRasterizer.ArtRasterBudget;
 import pr2.level.LevelArtRasterizer.ArtRasterTiles;
 import pr2.level.LevelArtCursor.ArtStrokeState;
+import pr2.level.ArtTileStorage.ArtTileStore;
+import pr2.level.ArtTileStorage.ArtTileStoreFactory;
 
 import haxe.Timer;
 import haxe.ds.ObjectMap;
@@ -18,10 +20,13 @@ import openfl.geom.ColorTransform;
 import openfl.geom.Matrix;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
+import openfl.text.TextField;
+import openfl.text.TextFormat;
 import pr2.Constants;
 import pr2.app.AppStage;
 import pr2.app.DebugSignal;
 import pr2.lobby.account.Settings;
+import pr2.runtime.FrameClock;
 import pr2.level.Level.LevelArtObject;
 import pr2.level.Level.LevelDrawAction;
 import pr2.level.Level.LevelTextObject;
@@ -61,7 +66,6 @@ class LevelRenderer extends Sprite {
 	// MAX_TEXTURE_SIZE (8192 on many GPUs, 4096 on some) so a single tile never
 	// fails to upload. See rasterizeBrushInto.
 	public static inline var ART_RASTER_TILE_SIZE:Int = 512;
-	public static inline var DEFAULT_ART_RASTER_TILE_LIMIT:Int = 500;
 	public static inline var DEFAULT_ART_BRUSH_SIZE:Float = 4.0;
 	private static inline var ART_DRAW_ACTION_BATCH_LIMIT:Int = 8;
 	public static inline var ART_DRAW_BATCH_MAX_TILE_COUNT:Int = 24;
@@ -69,16 +73,17 @@ class LevelRenderer extends Sprite {
 	private static inline var ART_DRAW_FRAME_BUDGET_SECONDS:Float = 0.008;
 	private static inline var ART_DRAW_SLOW_PROFILE_MS:Float = 50.0;
 	private static inline var RENDER_FRAME_ESCAPE_SECONDS:Float = 0.1;
-	public static inline var ART_RASTER_VIEW_MARGIN_TILES:Int = 1;
+	public static inline var ART_RASTER_HOT_MARGIN_TILES:Int = 1;
+	public static inline var ART_RASTER_WARM_MARGIN_TILES:Int = 2;
 	public static inline var ART_RASTER_VIEW_REBUILD_THRESHOLD:Int = 1;
-	public static inline var ART_RASTER_ATTACH_TILES_PER_FRAME:Int = 1;
+	public static inline var ART_RASTER_SAVES_PER_FRAME:Int = 10;
 	public static inline var DEFAULT_FOCUS_X:Float = 180;
 	public static inline var DEFAULT_FOCUS_Y:Float = 280;
 	public static inline var DEFAULT_BLOCKS_PER_FRAME:Int = 50;
 	public static inline var BG5_CODE:Int = 205;
 	public static inline var ART_LOAD_WARNING_GAME:String = "Error: Some art didn't load correctly. Don't worry! You can still play the level.\n\nIf this persists, please contact a member of the PR2 staff team.";
 	public static inline var ART_LOAD_WARNING_EDITOR:String = "Error: Some art didn't load correctly. This could be because there's too much art on your level. Saving the level now may cause permanent damage to its playability. Try undoing your recent changes until you don't get this error, and then saving your work.\n\nIf this persists, please contact a member of the PR2 staff team.";
-	public static inline var ART_RASTER_STOP_WARNING:String = "Error: Some art didn't load correctly. Don't worry! You can still play the level.\n\nYou can prevent this in the future by enabling lossless art quality in the options menu.";
+	public static inline var ART_RASTER_STOP_WARNING:String = "Error: Some art didn't load correctly. Don't worry! You can still play the level.\n\nIf this persists, please contact a member of the PR2 staff team.";
 	private static inline var ICE_OVERLAY_NAME:String = "iceOverlay";
 	private static inline var ART_RASTER_CANVAS_NAME:String = "artRasterCanvas";
 	// View-window culling (mirrors Flash background.Background.updateViewWindow):
@@ -107,6 +112,11 @@ class LevelRenderer extends Sprite {
 	private var fractionalPresentationCamera:Bool = false;
 	private var viewWindowUpdateCount:Int = 0;
 	private var artViewWindowUpdateCount:Int = 0;
+	// Course commits a 90-degree rotation before it snaps the camera to the
+	// player's rotated position. Reconcile art only after that matching camera
+	// update, otherwise the intermediate rotation/old-camera pair can make every
+	// tile cold and immediately reload it.
+	private var artViewRefreshPendingAfterRotation:Bool = false;
 	// Holds the parallax art layers and the block layer — everything that spins
 	// when a rotate block fires. Mirrors Flash, which rotates the whole Course
 	// during the tween (worldContainer here) and bakes the committed 90-degree
@@ -169,8 +179,9 @@ class LevelRenderer extends Sprite {
 	private final drawArtEnabled:Bool;
 	private final artOptions:Null<ArtRenderOptions>;
 	private final artRasterBudget:ArtRasterBudget;
-	private final losslessArtEnabled:Bool;
 	private var artRasterScale:Float;
+	private final artTileStore:ArtTileStore;
+	private var artTileCacheGroup:String;
 	private var artRasterResizeTimer:Null<Timer>;
 	private final blockFactory:BlockViewFactory;
 	private var backgroundRenderer:LevelBackgroundRenderer;
@@ -179,7 +190,8 @@ class LevelRenderer extends Sprite {
 	private var attemptedArtItems:Int = 0;
 	private var artLoadWarningShown:Bool = false;
 	private var rasterStopNotified:Bool = false;
-	private var artRasterAttachActive:Bool = false;
+	private var artRasterWorkActive:Bool = false;
+	private var drawingCompleteLatched:Bool = false;
 	public var artWarningMessage(default, null):Null<String>;
 	public var stoppedRasterizing(default, null):Bool = false;
 	public var artProfileLastMs(default, null):Float = 0;
@@ -219,12 +231,13 @@ class LevelRenderer extends Sprite {
 		this.blocksPerFrame = blocksPerFrame <= 0 ? DEFAULT_BLOCKS_PER_FRAME : blocksPerFrame;
 		this.drawArtEnabled = Settings.getValue(Settings.DRAW_ART, true) != false;
 		this.artOptions = artOptions;
-		var losslessArt = Settings.getValue(Settings.ART_LOSSLESS_QUALITY, false) == true;
-		this.losslessArtEnabled = losslessArt;
 		var rasterTileLimit = artOptions != null && artOptions.rasterTileLimit != null ? artOptions.rasterTileLimit
-			: losslessArt ? -1 : DEFAULT_ART_RASTER_TILE_LIMIT;
+			: -1;
 		this.artRasterBudget = new ArtRasterBudget(rasterTileLimit, artRenderer.notifyRasterStopped);
-		this.artRasterScale = resolveArtRasterScale(losslessArt, artOptions);
+		this.artRasterScale = resolveArtRasterScale(artOptions);
+		this.artTileStore = ArtTileStoreFactory.create();
+		this.artTileCacheGroup = ArtTileCacheIdentity.groupKey(level, artRasterScale);
+		if (drawArtEnabled && level.artLayers.length > 0) artTileStore.prepareGroup(artTileCacheGroup, level.id);
 		DebugSignal.set("art-raster-scale", Std.string(artRasterScale));
 		this.currentBackgroundColor = level.bgColor;
 		addEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
@@ -274,8 +287,7 @@ class LevelRenderer extends Sprite {
 		return tileCount <= ART_DRAW_BATCH_MAX_TILE_COUNT && tileSpanX <= ART_DRAW_BATCH_MAX_TILE_SPAN && tileSpanY <= ART_DRAW_BATCH_MAX_TILE_SPAN;
 	}
 
-	private static function resolveArtRasterScale(losslessArt:Bool, artOptions:Null<ArtRenderOptions>):Float {
-		if (!losslessArt) return 1;
+	private static function resolveArtRasterScale(artOptions:Null<ArtRenderOptions>):Float {
 		if (artOptions != null && artOptions.rasterScale != null) return Math.max(1, artOptions.rasterScale);
 		#if html5
 		var currentStage = AppStage.stage;
@@ -289,14 +301,16 @@ class LevelRenderer extends Sprite {
 	}
 
 	public function isDrawingComplete():Bool {
-		return isBlockDrawingComplete() && drawnArtItems >= totalArtItems;
+		if (drawingCompleteLatched) return true;
+		drawingCompleteLatched = isBlockDrawingComplete() && drawnArtItems >= totalArtItems && artRenderer.isTileBakeComplete();
+		return drawingCompleteLatched;
 	}
 
 	public function artRasterDensity():Float return artRasterScale;
 
 	private function onAddedToStage(_:Event):Void {
 		removeEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
-		if (!losslessArtEnabled || stage == null) return;
+		if (stage == null) return;
 		if (stage.window != null) stage.window.onResize.add(onWindowResize);
 		scheduleArtRasterDensityRefresh();
 	}
@@ -304,23 +318,28 @@ class LevelRenderer extends Sprite {
 	private function onWindowResize(_width:Int, _height:Int):Void scheduleArtRasterDensityRefresh();
 
 	private function scheduleArtRasterDensityRefresh(delayMs:Int = 150):Void {
-		if (!losslessArtEnabled) return;
 		if (artRasterResizeTimer != null) artRasterResizeTimer.stop();
 		artRasterResizeTimer = Timer.delay(refreshArtRasterDensity, delayMs);
 	}
 
 	private function refreshArtRasterDensity():Void {
 		artRasterResizeTimer = null;
-		if (!losslessArtEnabled || stage == null) return;
-		var desiredScale = resolveArtRasterScale(true, artOptions);
+		if (stage == null) return;
+		var desiredScale = resolveArtRasterScale(artOptions);
 		if (desiredScale <= artRasterScale + 0.01) return;
 		if (!isDrawingComplete()) {
 			scheduleArtRasterDensityRefresh(250);
 			return;
 		}
 		artRasterScale = desiredScale;
+		prepareArtTileCache(desiredScale);
 		artRenderer.rerasterizeLayers(desiredScale);
 		DebugSignal.set("art-raster-scale", Std.string(artRasterScale));
+	}
+
+	private function prepareArtTileCache(rasterScale:Float):Void {
+		artTileCacheGroup = ArtTileCacheIdentity.groupKey(level, rasterScale);
+		artTileStore.prepareGroup(artTileCacheGroup, level.id);
 	}
 
 	public function drawnBlockCount():Int {
@@ -410,12 +429,12 @@ class LevelRenderer extends Sprite {
 			this.courseRotation = courseRotation;
 			applyLayerTransforms();
 			updateViewWindow(true);
-			updateArtViewWindows(true);
+			artViewRefreshPendingAfterRotation = true;
 		}
 		if (this.tweenRotation != tweenRotation) {
 			this.tweenRotation = tweenRotation;
 			updateViewWindow(false);
-			updateArtViewWindows(false);
+			if (!artViewRefreshPendingAfterRotation) updateArtViewWindows(false);
 		}
 		presentationTweenRotation = tweenRotation;
 		applyTweenRotation();
@@ -531,7 +550,8 @@ class LevelRenderer extends Sprite {
 		fractionalPresentationCamera = false;
 		applyLayerTransforms();
 		updateViewWindow(false);
-		updateArtViewWindows(false);
+		updateArtViewWindows(artViewRefreshPendingAfterRotation);
+		artViewRefreshPendingAfterRotation = false;
 	}
 
 	/**
@@ -1190,9 +1210,10 @@ class LevelRenderer extends Sprite {
 		removeEventListener(Event.ENTER_FRAME, drawBlockBatch);
 		removeEventListener(Event.ENTER_FRAME, drawArtBatch);
 		artRenderer.dispose();
+		artTileStore.dispose();
 		removeEventListener(Event.ENTER_FRAME, onWaterRippleFrame);
 		removeEventListener(Event.ENTER_FRAME, onBlockBounceFrame);
-		artRasterAttachActive = false;
+		artRasterWorkActive = false;
 		waterRippleFrames.clear();
 		blockBounceVelocities.clear();
 		// Dispose every arrow movie clip, including off-screen ones that culling left

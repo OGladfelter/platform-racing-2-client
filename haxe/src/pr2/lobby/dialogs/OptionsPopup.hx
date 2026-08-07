@@ -58,13 +58,8 @@ class OptionsPopup extends Popup {
 		bind("filterOff_bt", function() setFilter(false));
 		bind("artOn_bt", function() setDrawArt(true));
 		bind("artOff_bt", function() setDrawArt(false));
-		bind("art_bt", toggleArtMenu);
 		bind("music_bt", toggleSongsMenu);
-		bindHover("art_bt", hoverArt, hoverOut);
 		bindHover("music_bt", hoverMusic, hoverOut);
-		// Flash calls toggleArtBtnListeners during construction, before the popup
-		// is shown. Keep exactly one form of the art label visible from frame one.
-		syncArtLabel();
 		bind("close_bt", startFadeOut);
 		setupAccountButtons();
 	}
@@ -169,29 +164,8 @@ class OptionsPopup extends Popup {
 	private function setDrawArt(value:Bool):Void {
 		drawArt = value;
 		setHighlight("artHighlight", value);
-		syncArtLabel();
-		if (!value) closeArtMenu();
-		if (!value) hoverOut();
-	}
-
-	private function syncArtLabel():Void {
-		var button = DisplayUtil.directChildByName(art, "art_bt");
-		var offText = DisplayUtil.directChildByName(art, "artOffText");
-		if (button != null) button.visible = drawArt;
-		if (offText != null) offText.visible = !drawArt;
 	}
 	private function setHighlight(name:String, value:Bool):Void { var target = DisplayUtil.directChildByName(art, name); if (target != null) target.y = value ? TRUE_Y : FALSE_Y; }
-
-	private function hoverArt():Void {
-		if (!drawArt) return;
-		hoverOut();
-		var target = DisplayUtil.directChildByName(art, "art_bt");
-		if (target != null) {
-			hoverActive = new HoverPopup("Choose Art Quality",
-				"Choose whether to draw art with lossless quality. This setting may degrade performance on some systems.", target);
-			hoverActive.x += 5;
-		}
-	}
 
 	private function hoverMusic():Void {
 		hoverOut();
@@ -233,20 +207,6 @@ class OptionsPopup extends Popup {
 		Settings.setValue(Settings.ALTERNATE_CONTROLS, controls);
 	}
 
-	private function toggleArtMenu():Void {
-		if (!drawArt) return;
-		var target = DisplayUtil.directChildByName(art, "art_bt");
-		if (target != null) {
-			new OptionsArtQualityMenu(target);
-		}
-	}
-
-	private function closeArtMenu():Void {
-		if (OptionsArtQualityMenu.instance != null) {
-			OptionsArtQualityMenu.instance.remove();
-		}
-	}
-
 	private function toggleSongsMenu():Void {
 		var target = DisplayUtil.directChildByName(art, "music_bt");
 		if (target != null) {
@@ -262,7 +222,6 @@ class OptionsPopup extends Popup {
 
 	override public function remove():Void {
 		hoverOut();
-		closeArtMenu();
 		closeSongsMenu();
 		if (accountButtons != null) {
 			accountButtons.remove();

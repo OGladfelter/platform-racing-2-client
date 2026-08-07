@@ -28,6 +28,7 @@ class ArtDrawCursor {
 	public var lastProfileMs(default, null):Float = 0;
 	private final strokeTiles:ArtRasterTiles;
 	private var actionIndex:Int = 0;
+	private var strokeIndexComplete:Bool = false;
 	private var objectIndex:Int = 0;
 	private var textIndex:Int = 0;
 
@@ -36,6 +37,10 @@ class ArtDrawCursor {
 		this.rasterCanvas = strokeTiles.rasterCanvas;
 		this.layer = layer;
 		this.strokeTiles = strokeTiles;
+		if (layer.drawActions.length == 0) {
+			strokeIndexComplete = true;
+			strokeTiles.finishIndexing();
+		}
 	}
 
 	public function drawNext(maxActions:Int = 1, ?deadline:Null<Float>):Int {
@@ -70,7 +75,15 @@ class ArtDrawCursor {
 					copyFlushProfile(actionIndex - 1, flushMs);
 				}
 			}
+			if (actionIndex >= layer.drawActions.length && !strokeIndexComplete) {
+				strokeIndexComplete = true;
+				strokeTiles.finishIndexing();
+			}
 			return drawn;
+		}
+		if (!strokeIndexComplete) {
+			strokeIndexComplete = true;
+			strokeTiles.finishIndexing();
 		}
 		var flushStarted = Timer.stamp();
 		strokeTiles.flush();

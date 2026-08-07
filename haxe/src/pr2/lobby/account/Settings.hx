@@ -6,7 +6,6 @@ class Settings {
 	public static inline var MUSIC_VOLUME:String = "musicLevel";
 	public static inline var SOUND_VOLUME:String = "soundLevel";
 	public static inline var DRAW_ART:String = "drawArt";
-	public static inline var ART_LOSSLESS_QUALITY:String = "losslessQuality";
 	public static inline var FILTER_SWEARS:String = "filterSwears";
 	public static inline var ALTERNATE_CONTROLS:String = "altCtrl";
 	public static inline var LE_TEST_STATS:String = "leTestStats";
@@ -19,7 +18,6 @@ class Settings {
 	public static var musicLevel:Int = 100;
 	public static var soundLevel:Int = 100;
 	public static var drawArt:Bool = true;
-	public static var losslessQuality:Bool = false;
 	public static var filterSwears:Bool = true;
 	public static var altCtrl:Dynamic = cloneObject(DEFAULT_ALT_CONTROLS);
 	public static var leTestStats:Dynamic = cloneObject(DEFAULT_LE_TEST_STATS);
@@ -32,7 +30,6 @@ class Settings {
 		MUSIC_VOLUME,
 		SOUND_VOLUME,
 		DRAW_ART,
-		ART_LOSSLESS_QUALITY,
 		FILTER_SWEARS,
 		ALTERNATE_CONTROLS,
 		LE_TEST_STATS,
@@ -227,7 +224,6 @@ class Settings {
 			case MUSIC_VOLUME: musicLevel;
 			case SOUND_VOLUME: soundLevel;
 			case DRAW_ART: drawArt;
-			case ART_LOSSLESS_QUALITY: losslessQuality;
 			case FILTER_SWEARS: filterSwears;
 			case ALTERNATE_CONTROLS: altCtrl;
 			case LE_TEST_STATS: leTestStats;
@@ -248,8 +244,6 @@ class Settings {
 				soundLevel = cast value;
 			case DRAW_ART:
 				drawArt = value;
-			case ART_LOSSLESS_QUALITY:
-				losslessQuality = value;
 			case FILTER_SWEARS:
 				filterSwears = value;
 			case ALTERNATE_CONTROLS:
@@ -305,7 +299,6 @@ class Settings {
 		musicLevel = 100;
 		soundLevel = 100;
 		drawArt = true;
-		losslessQuality = false;
 		filterSwears = true;
 		altCtrl = cloneObject(DEFAULT_ALT_CONTROLS);
 		leTestStats = cloneObject(DEFAULT_LE_TEST_STATS);
