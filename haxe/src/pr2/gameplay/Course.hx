@@ -1412,7 +1412,7 @@ class Course extends Sprite {
 				hit: function(impulseX:Float, impulseY:Float):Void localCharacter.receiveHit(impulseX, impulseY)
 			},
 			onBlockDamage: function(block, reach):Void {
-				if (shooterID == -1 && localCharacter != null) {
+				if (localCharacter != null) {
 					localCharacter.controller.damageBlockFromEffect(block, reach);
 				} else if (levelRenderer != null) {
 					levelRenderer.animateBlockBump(block.worldX, block.worldY, reach, 0);
