@@ -505,11 +505,11 @@ class LevelRenderer extends Sprite {
 			}
 			var layer = level.artLayers[i];
 			var artOffsetX = fractionalPresentationCamera
-				? presentationRawOffsetX * layer.scale
-				: parallaxOffset(presentationRawOffsetX, layer.scale);
+				? fractionalParallaxOffset(presentationRawOffsetX, layer.scale, Constants.STAGE_WIDTH / 2)
+				: artParallaxOffsetX(presentationRawOffsetX, layer.scale);
 			var artOffsetY = fractionalPresentationCamera
-				? presentationRawOffsetY * layer.scale
-				: parallaxOffset(presentationRawOffsetY, layer.scale);
+				? fractionalParallaxOffset(presentationRawOffsetY, layer.scale, Constants.STAGE_HEIGHT / 2)
+				: artParallaxOffsetY(presentationRawOffsetY, layer.scale);
 			artLayerContainers[i].transform.matrix = configureLayerMatrix(
 				artPresentationMatrices[i],
 				artOffsetX,
@@ -1058,8 +1058,30 @@ class LevelRenderer extends Sprite {
 		return pieces;
 	}
 
-	private static inline function parallaxOffset(screenOffset:Float, scale:Float):Float {
-		return Math.round(screenOffset * scale);
+	/**
+		Flash `Background.setPos`: `x = Math.round(cameraPos * scale)` inside a
+		`GamePage` that is itself translated to the stage centre
+		(`GamePage.initialize`: `x = 550 / 2; y = 400 / 2`). The port carries that
+		centring inside the camera offset instead of on a parent, so the centre term
+		has to be lifted back out before the parallax scale is applied — otherwise
+		every layer whose scale is not 1 lands `(scale - 1) * centre` away from
+		Flash (up/left for the 0.5 and 0.25 layers, down/right for the 2x layer).
+	**/
+	private static inline function parallaxOffset(screenOffset:Float, scale:Float, centre:Float):Float {
+		return centre + Math.round((screenOffset - centre) * scale);
+	}
+
+	/** Unrounded `parallaxOffset`, for the fractional presentation camera. **/
+	private static inline function fractionalParallaxOffset(screenOffset:Float, scale:Float, centre:Float):Float {
+		return centre + (screenOffset - centre) * scale;
+	}
+
+	public static inline function artParallaxOffsetX(screenOffset:Float, scale:Float):Float {
+		return parallaxOffset(screenOffset, scale, Constants.STAGE_WIDTH / 2);
+	}
+
+	public static inline function artParallaxOffsetY(screenOffset:Float, scale:Float):Float {
+		return parallaxOffset(screenOffset, scale, Constants.STAGE_HEIGHT / 2);
 	}
 
 	public static inline function isStartBlockCode(code:Int):Bool {

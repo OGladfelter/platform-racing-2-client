@@ -26,8 +26,8 @@ class LevelArtRenderCoordinator {
 		var layer = owner.level.artLayers[index];
 		var container = new Sprite();
 		container.name = 'artLayer${index + 1}';
-		container.x = Math.round(owner.offsetX * layer.scale);
-		container.y = Math.round(owner.offsetY * layer.scale);
+		container.x = LevelRenderer.artParallaxOffsetX(owner.offsetX, layer.scale);
+		container.y = LevelRenderer.artParallaxOffsetY(owner.offsetY, layer.scale);
 		owner.artLayerContainers[index] = container;
 		var rasterCanvas = new Sprite();
 		rasterCanvas.name = LevelRenderer.ART_RASTER_CANVAS_NAME;
@@ -153,8 +153,8 @@ class LevelArtRenderCoordinator {
 		if (layerIndex >= 0 && layerIndex < owner.level.artLayers.length) {
 			var layer = owner.level.artLayers[layerIndex];
 			toLocal.concat(owner.layerMatrix(
-				LevelRenderer.parallaxOffset(owner.rawOffsetX, layer.scale),
-				LevelRenderer.parallaxOffset(owner.rawOffsetY, layer.scale)
+				LevelRenderer.artParallaxOffsetX(owner.rawOffsetX, layer.scale),
+				LevelRenderer.artParallaxOffsetY(owner.rawOffsetY, layer.scale)
 			));
 		} else {
 			toLocal.concat(rasterCanvas.parent.transform.matrix);

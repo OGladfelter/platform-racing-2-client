@@ -1205,9 +1205,17 @@ class LevelEditor extends Page {
 		}
 	}
 
+	/**
+		Flash `Background.setPos` parallaxes the camera position only
+		(`x = Math.round(cameraPos * scale)`); the viewport centring lives on the
+		`GamePage`/`LevelEditor` sprite itself (`x = 550 / 2; y = 400 / 2`). This
+		port keeps the centring inside `posX`/`posY`, so it has to come back out
+		before the scale is applied or every layer whose scale is not 1 drifts by
+		`(layerScale - 1) * half stage`.
+	**/
 	private function positionLayer(layer:Sprite, layerScale:Float):Void {
-		layer.x = Math.round(posX * layerScale);
-		layer.y = Math.round(posY * layerScale);
+		layer.x = BASE_HALF_STAGE_WIDTH + Math.round((posX - BASE_HALF_STAGE_WIDTH) * layerScale);
+		layer.y = BASE_HALF_STAGE_HEIGHT + Math.round((posY - BASE_HALF_STAGE_HEIGHT) * layerScale);
 	}
 
 	private function placeSelectedToolFromMouse(event:MouseEvent):Void {

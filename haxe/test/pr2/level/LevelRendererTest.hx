@@ -8,6 +8,7 @@ import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.text.TextField;
 import openfl.utils.ByteArray;
+import pr2.Constants;
 import pr2.effects.BlockPiece;
 import pr2.lobby.account.Settings;
 import pr2.level.Level.LevelArtLayer;
@@ -1102,29 +1103,44 @@ class LevelRendererTest {
 		assertEquals("artLayer4", worldLayer(renderer, 5).name, "first foreground layer renders after blocks");
 		assertEquals("artLayer5", worldLayer(renderer, 6).name, "nearest foreground layer renders last");
 
+		// Flash parallaxes the camera position alone (`Background.setPos`:
+		// `x = Math.round(cameraPos * scale)`); the viewport centring sits on the
+		// `GamePage` sprite (`x = 550 / 2; y = 400 / 2`). The port folds that centre
+		// into the camera offset, so it has to be lifted back out before scaling —
+		// otherwise every layer whose scale is not 1 drifts by
+		// `(scale - 1) * halfStage` (up/left below 1, down/right above).
+		var halfW = Constants.STAGE_WIDTH / 2;
+		var halfH = Constants.STAGE_HEIGHT / 2;
 		var rear = worldLayer(renderer, 1);
-		assertEquals(Math.round((180.0 - 10020) * 0.25), rear.x, "rear layer x applies authored parallax scale");
-		assertEquals(Math.round((280.0 - 10050) * 0.25), rear.y, "rear layer y applies authored parallax scale");
+		assertEquals(halfW + Math.round((180.0 - 10020 - halfW) * 0.25), rear.x, "rear layer x applies authored parallax scale");
+		assertEquals(halfH + Math.round((280.0 - 10050 - halfH) * 0.25), rear.y, "rear layer y applies authored parallax scale");
 
 		renderer.setCameraOffset(315.4, 172.6);
-		assertEquals(Math.round(315.4 * 0.25), rear.x, "rear layer x follows camera at quarter speed");
-		assertEquals(Math.round(172.6 * 0.25), rear.y, "rear layer y follows camera at quarter speed");
+		assertEquals(halfW + Math.round((315.4 - halfW) * 0.25), rear.x, "rear layer x follows camera at quarter speed");
+		assertEquals(halfH + Math.round((172.6 - halfH) * 0.25), rear.y, "rear layer y follows camera at quarter speed");
 		var foreground = worldLayer(renderer, 6);
-		assertEquals(Math.round(315.4 * 2), foreground.x, "foreground layer x follows camera at double speed");
-		assertEquals(Math.round(172.6 * 2), foreground.y, "foreground layer y follows camera at double speed");
+		assertEquals(halfW + Math.round((315.4 - halfW) * 2), foreground.x, "foreground layer x follows camera at double speed");
+		assertEquals(halfH + Math.round((172.6 - halfH) * 2), foreground.y, "foreground layer y follows camera at double speed");
 
+		// A stage-centred camera leaves every layer exactly on the centre: parallax
+		// only separates layers as the camera moves away from where it started.
+		renderer.setCameraOffset(halfW, halfH);
+		assertEquals(halfW, rear.x, "centred camera keeps the rear layer aligned with the block plane");
+		assertEquals(halfW, foreground.x, "centred camera keeps the foreground layer aligned with the block plane");
+
+		renderer.setCameraOffset(315.4, 172.6);
 		renderer.setPresentationCameraOffset(315.75, 172.25);
-		assertClose(315.75 * 0.25, rear.x, "presentation rear parallax preserves fractional x");
-		assertClose(172.25 * 0.25, rear.y, "presentation rear parallax preserves fractional y");
-		assertClose(315.75 * 2, foreground.x, "presentation foreground parallax preserves fractional x");
-		assertClose(172.25 * 2, foreground.y, "presentation foreground parallax preserves fractional y");
+		assertClose(halfW + (315.75 - halfW) * 0.25, rear.x, "presentation rear parallax preserves fractional x");
+		assertClose(halfH + (172.25 - halfH) * 0.25, rear.y, "presentation rear parallax preserves fractional y");
+		assertClose(halfW + (315.75 - halfW) * 2, foreground.x, "presentation foreground parallax preserves fractional x");
+		assertClose(halfH + (172.25 - halfH) * 2, foreground.y, "presentation foreground parallax preserves fractional y");
 		var blockLayer = worldLayer(renderer, 4);
 		assertClose(315.75, blockLayer.transform.matrix.tx, "presentation block plane preserves fractional x");
 		assertClose(172.25, blockLayer.transform.matrix.ty, "presentation block plane preserves fractional y");
 
 		renderer.setCameraOffset(315.4, 172.6);
-		assertEquals(Math.round(315.4 * 0.25), rear.x, "next simulation restores rounded rear parallax x");
-		assertEquals(Math.round(172.6 * 0.25), rear.y, "next simulation restores rounded rear parallax y");
+		assertEquals(halfW + Math.round((315.4 - halfW) * 0.25), rear.x, "next simulation restores rounded rear parallax x");
+		assertEquals(halfH + Math.round((172.6 - halfH) * 0.25), rear.y, "next simulation restores rounded rear parallax y");
 	}
 
 	private static function testRemoveDisposesAnimatedChildren():Void {
