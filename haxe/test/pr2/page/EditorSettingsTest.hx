@@ -1128,9 +1128,12 @@ class EditorSettingsTest {
 		for (i in 0...previewLevel.artLayers.length) {
 			var stroke = previewLevel.artLayers[i].drawActions[0];
 			var parallax = previewLevel.artLayers[i].scale;
-			assertClose(paintPoint.x, stroke.values[0] + Math.round(editor.posX * parallax),
+			// Flash's editor extends `GamePage`, whose `initialize` translates the page
+			// to the stage centre (275, 200) *outside* the parallax multiply, so only
+			// the scroll component is scaled (`Background.setPos`).
+			assertClose(paintPoint.x, stroke.values[0] + 275 + Math.round((editor.posX - 275) * parallax),
 				'art ${i + 1} paint keeps its tester screen x');
-			assertClose(paintPoint.y, stroke.values[1] + Math.round(editor.posY * parallax),
+			assertClose(paintPoint.y, stroke.values[1] + 200 + Math.round((editor.posY - 200) * parallax),
 				'art ${i + 1} paint keeps its tester screen y');
 		}
 		editor.remove();
