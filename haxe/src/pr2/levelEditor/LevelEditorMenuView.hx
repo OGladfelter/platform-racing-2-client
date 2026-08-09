@@ -41,12 +41,14 @@ class LevelEditorMenuView extends NativeView {
 		button("testButton", "Test", -150.9, 169, 46.1044311523438);
 		button("newButton", "New", -98.4, 169, 46.1044311523438);
 		button("exitButton", "Exit", -47, 169, 46.09375);
+		var zoomValues = ["25", "50", "75", "100", "150", "250", "500"];
 		zoomSelect = ownControl(new GameSelect<String>());
 		zoomSelect.name = "zoomSelect";
 		zoomSelect.x = 30;
 		zoomSelect.y = 169;
 		zoomSelect.setSize(60.009765625, 22);
-		for (value in ["25", "50", "75", "100", "150", "250", "500"]) zoomSelect.addOption(value + "%", value);
+		for (value in zoomValues) zoomSelect.addOption(value + "%", value);
+		zoomSelect.rowCount = zoomValues.length;
 		addChild(zoomSelect);
 		button("undoButton", "Undo", 94.65, 169, 46.09375);
 		button("redoButton", "Redo", 146.15, 169, 46.09375);
