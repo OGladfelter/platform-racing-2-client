@@ -34,12 +34,22 @@ class MenuMusic extends Sprite {
 		else { percentage1 = 1; percentage2 = 0; }
 		channel1 = playLoop("assets/audio/sfx/menu_noodle_town_2.wav");
 		channel2 = playLoop("assets/audio/sfx/menu_noodle_town_3.wav");
+		// Either layer can fail to start (SoundMixer refuses new channels past
+		// MAX_ACTIVE_CHANNELS). Drop the half-started pair so a later
+		// startPlaying() retries from scratch instead of playing one layer.
+		if (channel1 == null || channel2 == null) {
+			stop();
+			return;
+		}
 		applyVolume(volume);
 		scheduleCrossfade();
 	}
 
-	private function playLoop(path:String):SoundChannel {
-		var channel = Assets.getSound(path).play(0, 9999);
+	private function playLoop(path:String):Null<SoundChannel> {
+		var sound = Assets.getSound(path);
+		if (sound == null) return null;
+		var channel = sound.play(0, 9999);
+		if (channel == null) return null;
 		#if (js && html5)
 		// Lime implements a finite loop count by waiting for Howler's `end`
 		// event and starting a new source. That event-to-source handoff leaves a
