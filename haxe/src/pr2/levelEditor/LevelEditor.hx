@@ -44,6 +44,9 @@ class LevelEditor extends Page {
 	private static inline var LEVEL_HEIGHT:Int = 60000;
 	private static inline var BASE_HALF_STAGE_WIDTH:Float = 275;
 	private static inline var BASE_HALF_STAGE_HEIGHT:Float = 200;
+	// Flash offsets the start-block from the viewport centre when framing the level.
+	private static inline var START_VIEW_OFFSET_X:Float = 100;
+	private static inline var START_VIEW_OFFSET_Y:Float = 50;
 	private final alternateControls:Dynamic = Settings.getValue(Settings.ALTERNATE_CONTROLS, Settings.DEFAULT_ALT_CONTROLS);
 
 	public final isMod:Bool;
@@ -445,12 +448,10 @@ class LevelEditor extends Page {
 		if (layerNum < 1 || layerNum > objectLayers.length) {
 			return;
 		}
-		var nextObjectLayer = objectLayers[layerNum - 1];
-		if (activeObjectLayer != null && activeObjectLayer != nextObjectLayer) {
-			activeObjectLayer.deselectItem();
-		}
 		activeDrawLayer = drawLayers[layerNum - 1];
-		activeObjectLayer = nextObjectLayer;
+		activeObjectLayer = objectLayers[layerNum - 1];
+		// updateObjectLayerInteractivity deselects every layer but the active one,
+		// so the previously active layer's item is cleared there.
 		updateObjectLayerInteractivity();
 	}
 
@@ -927,8 +928,37 @@ class LevelEditor extends Page {
 	}
 
 	private function updateObjectLayerInteractivity():Void {
+		// Flash's focusOn/focusNone unfocuses every layer but the target one
+		// (mouseEnabled/mouseChildren = false) and the layer switch deselects the
+		// active object via the stage mouse-down. Mirror both here: only the layer
+		// matching the current focus stays interactive, and anything selected on a
+		// now-unfocused layer is deselected so blocks/stamps/texts can never be
+		// selected at the same time (and blocks stop being selectable on art layers).
+		var blocksFocused = focusedEditorLayer == "blocks";
+		if (blockLayer != null) {
+			blockLayer.mouseEnabled = blocksFocused;
+			blockLayer.mouseChildren = blocksFocused;
+		}
+		if (!blocksFocused) {
+			selectBlock(null);
+		}
 		for (layer in objectLayers) {
 			var active = focusedEditorLayer == "objects" && layer == activeObjectLayer;
+			layer.mouseEnabled = active;
+			layer.mouseChildren = active;
+			if (!active) {
+				layer.deselectItem();
+			}
+		}
+		// Draw layers four and five render in front of the block layer, so their
+		// painted strokes would otherwise intercept clicks meant for a selected
+		// block's corner buttons (which spill past the block's edges). Flash's
+		// focus model unfocuses every non-target layer; mirror that here. Brush
+		// painting is driven by the editor's own stage handlers rather than by
+		// listeners on the draw layer, so an unfocused draw layer never needs
+		// mouse input of its own.
+		for (layer in drawLayers) {
+			var active = focusedEditorLayer == "draw" && layer == activeDrawLayer;
 			layer.mouseEnabled = active;
 			layer.mouseChildren = active;
 		}
@@ -1030,7 +1060,13 @@ class LevelEditor extends Page {
 		if (start == null) {
 			return;
 		}
-		setPos(BASE_HALF_STAGE_WIDTH - (start.segX * segSize), BASE_HALF_STAGE_HEIGHT - (start.segY * segSize));
+		// Flash frames the start block 100px left / 50px above the viewport centre
+		// (LevelEditor.setStartPos: posX = -point.x - 100, posY = -point.y - 50) rather
+		// than snapping it dead-centre, so match that offset for camera parity.
+		setPos(
+			BASE_HALF_STAGE_WIDTH - START_VIEW_OFFSET_X - (start.segX * segSize),
+			BASE_HALF_STAGE_HEIGHT - START_VIEW_OFFSET_Y - (start.segY * segSize)
+		);
 	}
 
 	private function installBrowserHarness():Void {
@@ -1188,6 +1224,7 @@ class LevelEditor extends Page {
 		}
 		var targetInMenu = target != null && isTargetWithinEditorMenu(target);
 		var targetInPlacedObject = target != null && isTargetWithinPlacedEditorObject(target);
+		var targetInEditorBlock = target != null && isTargetWithinEditorBlock(target);
 		mouseDownEventsForTests++;
 		lastMouseDownTargetForTests = target == null ? "" : target.name;
 		lastMouseDownXForTests = event.stageX;
@@ -1236,6 +1273,14 @@ class LevelEditor extends Page {
 		}
 		if (deleteSelectedBlockAt(event.stageX, event.stageY)) {
 			event.stopImmediatePropagation();
+			return;
+		}
+		if (isBlockPlacementTool() && targetInEditorBlock) {
+			// Flash's ObjectPlacer removes itself when the block layer is hit, then
+			// lets the block's own select/drag handler receive the click. Without
+			// this the placer stays active and paints stray blocks along the drag
+			// path when the player just meant to reposition an existing block.
+			cancelSelectedPlacementTool();
 			return;
 		}
 		if (isBlockPlacementTool()) {
@@ -1360,6 +1405,17 @@ class LevelEditor extends Page {
 		return false;
 	}
 
+	private function isTargetWithinEditorBlock(target:DisplayObject):Bool {
+		var current:Null<DisplayObject> = target;
+		while (current != null && current != blockLayer) {
+			if (Std.isOfType(current, EditorBlockObject)) {
+				return true;
+			}
+			current = current.parent;
+		}
+		return false;
+	}
+
 	private function isStampPlacementTool():Bool {
 		return activeObjectLayer != null && selectedToolSidebar == "stamps" && StringTools.startsWith(selectedToolId, "stamp");
 	}
@@ -1389,7 +1445,7 @@ class LevelEditor extends Page {
 	}
 
 	private function cancelSelectedPlacementTool():Void {
-		if (isStampPlacementTool()) {
+		if (isStampPlacementTool() || isBlockPlacementTool()) {
 			selectEditorTool("", "");
 		}
 	}

@@ -27,9 +27,11 @@ import pr2.ui.controls.NativeControl;
 	paths: arrow mouse-up and slider thumb release.
 **/
 class StatSlider extends Sprite {
-	// XFL `UI/Global/StatSlider` keeps the native component at 80x22 and applies
-	// a 1.5625 horizontal instance transform. Preserve that transform so its
-	// track edges and thumb are scaled exactly like the authored control.
+	// XFL `UI/Global/StatSlider` embeds the native component at 80x22 with a 1.5625
+	// horizontal instance transform. Flash's fl.controls.Slider turns that scale
+	// into a width change (the track stretches, the SliderThumb keeps its authored
+	// size), so the port applies it as width rather than a geometric scaleX that
+	// would smear the thumb ~1.5x wide.
 	private static inline final STAT_SLIDER_TRACK_WIDTH:Float = 80;
 	private static inline final STAT_SLIDER_HEIGHT:Float = 22;
 	private static inline final STAT_SLIDER_SCALE_X:Float = 1.5625;
@@ -65,8 +67,7 @@ class StatSlider extends Sprite {
 		slider = new GameSlider(0, 100, 0, 1);
 		slider.name = "slider";
 		slider.y = 20;
-		slider.setSize(STAT_SLIDER_TRACK_WIDTH, STAT_SLIDER_HEIGHT);
-		slider.scaleX = STAT_SLIDER_SCALE_X;
+		slider.setSize(STAT_SLIDER_TRACK_WIDTH * STAT_SLIDER_SCALE_X, STAT_SLIDER_HEIGHT);
 		slider.addEventListener(Event.CHANGE, onSliderChange);
 		slider.onRelease = onSliderThumbRelease;
 		addChild(slider);

@@ -236,20 +236,3 @@ available from their source threads.
   [4](docs/bug-reports/html-pr2/tid-5412-04.png),
   [5](docs/bug-reports/html-pr2/tid-5412-05.png), and
   [6](docs/bug-reports/html-pr2/tid-5412-06.png).
-- [x] [Option sliders are inverted](https://jiggmin2.com/forums/showthread.php?tid=5410):
-  Options sliders map the bottom to 100% and the top to 0%.
-  Evidence: [example 1](docs/bug-reports/html-pr2/tid-5410-01.png) and
-  [example 2](docs/bug-reports/html-pr2/tid-5410-02.png).
-- [x] [Part colour picker shows white for both colours when on epic upgraded parts](https://jiggmin2.com/forums/showthread.php?tid=5406):
-  the part-colour picker displays white for both channels on epic-upgraded parts.
-  [Evidence](docs/bug-reports/html-pr2/tid-5406-01.png)
-- [x] [Propeller hat loses its hat after being removed](https://jiggmin2.com/forums/showthread.php?tid=5405):
-  a removed Propeller Hat loses its propeller blades.
-  [Evidence](docs/bug-reports/html-pr2/tid-5405-01.png)
-- [!] [Hats become transparent and non-interactable after being removed](https://jiggmin2.com/forums/showthread.php?tid=5370):
-  removed EXP and Propeller Hats become transparent and cannot be picked up.
-  [Evidence](docs/bug-reports/html-pr2/tid-5370-01.png)
-- [x] [Giant Dialog Boxes](https://jiggmin2.com/forums/showthread.php?tid=5388):
-  message dialogs now use the authored 100x44 TextArea bounds without scaling
-  their text, and the overflow scrollbar preserves and changes the visible line.
-  [Evidence](docs/bug-reports/html-pr2/tid-5388-01.png)

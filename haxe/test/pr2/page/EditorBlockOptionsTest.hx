@@ -387,7 +387,10 @@ class EditorBlockOptionsTest {
 		assertEquals("Reset To Starting Stats", reset.label, "custom reset label");
 		assertNear(-75, reset.x, "custom reset x");
 		assertNear(80, reset.y, "custom reset y");
-		assertNear(1.5, reset.scaleX, "custom reset scale");
+		// Flash widens the CheckBox layout (100 * 1.5) instead of geometrically
+		// scaling it, so the label glyphs are not stretched.
+		assertNear(1, reset.scaleX, "custom reset keeps unit scale");
+		assertNear(150, reset.controlWidth, "custom reset widens its layout box");
 	}
 
 	private static function assertPoint(value:DisplayObject, x:Float, y:Float, scaleX:Float, scaleY:Float, message:String):Void {

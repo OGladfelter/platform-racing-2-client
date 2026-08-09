@@ -86,6 +86,8 @@ class EditorSettingsTest {
 		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBrushTargetGating", testBrushTargetGating);
 		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testStampPlacementCancellationAndCursorScale", testStampPlacementCancellationAndCursorScale);
 		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testArtLayerSwitchDeselectsItem", testArtLayerSwitchDeselectsItem);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testLayerFocusClearsCrossLayerSelection", testLayerFocusClearsCrossLayerSelection);
+		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testSelectedBlockButtonsClearNeighbours", testSelectedBlockButtonsClearNeighbours);
 		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBlockDragPlacement", testBlockDragPlacement);
 		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testModalPopupBlocksEditorInput", testModalPopupBlocksEditorInput);
 		pr2.DeterministicTestMode.runTest("EditorSettingsTest.testBlockObjectInteractions", testBlockObjectInteractions);
@@ -259,9 +261,10 @@ class EditorSettingsTest {
 		assertEquals("-- Brush Size --", title.text, "size picker menu preserves authored title");
 		assertClose(-75, menu.slider.x, "size picker slider x follows XFL matrix");
 		assertClose(29, menu.slider.y, "size picker slider y follows XFL matrix");
-		assertClose(80, menu.slider.controlWidth, "size picker slider keeps its authored skin width");
-		assertClose(1.875, menu.slider.scaleX, "size picker slider applies the XFL instance scale");
-		assertClose(150, menu.slider.controlWidth * menu.slider.scaleX, "size picker slider renders at the authored width");
+		// Flash applies the 1.875 XFL instance scale as a width change (80 * 1.875),
+		// so the port widens the control instead of stretching the thumb via scaleX.
+		assertClose(1, menu.slider.scaleX, "size picker slider keeps unit scale so the thumb is not smeared");
+		assertClose(150, menu.slider.controlWidth, "size picker slider renders at the authored width");
 		assertEquals(100.0, menu.slider.maximum, "size picker slider preserves authored maximum");
 		assertClose(-29, menu.textInput.x, "size picker input x follows XFL matrix");
 		assertClose(-13, menu.textInput.y, "size picker input y follows XFL matrix");
@@ -951,6 +954,110 @@ class EditorSettingsTest {
 		editor.setActiveObjectLayer(3);
 		assertEquals(null, @:privateAccess firstLayer.selectedText, "switching art layers deselects the selected text");
 		editor.remove();
+	}
+
+	private static function testLayerFocusClearsCrossLayerSelection():Void {
+		var editor = new LevelEditor();
+		editor.initialize();
+
+		editor.selectEditorTool("blocks", "brick");
+		assertEquals(true, editor.blockLayer.mouseChildren, "block layer is interactive while focused");
+		var block = editor.blockLayer.blocks[0];
+		assertNotNull(block, "editor seeds at least one block");
+		editor.selectBlock(block);
+		assertEquals(block, editor.selectedBlock, "block selects while the block layer is focused");
+
+		editor.selectEditorTool("stamps", "stamp0");
+		assertEquals(null, editor.selectedBlock, "switching to an art layer deselects the block");
+		assertEquals(false, editor.blockLayer.mouseChildren, "blocks are not selectable on art layers");
+		assertEquals(false, editor.blockLayer.mouseEnabled, "block layer ignores mouse input on art layers");
+
+		var layer = editor.activeObjectLayer;
+		layer.addStamp(0, 100, 100);
+		layer.selectPlacedStampForTests(0);
+		assertNotNull(@:privateAccess layer.selectedStamp, "stamp selects on the active art layer");
+		editor.selectEditorTool("blocks", "brick");
+		assertEquals(null, @:privateAccess layer.selectedStamp, "switching to the block layer deselects the stamp");
+		assertEquals(true, editor.blockLayer.mouseChildren, "block layer is interactive again after returning");
+		editor.remove();
+	}
+
+	private static function testSelectedBlockButtonsClearNeighbours():Void {
+		var editor = new LevelEditor();
+		editor.initialize();
+		var seg = LevelEditor.segSize;
+
+		// Fill a 2x2 patch so the chosen block has neighbours below and to the
+		// left, where its corner-straddling delete/options buttons spill over.
+		editor.selectEditorTool("blocks", "custom");
+		editor.placeSelectedBlockAt(300, 200, false);
+		editor.placeSelectedBlockAt(300 - seg, 200, false);
+		editor.placeSelectedBlockAt(300, 200 + seg, false);
+		editor.placeSelectedBlockAt(300 - seg, 200 + seg, false);
+
+		var target:EditorBlockObject = null;
+		for (block in editor.blockLayer.blocks) {
+			if (blockAtSeg(editor, block.segX - 1, block.segY) != null
+				&& blockAtSeg(editor, block.segX, block.segY + 1) != null
+				&& blockAtSeg(editor, block.segX - 1, block.segY + 1) != null) {
+				target = block;
+				break;
+			}
+		}
+		assertNotNull(target, "seeded a block surrounded on its lower-left corner");
+		editor.selectBlock(target);
+
+		// The delete button is centred on the block's bottom-left corner (local
+		// 0, seg) and its art spans +/-7, so three of its quarters hang over the
+		// neighbouring cells. Every quarter must still resolve to this block's
+		// own button rather than to whichever neighbour sits beneath it.
+		assertTargetIsOwnButton(editor, target, 3, seg - 3, "delete quarter over the block itself");
+		assertTargetIsOwnButton(editor, target, -3, seg - 3, "delete quarter over the left neighbour");
+		assertTargetIsOwnButton(editor, target, -3, seg + 3, "delete quarter over the below-left neighbour");
+		assertTargetIsOwnButton(editor, target, 3, seg + 3, "delete quarter over the below neighbour");
+
+		// A front art layer (layers four and five) renders above the block layer,
+		// so its painted strokes must not steal a button quarter either. Paint one
+		// straight over the bottom-left quarter and confirm the button still wins;
+		// this holds only because unfocused draw layers surrender their mouse input.
+		var frontLayer = editor.drawLayers[4];
+		var global = target.localToGlobal(new Point(-3, seg + 3));
+		var local = frontLayer.globalToLocal(global);
+		var canvas:Sprite = @:privateAccess frontLayer.brushCanvas;
+		canvas.graphics.lineStyle(40, 0xFF0000);
+		canvas.graphics.moveTo(local.x - 30, local.y);
+		canvas.graphics.lineTo(local.x + 30, local.y);
+		assertTargetIsOwnButton(editor, target, -3, seg + 3, "delete quarter over a front-layer stroke");
+		editor.remove();
+	}
+
+	private static function assertTargetIsOwnButton(editor:LevelEditor, block:EditorBlockObject, localX:Float, localY:Float,
+			message:String):Void {
+		var global = block.localToGlobal(new Point(localX, localY));
+		var stack:Array<DisplayObject> = [];
+		@:privateAccess editor.__hitTest(global.x, global.y, false, stack, true, editor);
+		var top = stack.length > 0 ? stack[stack.length - 1] : null;
+		assertNotNull(top, message + ": a display object receives the click");
+		assertEquals("DeleteButton", top.name, message + ": the click hits a delete button");
+		var descendsFromBlock = false;
+		var node:DisplayObject = top;
+		while (node != null) {
+			if (node == block) {
+				descendsFromBlock = true;
+				break;
+			}
+			node = node.parent;
+		}
+		assertEquals(true, descendsFromBlock, message + ": the button belongs to the selected block, not a neighbour");
+	}
+
+	private static function blockAtSeg(editor:LevelEditor, segX:Int, segY:Int):EditorBlockObject {
+		for (block in editor.blockLayer.blocks) {
+			if (block.segX == segX && block.segY == segY) {
+				return block;
+			}
+		}
+		return null;
 	}
 
 	private static function testBlockDragPlacement():Void {

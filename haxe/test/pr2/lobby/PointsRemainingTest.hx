@@ -43,8 +43,10 @@ class PointsRemainingTest {
 		assertClose(93, statBox.x, "stat value keeps XFL X");
 		assertClose(2, statBox.y, "stat value keeps XFL Y");
 		assertClose(20, slider.y, "stat slider keeps XFL Y");
-		assertClose(80, slider.controlWidth, "stat slider keeps the native XFL component width");
-		assertClose(1.5625, slider.scaleX, "stat slider keeps the XFL horizontal instance scale");
+		// Flash applies the 1.5625 XFL instance scale as a width change (80 * 1.5625),
+		// keeping the SliderThumb its authored width instead of stretching it.
+		assertClose(125, slider.controlWidth, "stat slider widens to the authored track width");
+		assertClose(1, slider.scaleX, "stat slider keeps unit scale so the thumb is not smeared");
 		assertClose(22, slider.controlHeight, "stat slider keeps XFL height");
 		assertClose(-1, dec.transform.matrix.a, "decrement arrow keeps XFL horizontal inversion");
 		assertClose(-1, dec.transform.matrix.d, "decrement arrow keeps XFL vertical inversion");

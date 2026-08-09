@@ -39,8 +39,10 @@ class BrushSizeMenuView extends NativeView {
 		slider.name = "slider";
 		slider.x = -75;
 		slider.y = 29;
-		slider.setSize(80, 22);
-		slider.scaleX = 1.875;
+		// Flash's fl.controls.Slider applies the 1.875 XFL instance scale as a width
+		// change (stretching the track, not the SliderThumb), so widen rather than
+		// scaleX to avoid smearing the thumb.
+		slider.setSize(80 * 1.875, 22);
 		addChild(slider);
 		textInput = ownControl(new GameTextInput("25"));
 		textInput.name = "textBox";

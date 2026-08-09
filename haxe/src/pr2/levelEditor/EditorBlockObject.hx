@@ -4,12 +4,17 @@ import openfl.display.Bitmap;
 import openfl.display.Sprite;
 import openfl.events.MouseEvent;
 import openfl.geom.Point;
+import openfl.text.TextField;
+import openfl.text.TextFieldType;
+import openfl.text.TextFormat;
+import openfl.text.TextFormatAlign;
 import openfl.utils.AssetType;
 import openfl.utils.Assets;
 import pr2.level.BlockType;
 import pr2.level.ObjectCodes;
 import pr2.level.LevelRenderer;
 import pr2.page.EditorBlockOptions;
+import pr2.runtime.FontResolver;
 import pr2.runtime.SvgAsset;
 
 class EditorBlockObject extends Sprite {
@@ -89,6 +94,12 @@ class EditorBlockObject extends Sprite {
 
 	public function setSelected(selected:Bool):Void {
 		if (selected) {
+			// Raise the block above its neighbours so the delete/options buttons,
+			// which straddle the block's corners and spill into adjacent cells,
+			// are not occluded by neighbouring blocks. Flash never did this, so in
+			// a filled level only the corner quarter overlapping the block itself
+			// stayed clickable; lifting the block makes the whole button hittable.
+			raiseToFront();
 			showHighlight();
 			if (deleteable) {
 				showDeleteButton();
@@ -126,6 +137,10 @@ class EditorBlockObject extends Sprite {
 		dragStartX = x;
 		dragStartY = y;
 		alpha = 0.75;
+		raiseToFront();
+	}
+
+	private function raiseToFront():Void {
 		if (parent != null && parent.numChildren > 1) {
 			parent.setChildIndex(this, parent.numChildren - 1);
 		}
@@ -350,6 +365,32 @@ class EditorBlockObject extends Sprite {
 			pivot.rotation = rotation;
 			holder.addChild(pivot);
 		}
+		if (code >= ObjectCodes.BLOCK_START1 && code <= ObjectCodes.BLOCK_START4) {
+			holder.addChild(createStartNumber(code - ObjectCodes.BLOCK_START1 + 1));
+		}
 		return holder;
+	}
+
+	// Flash overlays each start block with a StartBlockText symbol (Verdana-Bold,
+	// white, centered) showing the player number 1-4; mirror that authored text
+	// field so the editor labels the four spawn points like the original.
+	private static function createStartNumber(number:Int):TextField {
+		var field = new TextField();
+		field.name = "startNumber";
+		field.selectable = false;
+		field.mouseEnabled = false;
+		field.type = TextFieldType.DYNAMIC;
+		field.wordWrap = false;
+		field.multiline = false;
+		var format = new TextFormat(FontResolver.resolve("Verdana-Bold"), 12, 0xFFFFFF, true);
+		format.align = TextFormatAlign.CENTER;
+		field.defaultTextFormat = format;
+		// Authored StartBlockText box: 17x16.3 at tx=7.25, ty=8.55 within the 30px block.
+		field.width = 17;
+		field.height = 16.3;
+		field.x = 7.25;
+		field.y = 8.55;
+		field.text = Std.string(number);
+		return field;
 	}
 }

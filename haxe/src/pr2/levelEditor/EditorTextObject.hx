@@ -589,7 +589,7 @@ class EditorTextObject extends Sprite {
 		positionDeleteButton();
 		positionResizeHandle();
 		positionColorPicker();
-		drawSelectionOutline();
+		drawSelectionOutline(buttonScaleX, buttonScaleY);
 	}
 
 	private function inverseEditorScaleX():Float {
@@ -612,14 +612,25 @@ class EditorTextObject extends Sprite {
 		resizeHandle.y = target.height;
 	}
 
-	private function drawSelectionOutline():Void {
+	private function drawSelectionOutline(invScaleX:Float, invScaleY:Float):Void {
 		var target = editField != null ? editField : displayField;
+		// Flash keeps this 3px border a constant device thickness via
+		// LineScaleMode.NONE, so resizing the box never fattens or thins the lines.
+		// OpenFL's HTML5 renderer ignores NONE, so the object's own resize scale
+		// (and the editor zoom) would smear the stroke. Counter-scale the outline
+		// sprite by the same inverse factor the delete/resize handles use, then
+		// draw the rectangle at the box's device dimensions so it still frames the
+		// text while the stroke renders at a fixed 3px.
+		selectionOutline.scaleX = invScaleX;
+		selectionOutline.scaleY = invScaleY;
+		var width = invScaleX == 0 ? target.width : target.width / invScaleX;
+		var height = invScaleY == 0 ? target.height : target.height / invScaleY;
 		selectionOutline.graphics.clear();
 		selectionOutline.graphics.lineStyle(3, 0xFFFFFF, 1, false, "none");
 		selectionOutline.graphics.moveTo(0, 0);
-		selectionOutline.graphics.lineTo(0, target.height);
-		selectionOutline.graphics.lineTo(target.width, target.height);
-		selectionOutline.graphics.lineTo(target.width, 0);
+		selectionOutline.graphics.lineTo(0, height);
+		selectionOutline.graphics.lineTo(width, height);
+		selectionOutline.graphics.lineTo(width, 0);
 		selectionOutline.graphics.lineTo(0, 0);
 	}
 

@@ -10,6 +10,10 @@ import openfl.ui.Keyboard;
 import pr2.runtime.SvgAsset;
 
 class GameSlider extends NativeControl {
+	// Flash's fl.controls.Slider anchors both the SliderThumb skin (13px) and the
+	// SliderTrack skin (3px) to the component's top-left origin. The port had
+	// centred the track inside the thumb (track.y = (13-3)/2), which pushed the
+	// bar exactly 5px below where Flash renders it while the thumb stayed correct.
 	public var minimum(default, null):Float;
 	public var maximum(default, null):Float;
 	public var step(default, null):Float;
@@ -129,7 +133,7 @@ class GameSlider extends NativeControl {
 			"assets/svg/ui/slider_thumb_over.svg" : "assets/svg/ui/slider_thumb_up.svg"));
 		thumb.addChild(SvgAsset.create(path));
 		thumb.x = 5 + ratio * Math.max(1, controlWidth - 10);
-		thumb.y = (controlHeight - 13) / 2;
+		thumb.y = 0;
 	}
 
 	private function drawTrack():Void {
@@ -139,7 +143,7 @@ class GameSlider extends NativeControl {
 		art.scale9Grid = new Rectangle(2.25, 0, 75.75, 3);
 		art.width = controlWidth;
 		track.addChild(art);
-		track.y = (controlHeight - 3) / 2;
+		track.y = 0;
 	}
 
 	private function thumbOver(_:MouseEvent):Void { if (enabled) { thumbHovered = true; drawThumb(); } }

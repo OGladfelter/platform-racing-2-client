@@ -88,7 +88,11 @@ class EditorBlockOptionsView extends NativeView {
 		reset.name = "resetChk";
 		reset.x = -75;
 		reset.y = 80;
-		reset.scaleX = 1.5;
+		// Flash's fl.controls.CheckBox turns the 1.5 XFL instance scale into a wider
+		// layout box; the label keeps its font size. Applying it as scaleX instead
+		// stretched the "Reset To Starting Stats" glyphs horizontally, so widen the
+		// control (100 default * 1.5) and leave scaleX at 1.
+		reset.setSize(150, 22);
 		addChild(reset);
 		named.set(reset.name, reset);
 	}

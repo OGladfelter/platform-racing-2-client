@@ -57,16 +57,21 @@ class EditorBlockOptionsPopup extends Sprite {
 		var popupBounds = getBounds(this);
 		var popupWidth = popupBounds.width <= 0 ? 236 : popupBounds.width;
 		var popupHeight = popupBounds.height <= 0 ? 120 : popupBounds.height;
-		x = blockBounds.left > popupWidth ? blockBounds.left - popupWidth - 7 : blockBounds.right + 7;
-		y = blockBounds.top;
-		if (y < 0) {
-			y = 0;
+		// Flash's InfoPopup positions the popup's *visual* left/top beside the
+		// block, then subtracts the authored content offset (popupBounds.left/top)
+		// so the box does not slide by its own registration. The views here are
+		// centered on their origin, so skipping that correction dropped the popup
+		// on top of the block instead of next to it.
+		var visualLeft = blockBounds.left > popupWidth ? blockBounds.left - popupWidth - 7 : blockBounds.right + 7;
+		var visualTop = blockBounds.top;
+		if (visualTop < 0) {
+			visualTop = 0;
 		}
-		if (y + popupHeight > 400) {
-			y = 400 - popupHeight;
+		if (visualTop + popupHeight > 400) {
+			visualTop = 400 - popupHeight;
 		}
-		x = Math.round(x);
-		y = Math.round(y);
+		x = Math.round(visualLeft - popupBounds.left);
+		y = Math.round(visualTop - popupBounds.top);
 	}
 
 }
