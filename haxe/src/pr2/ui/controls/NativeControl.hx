@@ -13,8 +13,15 @@ class NativeControl extends Sprite {
 	public static inline var KEYBOARD_ACTIVATE:String = "nativeControlKeyboardActivate";
 	private static final FOCUS_GRID = new Rectangle(4, 2, 74, 18);
 
+	// Flash's fl.managers.FocusManager only paints focus rectangles while
+	// showFocusIndicator is true: Tab traversal turns it on, pointer input turns
+	// it off. Without that gate every click leaves a blue outline behind.
+	public static var showFocusIndicator:Bool = false;
+
 	public var enabled(get, set):Bool;
-	public var focused(default, null):Bool = false;
+	public var focused(default, set):Bool = false;
+	/** Whether this control's focus was keyboard-driven, so it paints the outline. */
+	public var focusVisible(default, null):Bool = false;
 	public var disposed(default, null):Bool = false;
 	public var controlWidth(default, null):Float;
 	public var controlHeight(default, null):Float;
@@ -89,16 +96,29 @@ class NativeControl extends Sprite {
 
 	public function activate():Void {}
 
+	/** Drops the focus outline without dropping focus itself, for pointer input. */
+	public function hideFocusIndicator():Void {
+		if (!focusVisible) return;
+		focusVisible = false;
+		redraw();
+		refreshFocusIndicator();
+	}
+
 	public function state():ControlState {
 		if (!enabled) return Disabled;
 		if (pressed) return Pressed;
-		if (focused) return Focused;
+		if (focused && focusVisible) return Focused;
 		if (hovered) return Hovered;
 		return Normal;
 	}
 
 	public function redraw():Void {
 		skin.draw(graphics, controlWidth, controlHeight, state());
+	}
+
+	private function set_focused(value:Bool):Bool {
+		focusVisible = value && showFocusIndicator;
+		return focused = value;
 	}
 
 	private function get_enabled():Bool return _enabled;
@@ -125,7 +145,7 @@ class NativeControl extends Sprite {
 
 	private function onRollOver(_):Void { if (enabled) { hovered = true; redraw(); refreshFocusIndicator(); } }
 	private function onRollOut(_):Void { hovered = false; pressed = false; redraw(); refreshFocusIndicator(); }
-	private function onMouseDown(_):Void { if (enabled) { pressed = true; focus(); redraw(); refreshFocusIndicator(); } }
+	private function onMouseDown(_):Void { if (enabled) { showFocusIndicator = false; pressed = true; focus(); redraw(); refreshFocusIndicator(); } }
 	private function onMouseUp(_):Void { if (enabled) { pressed = false; redraw(); refreshFocusIndicator(); } }
 	private function onFocusIn(_):Void {
 		focused = true;
@@ -159,6 +179,6 @@ class NativeControl extends Sprite {
 		art.width = controlWidth;
 		art.height = controlHeight;
 		focusIndicator.addChild(art);
-		focusIndicator.visible = focused && enabled && !disposed;
+		focusIndicator.visible = focused && focusVisible && enabled && !disposed;
 	}
 }

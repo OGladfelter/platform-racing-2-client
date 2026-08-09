@@ -5,6 +5,7 @@ import openfl.display.DisplayObjectContainer;
 import openfl.display.InteractiveObject;
 import openfl.display.Stage;
 import openfl.events.KeyboardEvent;
+import openfl.events.MouseEvent;
 import openfl.geom.Rectangle;
 import openfl.ui.Keyboard;
 import pr2.ui.controls.NativeControl;
@@ -20,11 +21,30 @@ class KeyboardFocusManager {
 		if (installedStage != null) {
 			installedStage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyDown, true);
 			installedStage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+			installedStage.removeEventListener(MouseEvent.MOUSE_DOWN, onMouseDown, true);
+			installedStage.removeEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
 		}
 		installedStage = stage;
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown, true, 1000);
 		// When Stage itself is the event target there is no capture phase.
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown, false, 1000);
+		stage.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown, true, 1000);
+		stage.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown, false, 1000);
+	}
+
+	/** Pointer input hides focus rectangles until the next Tab, exactly like Flash. */
+	private static function onMouseDown(_:MouseEvent):Void {
+		NativeControl.showFocusIndicator = false;
+		if (installedStage == null) return;
+		var current:Null<DisplayObject> = installedStage.focus;
+		while (current != null) {
+			var control = Std.downcast(current, NativeControl);
+			if (control != null) {
+				control.hideFocusIndicator();
+				return;
+			}
+			current = current.parent;
+		}
 	}
 
 	private static function onKeyDown(event:KeyboardEvent):Void {
@@ -37,6 +57,7 @@ class KeyboardFocusManager {
 	private static function advanceFocus(stage:Stage, reverse:Bool):Void {
 		var candidates = orderedCandidates(stage);
 		if (candidates.length == 0) return;
+		NativeControl.showFocusIndicator = true;
 		var currentIndex = candidateIndex(candidates, stage.focus);
 		var offset = reverse ? -1 : 1;
 		var nextIndex = currentIndex < 0 ? (reverse ? candidates.length - 1 : 0) : currentIndex + offset;

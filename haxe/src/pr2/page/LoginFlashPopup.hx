@@ -389,7 +389,7 @@ private class LoginTextButton extends Sprite {
 		focusIndicator.addChild(art);
 		focusIndicator.visible = false;
 		addChild(focusIndicator);
-		addEventListener(FocusEvent.FOCUS_IN, function(_):Void focusIndicator.visible = true);
+		addEventListener(FocusEvent.FOCUS_IN, function(_):Void focusIndicator.visible = NativeControl.showFocusIndicator);
 		addEventListener(FocusEvent.FOCUS_OUT, function(_):Void focusIndicator.visible = false);
 		addEventListener(KeyboardEvent.KEY_DOWN, function(event):Void {
 			if (event.keyCode == Keyboard.ENTER || event.keyCode == Keyboard.SPACE) dispatchEvent(new Event(NativeControl.KEYBOARD_ACTIVATE));
